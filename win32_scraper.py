@@ -28,8 +28,9 @@ from rich.text import Text
 console = Console()
 
 class Win32APIScraper:
-    def __init__(self, language='us'):
+    def __init__(self, language='us', quiet=False):
         self.language = language
+        self.quiet = quiet
         if language == 'br':
             self.base_url = "https://learn.microsoft.com/pt-br"
             self.search_url_base = "https://learn.microsoft.com/pt-br/search/?scope=Windows&terms="
@@ -46,12 +47,14 @@ class Win32APIScraper:
         """
         Faz scraping das informações de uma função Win32 API usando busca dinâmica
         """
-        console.print(f"[cyan]Buscando documentação para: {function_name}[/cyan]")
+        if not self.quiet:
+            console.print(f"[cyan]Buscando documentação para: {function_name}[/cyan]")
         
         # Primeiro tenta URLs conhecidos
         direct_url = self._try_direct_url(function_name)
         if direct_url:
-            console.print(f"[green]Usando URL direto: {direct_url}[/green]")
+            if not self.quiet:
+                console.print(f"[green]Usando URL direto: {direct_url}[/green]")
             return self._parse_function_page(direct_url)
         
         # Se não encontrou URL direto, usar busca dinâmica
@@ -60,7 +63,8 @@ class Win32APIScraper:
         if not search_results:
             raise Exception(f"Função {function_name} não encontrada na documentação Microsoft")
         
-        console.print(f"[green]Encontrados {len(search_results)} resultado(s). Usando: {search_results[0]}[/green]")
+        if not self.quiet:
+            console.print(f"[green]Encontrados {len(search_results)} resultado(s). Usando: {search_results[0]}[/green]")
         
         return self._parse_function_page(search_results[0])
     
@@ -161,7 +165,8 @@ class Win32APIScraper:
         """
         Parseia a página de documentação de uma função específica usando extração dinâmica
         """
-        console.print(f"[blue]Analisando página: {url}[/blue]")
+        if not self.quiet:
+            console.print(f"[blue]Analisando página: {url}[/blue]")
         
         try:
             response = self.session.get(url, timeout=15)
@@ -693,8 +698,9 @@ def main():
     args = parser.parse_args()
     
     try:
-        scraper = Win32APIScraper(language=args.language)
-        console.print(f"[yellow]Fazendo scraping da função: {args.function_name} (idioma: {args.language})[/yellow]")
+        scraper = Win32APIScraper(language=args.language, quiet=(args.output == 'json'))
+        if args.output != 'json':
+            console.print(f"[yellow]Fazendo scraping da função: {args.function_name} (idioma: {args.language})[/yellow]")
         
         function_info = scraper.scrape_function(args.function_name)
         

@@ -9,6 +9,7 @@ import requests
 from bs4 import BeautifulSoup
 import sys
 import os
+import pytest
 
 # Adiciona o diretório pai ao path para importar o módulo
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -162,6 +163,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         """Configuração para testes de integração"""
         self.scraper = Win32APIScraper()
 
+    @pytest.mark.integration
     @patch('win32_scraper.requests.Session.get')
     def test_search_function_success(self, mock_get):
         """Testa busca de função com sucesso"""
@@ -181,6 +183,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         self.assertGreater(len(results), 0)
         self.assertIn("microsoft.com", results[0])
 
+    @pytest.mark.integration
     @patch('win32_scraper.requests.Session.get')
     def test_search_function_no_results(self, mock_get):
         """Testa busca sem resultados"""
@@ -192,6 +195,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         results = self.scraper._search_function("NonExistentFunction")
         self.assertEqual(len(results), 0)
 
+    @pytest.mark.integration
     @patch('win32_scraper.requests.Session.get')
     def test_search_function_network_error(self, mock_get):
         """Testa tratamento de erro de rede"""
@@ -201,6 +205,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         # Deve retornar pelo menos uma URL de fallback
         self.assertGreater(len(results), 0)
 
+    @pytest.mark.integration
     @patch('win32_scraper.Win32APIScraper._parse_function_page')
     def test_scrape_function_with_direct_url(self, mock_parse):
         """Testa scraping com URL direto"""
@@ -214,6 +219,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         self.assertEqual(result['name'], 'CreateProcessW')
         mock_parse.assert_called_once()
 
+    @pytest.mark.integration
     @patch('win32_scraper.Win32APIScraper._search_function')
     @patch('win32_scraper.Win32APIScraper._parse_function_page')
     def test_scrape_function_with_search(self, mock_parse, mock_search):
@@ -229,6 +235,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         self.assertEqual(result['name'], 'TestFunction')
         mock_search.assert_called_once_with("UnknownFunction")
 
+    @pytest.mark.integration
     @patch('win32_scraper.Win32APIScraper._search_function')
     def test_scrape_function_not_found(self, mock_search):
         """Testa função não encontrada"""
@@ -239,6 +246,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         
         self.assertIn("não encontrada", str(context.exception))
 
+    @pytest.mark.integration
     @patch('win32_scraper.requests.Session.get')
     def test_parse_function_page_success(self, mock_get):
         """Testa parsing de página com sucesso"""
@@ -261,6 +269,7 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         self.assertIn('dll', result)
         self.assertIn('signature', result)
 
+    @pytest.mark.integration
     @patch('win32_scraper.requests.Session.get')
     def test_parse_function_page_network_error(self, mock_get):
         """Testa erro de rede no parsing"""

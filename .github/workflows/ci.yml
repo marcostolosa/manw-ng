@@ -129,7 +129,7 @@ jobs:
         safety check || true
 
     - name: 📊 Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -168,7 +168,7 @@ jobs:
         flake8 . --exit-zero --format=html --htmldir=flake8-report --statistics
       
     - name: 📊 Upload code quality reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: code-quality-reports
         path: flake8-report/
