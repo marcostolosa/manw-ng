@@ -71,7 +71,7 @@ class TestCLI(unittest.TestCase):
             pass
         
         # Verifica se o scraper foi inicializado com o idioma correto
-        mock_scraper_class.assert_called_once_with(language='br')
+        mock_scraper_class.assert_called_once_with(language='br', quiet=False)
 
     @patch('win32_scraper.Win32APIScraper.scrape_function')
     @patch('sys.argv', ['win32_scraper.py', 'InvalidFunction'])
