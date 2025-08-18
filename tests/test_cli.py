@@ -58,6 +58,21 @@ class TestCLI(unittest.TestCase):
         except json.JSONDecodeError:
             self.fail("Output is not valid JSON")
 
+    @patch('win32_scraper.Win32APIScraper')
+    @patch('sys.argv', ['win32_scraper.py', 'CreateProcessW', '-l', 'br'])
+    def test_main_language_parameter(self, mock_scraper_class):
+        """Testa parâmetro de idioma"""
+        mock_instance = mock_scraper_class.return_value
+        mock_instance.scrape_function.return_value = {'name': 'CreateProcessW'}
+        
+        try:
+            main()
+        except SystemExit:
+            pass
+        
+        # Verifica se o scraper foi inicializado com o idioma correto
+        mock_scraper_class.assert_called_once_with(language='br')
+
     @patch('win32_scraper.Win32APIScraper.scrape_function')
     @patch('sys.argv', ['win32_scraper.py', 'InvalidFunction'])
     def test_main_function_not_found(self, mock_scrape):
@@ -85,11 +100,19 @@ class TestCLI(unittest.TestCase):
         # Simula parser (seria necessário extrair do main)
         parser = argparse.ArgumentParser()
         parser.add_argument("function_name")
+        parser.add_argument("-l", "--language", choices=["br", "us"], default="us")
         parser.add_argument("--output", choices=["rich", "json", "markdown"], default="rich")
         
         # Testa argumentos válidos
         args = parser.parse_args(['CreateProcessW', '--output', 'json'])
         self.assertEqual(args.function_name, 'CreateProcessW')
+        
+        # Testa argumento de idioma
+        args_br = parser.parse_args(['CreateProcessW', '-l', 'br'])
+        self.assertEqual(args_br.language, 'br')
+        
+        args_us = parser.parse_args(['CreateProcessW', '--language', 'us'])
+        self.assertEqual(args_us.language, 'us')
         self.assertEqual(args.output, 'json')
         
         # Testa argumentos padrão

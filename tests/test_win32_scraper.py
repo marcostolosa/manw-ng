@@ -60,15 +60,28 @@ class TestWin32APIScraper(unittest.TestCase):
 
     def test_init(self):
         """Testa a inicialização da classe"""
-        self.assertEqual(self.scraper.base_url, "https://learn.microsoft.com")
+        # Testa inicialização padrão (inglês)
+        self.assertEqual(self.scraper.base_url, "https://learn.microsoft.com/en-us")
+        self.assertEqual(self.scraper.language, "us")
         self.assertIsNotNone(self.scraper.session)
         self.assertIn('User-Agent', self.scraper.session.headers)
+        
+        # Testa inicialização com português
+        scraper_br = Win32APIScraper(language='br')
+        self.assertEqual(scraper_br.base_url, "https://learn.microsoft.com/pt-br")
+        self.assertEqual(scraper_br.language, "br")
 
     def test_try_direct_url_known_function(self):
         """Testa URL direto para função conhecida"""
         url = self.scraper._try_direct_url("CreateProcessW")
         expected = "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
         self.assertEqual(url, expected)
+        
+        # Testa com português
+        scraper_br = Win32APIScraper(language='br')
+        url_br = scraper_br._try_direct_url("CreateProcessW")
+        expected_br = "https://learn.microsoft.com/pt-br/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
+        self.assertEqual(url_br, expected_br)
 
     def test_try_direct_url_unknown_function(self):
         """Testa URL direto para função desconhecida"""
