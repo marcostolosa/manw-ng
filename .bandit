@@ -1,0 +1,20 @@
+[bandit]
+# Configuração do Bandit para análise de segurança
+
+# Diretórios a serem incluídos
+include = .
+
+# Diretórios a serem excluídos
+exclude_dirs = /tests
+
+# Testes a serem ignorados (se necessário)
+# skips = B101,B601
+
+# Nível de confiança mínimo
+confidence = medium
+
+# Formato de relatório
+format = json
+
+# Arquivo de saída
+output = bandit-report.json

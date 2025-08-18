@@ -1,4 +1,335 @@
+# 🔍 Win32 API Scraper - GitIgnore
+# =====================================
+
+# 🐍 Python
+# ---------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 🧪 Testing & Coverage
+# ---------------------
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+pytest-debug.log
+test-results.xml
+.cache
+
+# 📊 Code Quality Reports
+# -----------------------
+flake8-report/
+bandit-report.json
+safety-report.json
+mypy-report.txt
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# 🔧 Development Tools
+# -------------------
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 📝 Logs & Temp Files
+# --------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# 🌐 Web Scraped Data (Cache)
+# ---------------------------
+scraped_data/
+cache/
+temp/
+tmp/
+*.tmp
+*.temp
+
+# 📦 Package Managers
+# ------------------
+node_modules/
+.npm
+.yarn-integrity
+package-lock.json
+yarn.lock
+
+# 🔒 Security & Credentials
+# -------------------------
+.env
+.env.*
+!.env.example
+secrets/
+credentials/
+*.pem
+*.key
+*.cert
+config.ini
+settings.local.py
+
+# 📊 Analytics & Reports
+# ----------------------
+reports/
+benchmarks/
+performance/
+.benchmarks/
+
+# 🖥️ OS Specific
+# --------------
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# 🔧 Development Environment
+# --------------------------
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+.ENV/
+.env/
+pyvenv.cfg
+
+# 📚 Documentation Build
+# ----------------------
+docs/_build/
+site/
+_site/
+.jekyll-cache/
+.sass-cache/
+
+# 🎯 IDE & Editor
+# ---------------
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/
+.ionide/
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+.*.swp
+.*.swo
+Session.vim
+.netrwhist
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# 🚀 Deployment & CI/CD
+# ---------------------
+.github/secrets/
+.circleci/
+.travis.yml
+.appveyor.yml
+docker-compose.override.yml
+.dockerignore
+Dockerfile.dev
+kubernetes/
+helm/
+
+# 📦 Build Artifacts
+# ------------------
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.obj
+*.o
+*.pyc
+*.pyo
+*.pyd
+*.whl
+
+# 🔄 Version Control
+# ------------------
+.git/
+.svn/
+.hg/
+.bzr/
+CVS/
+
+# 📊 Monitoring & Analytics
+# -------------------------
+.nyc_output/
+coverage/
+.lcov
+*.lcov
+
+# 🌐 Web Development (se aplicável)
+# ---------------------------------
+.next/
+out/
+.nuxt/
+.vuepress/dist/
+.serverless/
+.fusebox/
+.dynamodb/
+
+# 📊 Data Files (Large)
+# ---------------------
+*.csv
+*.json.gz
+*.xlsx
+*.db
+*.sqlite
+*.sqlite3
+
+# 🔧 Configuration Files (Local)
+# ------------------------------
+config.local.json
+settings.local.json
+.env.local
+local_settings.py
+
+# 🧪 Test Output Files
+# --------------------
+test_output.json
+test_output.xml
+output/
+results/
+
+# 📈 Performance & Profiling
+# --------------------------
+*.prof
+*.profile
+.prof/
+profiling/
+
+# 🎯 Specific to this project
+# ---------------------------
+# Scraped API documentation cache
+api_cache/
+function_cache/
+microsoft_docs_cache/
+
+# Generated badges and reports
+docs-badge.md
+test-results.md
+
+# Development database/cache
+dev.db
+cache.db
+
+# Temporary scraping results
+scraped_*.json
+temp_*.html
+
+# 🤖 Claude AI artifacts  
+# -----------------------
 .claude
 *.claude
-.pytest_cache
-*.pytest_cache
+
+# === IMPORTANT FILES TO KEEP ===
+# ===============================
+# These files SHOULD be in version control:
+# - README.md
+# - requirements.txt
+# - requirements-dev.txt
+# - win32_scraper.py
+# - main.py
+# - tests/
+# - .github/workflows/
+# - pytest.ini
+# - conftest.py
+# - setup.cfg
+# - Makefile
+# - scripts/
+# - .gitignore (this file)

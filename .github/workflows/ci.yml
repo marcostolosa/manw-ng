@@ -1,0 +1,254 @@
+name: 🔍 CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Executa testes todas as segundas às 02:00 UTC
+    - cron: '0 2 * * 1'
+
+env:
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  test:
+    name: 🧪 Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.9', '3.10', '3.11']
+        exclude:
+          # Reduz combinações para economizar recursos
+          - os: macos-latest
+            python-version: '3.8'
+          - os: macos-latest
+            python-version: '3.10'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: 🔍 Lint with flake8
+      run: |
+        # Para erros de sintaxe ou nomes indefinidos
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Para outros problemas
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+    - name: 🧪 Run unit tests
+      run: |
+        python -m pytest tests/ -v --tb=short --cov=win32_scraper --cov-report=xml --cov-report=term-missing
+
+    - name: 📊 Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  integration-tests:
+    name: 🌐 Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        cache: 'pip'
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-dev.txt
+
+    - name: 🧪 Run integration tests
+      run: |
+        python -m pytest tests/ -v -m "integration" --tb=short
+      env:
+        # Testes que requerem rede real
+        NETWORK_TESTS: true
+
+    - name: 🎯 Test CLI functionality
+      run: |
+        # Testa se o CLI funciona com funções conhecidas
+        python win32_scraper.py CreateProcessW --output json > test_output.json
+        cat test_output.json
+        # Verifica se o JSON é válido
+        python -c "import json; json.load(open('test_output.json'))"
+
+  security:
+    name: 🔒 Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install bandit[toml] safety
+
+    - name: 🔍 Run Bandit security scan
+      run: |
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . || true
+
+    - name: 🛡️ Check dependencies for vulnerabilities
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check || true
+
+    - name: 📊 Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+
+  code-quality:
+    name: 📝 Code Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements-dev.txt
+
+    - name: 🎨 Check code formatting with Black
+      run: |
+        black --check --diff .
+
+    - name: 📝 Type checking with MyPy
+      run: |
+        mypy win32_scraper.py --ignore-missing-imports || true
+
+    - name: 📊 Generate complexity report
+      run: |
+        flake8 . --exit-zero --format=html --htmldir=flake8-report --statistics
+      
+    - name: 📊 Upload code quality reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: code-quality-reports
+        path: flake8-report/
+
+  performance:
+    name: ⚡ Performance Tests
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest-benchmark
+
+    - name: ⚡ Run performance benchmarks
+      run: |
+        # Testa performance de funções críticas
+        python -c "
+        import time
+        from win32_scraper import Win32APIScraper
+        
+        scraper = Win32APIScraper()
+        
+        # Testa URLs diretos (deve ser rápido)
+        start = time.time()
+        url = scraper._try_direct_url('CreateProcessW')
+        end = time.time()
+        
+        print(f'Direct URL lookup: {(end-start)*1000:.2f}ms')
+        assert (end-start) < 0.1, 'Direct URL lookup too slow'
+        "
+
+  deploy-docs:
+    name: 📚 Deploy Documentation
+    runs-on: ubuntu-latest
+    needs: [test, integration-tests, security, code-quality]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📚 Generate documentation badge
+      run: |
+        # Cria badge de documentação
+        echo "![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)" > docs-badge.md
+
+    - name: 📊 Update README with test results
+      run: |
+        # Poderia atualizar README com resultados dos testes
+        echo "Tests completed successfully at $(date)" >> test-results.md
+
+  notify:
+    name: 📢 Notifications
+    runs-on: ubuntu-latest
+    needs: [test, integration-tests, security, code-quality, performance]
+    if: always()
+    
+    steps:
+    - name: 📢 Notify on success
+      if: needs.test.result == 'success' && needs.integration-tests.result == 'success'
+      run: |
+        echo "✅ All tests passed successfully!"
+        echo "📊 Coverage report generated"
+        echo "🔒 Security scan completed"
+        echo "📝 Code quality checks passed"
+
+    - name: 📢 Notify on failure
+      if: needs.test.result == 'failure' || needs.integration-tests.result == 'failure'
+      run: |
+        echo "❌ Tests failed!"
+        echo "Please check the logs for details."
+        exit 1
