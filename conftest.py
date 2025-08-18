@@ -51,41 +51,33 @@ def sample_html():
 def sample_function_info():
     """Informações de exemplo de uma função"""
     return {
-        'name': 'CreateProcessW',
-        'dll': 'Kernel32.dll',
-        'calling_convention': '__stdcall',
-        'parameters': [
+        "name": "CreateProcessW",
+        "dll": "Kernel32.dll",
+        "calling_convention": "__stdcall",
+        "parameters": [
             {
-                'name': 'lpApplicationName',
-                'type': 'LPCWSTR',
-                'description': 'The name of the module to be executed.'
+                "name": "lpApplicationName",
+                "type": "LPCWSTR",
+                "description": "The name of the module to be executed.",
             },
             {
-                'name': 'lpCommandLine',
-                'type': 'LPWSTR',
-                'description': 'The command line to be executed.'
-            }
+                "name": "lpCommandLine",
+                "type": "LPWSTR",
+                "description": "The command line to be executed.",
+            },
         ],
-        'parameter_count': 2,
-        'architectures': ['x86', 'x64'],
-        'signature': 'BOOL CreateProcessW(...);',
-        'return_type': 'BOOL',
-        'return_description': 'If the function succeeds, the return value is nonzero.',
-        'description': 'Creates a new process and its primary thread.'
+        "parameter_count": 2,
+        "architectures": ["x86", "x64"],
+        "signature": "BOOL CreateProcessW(...);",
+        "return_type": "BOOL",
+        "return_description": "If the function succeeds, the return value is nonzero.",
+        "description": "Creates a new process and its primary thread.",
     }
 
 
 def pytest_configure(config):
     """Configuração do pytest"""
-    config.addinivalue_line(
-        "markers", "unit: mark test as unit test"
-    )
-    config.addinivalue_line(
-        "markers", "integration: mark test as integration test"
-    )
-    config.addinivalue_line(
-        "markers", "slow: mark test as slow running"
-    )
-    config.addinivalue_line(
-        "markers", "network: mark test as requiring network"
-    )
+    config.addinivalue_line("markers", "unit: mark test as unit test")
+    config.addinivalue_line("markers", "integration: mark test as integration test")
+    config.addinivalue_line("markers", "slow: mark test as slow running")
+    config.addinivalue_line("markers", "network: mark test as requiring network")

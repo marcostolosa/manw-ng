@@ -19,11 +19,11 @@ from win32_scraper import Win32APIScraper
 
 class TestWin32APIScraper(unittest.TestCase):
     """Testes para a classe Win32APIScraper"""
-    
+
     def setUp(self):
         """Configuração executada antes de cada teste"""
         self.scraper = Win32APIScraper()
-        
+
         # HTML de exemplo para testes
         self.sample_html = """
         <html>
@@ -56,8 +56,8 @@ class TestWin32APIScraper(unittest.TestCase):
             </body>
         </html>
         """
-        
-        self.soup = BeautifulSoup(self.sample_html, 'html.parser')
+
+        self.soup = BeautifulSoup(self.sample_html, "html.parser")
 
     def test_init(self):
         """Testa a inicialização da classe"""
@@ -65,10 +65,10 @@ class TestWin32APIScraper(unittest.TestCase):
         self.assertEqual(self.scraper.base_url, "https://learn.microsoft.com/en-us")
         self.assertEqual(self.scraper.language, "us")
         self.assertIsNotNone(self.scraper.session)
-        self.assertIn('User-Agent', self.scraper.session.headers)
-        
+        self.assertIn("User-Agent", self.scraper.session.headers)
+
         # Testa inicialização com português
-        scraper_br = Win32APIScraper(language='br')
+        scraper_br = Win32APIScraper(language="br")
         self.assertEqual(scraper_br.base_url, "https://learn.microsoft.com/pt-br")
         self.assertEqual(scraper_br.language, "br")
 
@@ -77,9 +77,9 @@ class TestWin32APIScraper(unittest.TestCase):
         url = self.scraper._try_direct_url("CreateProcessW")
         expected = "https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
         self.assertEqual(url, expected)
-        
+
         # Testa com português
-        scraper_br = Win32APIScraper(language='br')
+        scraper_br = Win32APIScraper(language="br")
         url_br = scraper_br._try_direct_url("CreateProcessW")
         expected_br = "https://learn.microsoft.com/pt-br/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
         self.assertEqual(url_br, expected_br)
@@ -92,9 +92,9 @@ class TestWin32APIScraper(unittest.TestCase):
     def test_try_direct_url_case_insensitive(self):
         """Testa se a busca é case-insensitive"""
         url1 = self.scraper._try_direct_url("createprocessw")
-        url2 = self.scraper._try_direct_url("CREATEPROCESSW") 
+        url2 = self.scraper._try_direct_url("CREATEPROCESSW")
         url3 = self.scraper._try_direct_url("CreateProcessW")
-        
+
         self.assertEqual(url1, url2)
         self.assertEqual(url2, url3)
 
@@ -111,7 +111,7 @@ class TestWin32APIScraper(unittest.TestCase):
 
     def test_extract_dll_fallback(self):
         """Testa fallback da DLL quando não encontrada"""
-        empty_soup = BeautifulSoup("<html></html>", 'html.parser')
+        empty_soup = BeautifulSoup("<html></html>", "html.parser")
         dll = self.scraper._extract_dll(empty_soup)
         self.assertEqual(dll, "kernel32.dll")  # Padrão
 
@@ -125,19 +125,26 @@ class TestWin32APIScraper(unittest.TestCase):
         """Testa extração de parâmetros"""
         parameters = self.scraper._extract_parameters(self.soup)
         self.assertGreater(len(parameters), 0)
-        
+
         # Verifica se encontrou os parâmetros do exemplo
-        param_names = [p['name'] for p in parameters]
-        self.assertIn('lpApplicationName', param_names)
-        self.assertIn('lpCommandLine', param_names)
+        param_names = [p["name"] for p in parameters]
+        self.assertIn("lpApplicationName", param_names)
+        self.assertIn("lpCommandLine", param_names)
 
     def test_extract_type_from_text(self):
         """Testa extração de tipo de dados"""
         # Testa tipos Win32 comuns
         self.assertEqual(self.scraper._extract_type_from_text("BOOL value"), "BOOL")
-        self.assertEqual(self.scraper._extract_type_from_text("LPCWSTR string"), "LPCWSTR")
-        self.assertEqual(self.scraper._extract_type_from_text("LPPROCESS_INFORMATION info"), "LPPROCESS_INFORMATION")
-        self.assertEqual(self.scraper._extract_type_from_text("unknown type"), "UNKNOWN")
+        self.assertEqual(
+            self.scraper._extract_type_from_text("LPCWSTR string"), "LPCWSTR"
+        )
+        self.assertEqual(
+            self.scraper._extract_type_from_text("LPPROCESS_INFORMATION info"),
+            "LPPROCESS_INFORMATION",
+        )
+        self.assertEqual(
+            self.scraper._extract_type_from_text("unknown type"), "UNKNOWN"
+        )
 
     def test_extract_return_info(self):
         """Testa extração de informações de retorno"""
@@ -148,7 +155,7 @@ class TestWin32APIScraper(unittest.TestCase):
     def test_extract_architectures_default(self):
         """Testa extração de arquiteturas (padrão)"""
         architectures = self.scraper._extract_architectures(self.soup)
-        self.assertEqual(architectures, ['x86', 'x64'])
+        self.assertEqual(architectures, ["x86", "x64"])
 
     def test_extract_description(self):
         """Testa extração da descrição"""
@@ -158,13 +165,13 @@ class TestWin32APIScraper(unittest.TestCase):
 
 class TestWin32APIScraperIntegration(unittest.TestCase):
     """Testes de integração com mocks"""
-    
+
     def setUp(self):
         """Configuração para testes de integração"""
         self.scraper = Win32APIScraper()
 
     @pytest.mark.integration
-    @patch('win32_scraper.requests.Session.get')
+    @patch("win32_scraper.requests.Session.get")
     def test_search_function_success(self, mock_get):
         """Testa busca de função com sucesso"""
         # Mock da resposta da busca
@@ -178,76 +185,76 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
         </html>
         """
         mock_get.return_value = mock_response
-        
+
         results = self.scraper._search_function("TestFunction")
         self.assertGreater(len(results), 0)
         self.assertIn("microsoft.com", results[0])
 
     @pytest.mark.integration
-    @patch('win32_scraper.requests.Session.get')
+    @patch("win32_scraper.requests.Session.get")
     def test_search_function_no_results(self, mock_get):
         """Testa busca sem resultados"""
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.content = b"<html><body></body></html>"
         mock_get.return_value = mock_response
-        
+
         results = self.scraper._search_function("NonExistentFunction")
         self.assertEqual(len(results), 0)
 
     @pytest.mark.integration
-    @patch('win32_scraper.requests.Session.get')
+    @patch("win32_scraper.requests.Session.get")
     def test_search_function_network_error(self, mock_get):
         """Testa tratamento de erro de rede"""
         mock_get.side_effect = requests.exceptions.RequestException("Network error")
-        
+
         results = self.scraper._search_function("TestFunction")
         # Deve retornar pelo menos uma URL de fallback
         self.assertGreater(len(results), 0)
 
     @pytest.mark.integration
-    @patch('win32_scraper.Win32APIScraper._parse_function_page')
+    @patch("win32_scraper.Win32APIScraper._parse_function_page")
     def test_scrape_function_with_direct_url(self, mock_parse):
         """Testa scraping com URL direto"""
         mock_parse.return_value = {
-            'name': 'CreateProcessW',
-            'dll': 'Kernel32.dll',
-            'parameters': []
+            "name": "CreateProcessW",
+            "dll": "Kernel32.dll",
+            "parameters": [],
         }
-        
+
         result = self.scraper.scrape_function("CreateProcessW")
-        self.assertEqual(result['name'], 'CreateProcessW')
+        self.assertEqual(result["name"], "CreateProcessW")
         mock_parse.assert_called_once()
 
     @pytest.mark.integration
-    @patch('win32_scraper.Win32APIScraper._search_function')
-    @patch('win32_scraper.Win32APIScraper._parse_function_page')
+    @patch("win32_scraper.Win32APIScraper._search_function")
+    @patch("win32_scraper.Win32APIScraper._parse_function_page")
     def test_scrape_function_with_search(self, mock_parse, mock_search):
         """Testa scraping com busca dinâmica"""
-        mock_search.return_value = ['http://example.com/test']
+        mock_search.return_value = ["http://example.com/test"]
         mock_parse.return_value = {
-            'name': 'TestFunction',
-            'dll': 'test.dll',
-            'parameters': []
+            "name": "TestFunction",
+            "dll": "test.dll",
+            "parameters": [],
         }
-        
+
         result = self.scraper.scrape_function("UnknownFunction")
-        self.assertEqual(result['name'], 'TestFunction')
+        self.assertEqual(result["name"], "TestFunction")
         mock_search.assert_called_once_with("UnknownFunction")
 
     @pytest.mark.integration
-    @patch('win32_scraper.Win32APIScraper._search_function')
+    @patch("win32_scraper.Win32APIScraper._search_function")
     def test_scrape_function_not_found(self, mock_search):
         """Testa função não encontrada"""
         mock_search.return_value = []
-        
+
         with self.assertRaises(Exception) as context:
             self.scraper.scrape_function("NonExistentFunction")
-        
+
         self.assertIn("não encontrada", str(context.exception))
 
     @pytest.mark.integration
-    @patch('win32_scraper.requests.Session.get')
+    @patch("win32_scraper.requests.Session.get")
     def test_parse_function_page_success(self, mock_get):
         """Testa parsing de página com sucesso"""
         mock_response = Mock()
@@ -261,53 +268,63 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
                 <p>DLL: test.dll</p>
             </body>
         </html>
-        """.encode('utf-8')
+        """.encode(
+            "utf-8"
+        )
         mock_get.return_value = mock_response
-        
+
         result = self.scraper._parse_function_page("http://example.com/test")
-        self.assertIn('name', result)
-        self.assertIn('dll', result)
-        self.assertIn('signature', result)
+        self.assertIn("name", result)
+        self.assertIn("dll", result)
+        self.assertIn("signature", result)
 
     @pytest.mark.integration
-    @patch('win32_scraper.requests.Session.get')
+    @patch("win32_scraper.requests.Session.get")
     def test_parse_function_page_network_error(self, mock_get):
         """Testa erro de rede no parsing"""
         mock_get.side_effect = requests.exceptions.RequestException("Network error")
-        
+
         with self.assertRaises(Exception) as context:
             self.scraper._parse_function_page("http://example.com/test")
-        
+
         self.assertIn("Erro ao acessar página", str(context.exception))
 
 
 class TestWin32APIScraperFormats(unittest.TestCase):
     """Testes para formatos de saída"""
-    
+
     def setUp(self):
         """Configuração para testes de formato"""
         self.scraper = Win32APIScraper()
         self.sample_function_info = {
-            'name': 'CreateProcessW',
-            'dll': 'Kernel32.dll',
-            'calling_convention': '__stdcall',
-            'parameters': [
-                {'name': 'lpApplicationName', 'type': 'LPCWSTR', 'description': 'Application name'},
-                {'name': 'lpCommandLine', 'type': 'LPWSTR', 'description': 'Command line'}
+            "name": "CreateProcessW",
+            "dll": "Kernel32.dll",
+            "calling_convention": "__stdcall",
+            "parameters": [
+                {
+                    "name": "lpApplicationName",
+                    "type": "LPCWSTR",
+                    "description": "Application name",
+                },
+                {
+                    "name": "lpCommandLine",
+                    "type": "LPWSTR",
+                    "description": "Command line",
+                },
             ],
-            'parameter_count': 2,
-            'architectures': ['x86', 'x64'],
-            'signature': 'BOOL CreateProcessW(...);',
-            'return_type': 'BOOL',
-            'return_description': 'Nonzero if successful',
-            'description': 'Creates a new process'
+            "parameter_count": 2,
+            "architectures": ["x86", "x64"],
+            "signature": "BOOL CreateProcessW(...);",
+            "return_type": "BOOL",
+            "return_description": "Nonzero if successful",
+            "description": "Creates a new process",
         }
 
-    @patch('win32_scraper.console')
+    @patch("win32_scraper.console")
     def test_format_output_rich(self, mock_console):
         """Testa formatação Rich"""
         self.scraper.format_output(self.sample_function_info)
-        
+
         # Verifica se console.print foi chamado
         self.assertTrue(mock_console.print.called)
         self.assertGreater(mock_console.print.call_count, 1)
@@ -315,22 +332,29 @@ class TestWin32APIScraperFormats(unittest.TestCase):
     def test_function_info_structure(self):
         """Testa estrutura das informações da função"""
         required_keys = [
-            'name', 'dll', 'calling_convention', 'parameters',
-            'parameter_count', 'architectures', 'signature',
-            'return_type', 'return_description', 'description'
+            "name",
+            "dll",
+            "calling_convention",
+            "parameters",
+            "parameter_count",
+            "architectures",
+            "signature",
+            "return_type",
+            "return_description",
+            "description",
         ]
-        
+
         for key in required_keys:
             self.assertIn(key, self.sample_function_info)
 
     def test_parameters_structure(self):
         """Testa estrutura dos parâmetros"""
-        for param in self.sample_function_info['parameters']:
-            self.assertIn('name', param)
-            self.assertIn('type', param) 
-            self.assertIn('description', param)
+        for param in self.sample_function_info["parameters"]:
+            self.assertIn("name", param)
+            self.assertIn("type", param)
+            self.assertIn("description", param)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # Configuração para executar os testes
     unittest.main(verbosity=2)
