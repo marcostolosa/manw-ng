@@ -118,7 +118,11 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller
+        pip install pyinstaller==6.2.0
+        echo "Python version:"
+        python --version
+        echo "PyInstaller version:"
+        pyinstaller --version
 
     - name: 🧪 Run tests
       run: |
@@ -127,26 +131,20 @@ jobs:
 
     - name: 🔨 Build Windows ${{ matrix.arch }} executable
       run: |
-        pyinstaller --onefile --noupx --clean --strip --console ^
-          --name ${{ matrix.artifact-name }} ^
-          --add-data "manw_ng;manw_ng" ^
-          --hidden-import=requests --hidden-import=requests.adapters ^
-          --hidden-import=requests.packages --hidden-import=requests.packages.urllib3 ^
-          --hidden-import=requests.packages.urllib3.util --hidden-import=requests.packages.urllib3.util.retry ^
-          --hidden-import=bs4 --hidden-import=bs4.builder --hidden-import=bs4.builder._lxml ^
-          --hidden-import=lxml --hidden-import=lxml.etree --hidden-import=lxml._elementpath ^
-          --hidden-import=rich --hidden-import=rich.console --hidden-import=rich.text ^
-          --hidden-import=rich.markdown --hidden-import=rich.panel --hidden-import=rich.table ^
-          --hidden-import=urllib3 --hidden-import=urllib3.util --hidden-import=urllib3.util.retry ^
-          --hidden-import=urllib3.poolmanager --hidden-import=urllib3.connection ^
-          --hidden-import=certifi --hidden-import=charset_normalizer --hidden-import=idna ^
-          --hidden-import=email --hidden-import=email.mime --hidden-import=email.mime.multipart ^
-          --collect-all=certifi --collect-all=charset_normalizer ^
-          --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy ^
-          --exclude-module=pandas --exclude-module=PIL --exclude-module=PyQt5 ^
-          --exclude-module=PyQt6 --exclude-module=PySide2 --exclude-module=PySide6 ^
-          --exclude-module=scipy --exclude-module=IPython --exclude-module=jupyter ^
-          --distpath=dist --workpath=build/${{ matrix.arch }} manw-ng.py
+        echo "Building Windows executable with PyInstaller..."
+        pyinstaller --version
+        
+        REM Create a simple spec file approach
+        pyinstaller --onefile --console --name ${{ matrix.artifact-name }} manw-ng.py
+        
+        REM Check if build succeeded
+        if exist "dist\${{ matrix.artifact-name }}" (
+          echo "Build successful!"
+          dir dist
+        ) else (
+          echo "Build failed - executable not found"
+          exit /b 1
+        )
       shell: cmd
 
     - name: ✅ Test executable
@@ -231,28 +229,28 @@ jobs:
 
     - name: 🔨 Build Linux ${{ matrix.arch }} executable
       run: |
+        echo "Building Linux executable with PyInstaller..."
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller staticx patchelf
+        pip install pyinstaller==6.2.0
+        echo "Python version:"
+        python --version
+        echo "PyInstaller version:"
+        pyinstaller --version
         
-        # Build with PyInstaller
-        pyinstaller --onefile --strip --name ${{ matrix.artifact-name }}-temp \
-          --add-data "manw_ng:manw_ng" \
-          --hidden-import=requests --hidden-import=requests.adapters \
-          --hidden-import=requests.packages --hidden-import=requests.packages.urllib3 \
-          --hidden-import=bs4 --hidden-import=bs4.builder --hidden-import=lxml \
-          --hidden-import=rich --hidden-import=rich.console --hidden-import=rich.markdown \
-          --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
-          --collect-all=certifi --collect-all=charset_normalizer \
-          --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
-          --exclude-module=pandas --exclude-module=PIL --exclude-module=PyQt5 \
-          --distpath=dist --workpath=build/${{ matrix.arch }} manw-ng.py
+        # Build with PyInstaller - simplified approach
+        pyinstaller --version
+        pyinstaller --onefile --console --name ${{ matrix.artifact-name }} manw-ng.py
         
-        # Make it truly static with staticx (bundles all dependencies)
-        cd dist
-        staticx ${{ matrix.artifact-name }}-temp ${{ matrix.artifact-name }}
-        rm ${{ matrix.artifact-name }}-temp
-        chmod +x ${{ matrix.artifact-name }}
+        # Check if build succeeded
+        if [ -f "dist/${{ matrix.artifact-name }}" ]; then
+          echo "Build successful!"
+          ls -la dist/
+          chmod +x dist/${{ matrix.artifact-name }}
+        else
+          echo "Build failed - executable not found"
+          exit 1
+        fi
 
     - name: 📊 Get file info and verify static build
       run: |
