@@ -134,7 +134,37 @@ class Win32PageParser:
                 if next_elem.name in ["h1", "h2", "h3", "h4"]:
                     break
 
-                if next_elem.name == "dt":
+                # New format: <p><code>[in] paramName</code></p>
+                if next_elem.name == "p":
+                    code_elem = next_elem.find("code")
+                    if code_elem:
+                        # Save previous parameter if exists
+                        if current_param.get("name"):
+                            parameters.append(current_param)
+
+                        param_text = code_elem.get_text().strip()
+                        # Extract parameter name, removing brackets
+                        param_match = re.search(r"(\w+)$", param_text)
+                        if param_match:
+                            param_name = param_match.group(1)
+                            # Extract type from signature if available
+                            param_type = self._extract_param_type_from_signature(
+                                soup, param_name
+                            )
+                            current_param = {
+                                "name": param_name,
+                                "type": param_type,
+                                "description": "",
+                            }
+                    elif current_param.get("name") and next_elem.get_text().strip():
+                        # This paragraph contains the description
+                        desc_text = next_elem.get_text().strip()
+                        # Skip short texts or ones that look like parameter declarations
+                        if len(desc_text) > 20 and not re.match(r"^\[.*?\]", desc_text):
+                            current_param["description"] = desc_text
+
+                # Legacy format: <dt><dd>
+                elif next_elem.name == "dt":
                     if current_param.get("name"):
                         parameters.append(current_param)
 
@@ -147,17 +177,7 @@ class Win32PageParser:
                     }
 
                 elif next_elem.name == "dd" and current_param.get("name"):
-                    description_parts = []
-                    for elem in next_elem.find_all(string=True):
-                        text = elem.strip()
-                        if text:
-                            description_parts.append(text)
-
-                    direct_text = next_elem.get_text().strip()
-                    if direct_text and direct_text not in " ".join(description_parts):
-                        description_parts.append(direct_text)
-
-                    current_param["description"] = " ".join(description_parts)
+                    current_param["description"] = next_elem.get_text().strip()
 
                 next_elem = next_elem.find_next_sibling()
 
@@ -168,6 +188,19 @@ class Win32PageParser:
                 break
 
         return parameters
+
+    def _extract_param_type_from_signature(
+        self, soup: BeautifulSoup, param_name: str
+    ) -> str:
+        """Extract parameter type from function signature"""
+        signature = self._extract_signature(soup)
+        if signature and param_name:
+            # Look for pattern: TYPE paramName
+            pattern = rf"\s+(\w+)\s+{re.escape(param_name)}\b"
+            match = re.search(pattern, signature)
+            if match:
+                return match.group(1)
+        return self._extract_type_from_text(param_name)
 
     def _extract_type_from_text(self, text: str) -> str:
         """Extract Win32 data type from text"""
