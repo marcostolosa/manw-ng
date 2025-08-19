@@ -45,10 +45,6 @@ class Win32APIScraper:
         """
         Main function to scrape Win32 API documentation
         """
-        if not self.quiet:
-            self.console.print(
-                f"[cyan]Buscando documentação para: {function_name}[/cyan]"
-            )
 
         # Try direct URL first (fastest)
         direct_url = self._try_direct_url(function_name)
