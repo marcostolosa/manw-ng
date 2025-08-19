@@ -193,7 +193,7 @@ jobs:
           docker run --rm --platform=${{ matrix.docker-platform }} \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            six8/pyinstaller-alpine:alpine-3.18-py3.11 \
+            six8/pyinstaller-alpine:latest \
             sh -c "
               pip install -r requirements.txt && \
               pyinstaller --onefile --strip --name ${{ matrix.artifact-name }} \
@@ -207,7 +207,7 @@ jobs:
           docker run --rm --platform=linux/amd64 \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            six8/pyinstaller-alpine:alpine-3.18-py3.11 \
+            six8/pyinstaller-alpine:latest \
             sh -c "
               pip install -r requirements.txt && \
               pyinstaller --onefile --strip --name ${{ matrix.artifact-name }} \
