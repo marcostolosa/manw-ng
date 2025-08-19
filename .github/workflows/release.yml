@@ -198,7 +198,7 @@ jobs:
               apk add --no-cache python3 python3-dev py3-pip gcc musl-dev zlib-dev libxml2-dev libxslt-dev make g++ && \
               pip3 install --break-system-packages wheel setuptools && \
               pip3 install --break-system-packages -r requirements.txt && \
-              pip3 install --break-system-packages https://github.com/pyinstaller/pyinstaller/archive/develop.zip && \
+              pip3 install --break-system-packages 'pyinstaller>=6.0' && \
               python3 -m PyInstaller --onefile --strip --name ${{ matrix.artifact-name }} \
                 --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
                 --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
@@ -215,7 +215,7 @@ jobs:
               apk add --no-cache python3 python3-dev py3-pip gcc musl-dev zlib-dev libxml2-dev libxslt-dev make g++ && \
               pip3 install --break-system-packages wheel setuptools && \
               pip3 install --break-system-packages -r requirements.txt && \
-              pip3 install --break-system-packages https://github.com/pyinstaller/pyinstaller/archive/develop.zip && \
+              pip3 install --break-system-packages 'pyinstaller>=6.0' && \
               python3 -m PyInstaller --onefile --strip --name ${{ matrix.artifact-name }} \
                 --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
                 --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
@@ -224,17 +224,19 @@ jobs:
             "
         fi
 
-    - name: ✅ Test executable
-      run: |
-        cd dist
-        ./${{ matrix.artifact-name }} --help
-
     - name: 📊 Get file info
       run: |
         cd dist
         ls -la ${{ matrix.artifact-name }}
         file ${{ matrix.artifact-name }}
-        ldd ${{ matrix.artifact-name }} || echo "Statically linked or ldd not available"
+        readelf -h ${{ matrix.artifact-name }} 2>/dev/null || echo "readelf not available"
+        ldd ${{ matrix.artifact-name }} 2>/dev/null || echo "Statically linked or ldd not available"
+
+    - name: ✅ Test executable
+      run: |
+        cd dist
+        chmod +x ${{ matrix.artifact-name }}
+        ./${{ matrix.artifact-name }} --help
 
     - name: 📤 Upload Linux ${{ matrix.arch }} Binary  
       uses: softprops/action-gh-release@v1
