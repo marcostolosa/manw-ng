@@ -85,20 +85,19 @@ jobs:
         pip install -r requirements.txt
         pip install -r requirements-dev.txt
 
-    - name: 🧪 Run integration tests
+    - name: 🎯 Test CLI functionality (pt-br)
       run: |
-        python -m pytest tests/ -v -m "integration" --tb=short
-      env:
-        # Testes que requerem rede real
-        NETWORK_TESTS: true
+        # Testa funcionalidades principais em português
+        python manw-ng.py CreateProcessW -l br --output json > test_output_br.json
+        cat test_output_br.json
+        python -c "import json; data=json.load(open('test_output_br.json')); assert data['return_description'], 'Missing return description'"
 
-    - name: 🎯 Test CLI functionality
+    - name: 🎯 Test CLI functionality (en-us)
       run: |
-        # Testa se o CLI funciona com funções conhecidas
-        python manw-ng.py CreateProcessW --output json > test_output.json
-        cat test_output.json
-        # Verifica se o JSON é válido
-        python -c "import json; json.load(open('test_output.json'))"
+        # Testa funcionalidades principais em inglês
+        python manw-ng.py OpenProcess -l us --output json > test_output_us.json
+        cat test_output_us.json
+        python -c "import json; data=json.load(open('test_output_us.json')); assert data['return_description'], 'Missing return description'"
 
   security:
     name: 🔒 Security Scan

@@ -208,7 +208,7 @@ class Win32PageParser:
         return_headers = soup.find_all(
             ["h2", "h3", "h4"],
             string=re.compile(
-                r"Return\s+value|Valor\s+de\s+retorno|return\s+value", re.IGNORECASE
+                r"Return\s+value|Valor\s+de\s+retorno|Retornar\s+valor|Valor\s+retornado|return\s+value", re.IGNORECASE
             ),
         )
 
