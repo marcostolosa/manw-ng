@@ -189,32 +189,28 @@ jobs:
     - name: 🔨 Build Linux ${{ matrix.arch }} executable
       run: |
         if [ "${{ matrix.arch }}" == "x86" ]; then
-          # Para x86, usa Docker Alpine para build estático
+          # Para x86, usa imagem especializada com PyInstaller para musl
           docker run --rm --platform=${{ matrix.docker-platform }} \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            i386/alpine:latest \
+            six8/pyinstaller-alpine:alpine-3.18-py3.11 \
             sh -c "
-              apk add --no-cache python3 python3-dev py3-pip gcc musl-dev zlib-dev zlib-static libxml2-dev libxslt-dev && \
-              pip3 install --break-system-packages -r requirements.txt && \
-              pip3 install --break-system-packages pyinstaller && \
-              python3 -m PyInstaller --onefile --strip --name ${{ matrix.artifact-name }} \
+              pip install -r requirements.txt && \
+              pyinstaller --onefile --strip --name ${{ matrix.artifact-name }} \
                 --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
                 --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
                 --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
                 --distpath=dist --workpath=build/x86 win32_scraper.py
             "
         else
-          # Para x64, usa Alpine Linux para build completamente estático
+          # Para x64, usa imagem especializada com PyInstaller para musl
           docker run --rm --platform=linux/amd64 \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            alpine:latest \
+            six8/pyinstaller-alpine:alpine-3.18-py3.11 \
             sh -c "
-              apk add --no-cache python3 python3-dev py3-pip gcc musl-dev zlib-dev zlib-static libxml2-dev libxslt-dev && \
-              pip3 install --break-system-packages -r requirements.txt && \
-              pip3 install --break-system-packages pyinstaller && \
-              python3 -m PyInstaller --onefile --strip --name ${{ matrix.artifact-name }} \
+              pip install -r requirements.txt && \
+              pyinstaller --onefile --strip --name ${{ matrix.artifact-name }} \
                 --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
                 --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
                 --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
