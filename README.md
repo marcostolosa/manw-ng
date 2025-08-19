@@ -20,8 +20,8 @@ A **revolutionary tool** for reverse engineers and Windows developers to extract
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/win32-api-scraper.git
-cd win32-api-scraper
+git clone https://github.com/marcostolosa/manw-ng.git
+cd manw-ng
 
 # Install dependencies
 pip install -r requirements.txt
@@ -206,8 +206,8 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ### Development Setup
 ```bash
-git clone https://github.com/your-username/win32-api-scraper.git
-cd win32-api-scraper
+git clone https://github.com/marcostolosa/manw-ng.git
+cd manw-ng
 pip install -r requirements-dev.txt
 ```
 
@@ -231,8 +231,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If this tool helped you with your reverse engineering or development work, please consider giving it a star!
 
-## 🔗 Related Projects
+## 🔗 Related Projects and Inspirations
 
+- [manw](https://github.com/leandrofroes/manw) - Original manw tool from @leandrofroes
 - [API Monitor](https://github.com/rohitab/API-Monitor) - API monitoring and hooking
 - [Process Hacker](https://github.com/processhacker/processhacker) - System information tool
 - [x64dbg](https://github.com/x64dbg/x64dbg) - Windows debugger
