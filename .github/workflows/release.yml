@@ -116,7 +116,7 @@ jobs:
 
     - name: 🔨 Build Windows ${{ matrix.arch }} executable
       run: |
-        copy win32_scraper.spec win32_scraper_${{ matrix.arch }}.spec
+        cp win32_scraper.spec win32_scraper_${{ matrix.arch }}.spec
         sed -i "s/name='win32-scraper'/name='${{ matrix.artifact-name }}'/g" win32_scraper_${{ matrix.arch }}.spec
         pyinstaller --clean --distpath=dist --workpath=build/${{ matrix.arch }} win32_scraper_${{ matrix.arch }}.spec
       shell: bash
@@ -177,12 +177,13 @@ jobs:
             -w /workspace \
             i386/python:${{ env.PYTHON_VERSION }}-slim \
             bash -c "
-              apt-get update && apt-get install -y gcc g++ zlib1g-dev libc6-dev && \
+              apt-get update && apt-get install -y gcc g++ zlib1g-dev zlib1g libc6-dev build-essential && \
               pip install --no-cache-dir -r requirements.txt && \
-              pip install --no-cache-dir pyinstaller && \
-              cp win32_scraper.spec win32_scraper_x86.spec && \
+              pip install --no-cache-dir pyinstaller staticx && \
+              cp win32_scraper_static.spec win32_scraper_x86.spec && \
               sed -i \"s/name='win32-scraper'/name='${{ matrix.artifact-name }}'/g\" win32_scraper_x86.spec && \
-              pyinstaller --clean --distpath=dist --workpath=build/x86 win32_scraper_x86.spec
+              pyinstaller --clean --distpath=dist --workpath=build/x86 win32_scraper_x86.spec && \
+              cd dist && staticx ${{ matrix.artifact-name }} ${{ matrix.artifact-name }}_static && mv ${{ matrix.artifact-name }}_static ${{ matrix.artifact-name }}
             "
         else
           # Para x64, usa runner nativo
