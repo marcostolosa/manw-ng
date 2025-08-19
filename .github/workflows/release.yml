@@ -53,16 +53,27 @@ jobs:
         fi
         
         echo "" >> release_notes.md
-        echo "## 📦 Available Downloads" >> release_notes.md
-        echo "- **Windows x64**: win32-scraper-windows-x64.exe" >> release_notes.md
-        echo "- **Windows x86**: win32-scraper-windows-x86.exe" >> release_notes.md
-        echo "- **Linux x64**: win32-scraper-linux-x64" >> release_notes.md
-        echo "- **Linux x86**: win32-scraper-linux-x86" >> release_notes.md
+        echo "## 📦 Static Binaries (No Dependencies Required)" >> release_notes.md
+        echo "- **Windows x64**: win32-scraper-windows-x64.exe *(Standalone executable)*" >> release_notes.md
+        echo "- **Windows x86**: win32-scraper-windows-x86.exe *(Standalone executable)*" >> release_notes.md
+        echo "- **Linux x64**: win32-scraper-linux-x64 *(Static binary - works on any Linux)*" >> release_notes.md
+        echo "- **Linux x86**: win32-scraper-linux-x86 *(Static binary - works on any Linux)*" >> release_notes.md
         echo "" >> release_notes.md
-        echo "## 🚀 Usage" >> release_notes.md
+        echo "### ✨ Features" >> release_notes.md
+        echo "- 🚀 **No installation required** - just download and run" >> release_notes.md
+        echo "- 📦 **Self-contained** - all dependencies included" >> release_notes.md  
+        echo "- 🌍 **Universal compatibility** - works on any modern system" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 🚀 Usage Examples" >> release_notes.md
         echo "\`\`\`bash" >> release_notes.md
+        echo "# Linux/macOS" >> release_notes.md
+        echo "chmod +x win32-scraper-linux-x64" >> release_notes.md
         echo "./win32-scraper-linux-x64 CreateProcessW" >> release_notes.md
-        echo "win32-scraper-windows-x64.exe HeapAlloc --output json" >> release_notes.md
+        echo "./win32-scraper-linux-x64 HeapAlloc --output json -l br" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "# Windows" >> release_notes.md
+        echo "win32-scraper-windows-x64.exe SetWindowsHookEx" >> release_notes.md
+        echo "win32-scraper-windows-x64.exe WSAStartup --output json" >> release_notes.md
         echo "\`\`\`" >> release_notes.md
 
     - name: 📦 Create Release
@@ -116,10 +127,15 @@ jobs:
 
     - name: 🔨 Build Windows ${{ matrix.arch }} executable
       run: |
-        pyinstaller --onefile --name ${{ matrix.artifact-name }} ^
-          --hidden-import=requests --hidden-import=bs4 --hidden-import=rich ^
-          --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer ^
+        pyinstaller --onefile --noupx --clean --name ${{ matrix.artifact-name }} ^
+          --hidden-import=requests --hidden-import=requests.adapters ^
+          --hidden-import=requests.packages --hidden-import=requests.packages.urllib3 ^
+          --hidden-import=bs4 --hidden-import=bs4.builder --hidden-import=bs4.builder._lxml ^
+          --hidden-import=rich --hidden-import=rich.console --hidden-import=rich.text ^
+          --hidden-import=urllib3 --hidden-import=urllib3.util --hidden-import=urllib3.util.retry ^
+          --hidden-import=certifi --hidden-import=charset_normalizer --hidden-import=idna ^
           --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy ^
+          --exclude-module=pandas --exclude-module=PIL --exclude-module=PyQt5 ^
           --distpath=dist --workpath=build/${{ matrix.arch }} win32_scraper.py
       shell: cmd
 
@@ -173,32 +189,37 @@ jobs:
     - name: 🔨 Build Linux ${{ matrix.arch }} executable
       run: |
         if [ "${{ matrix.arch }}" == "x86" ]; then
-          # Para x86, usa Docker com imagem 32-bit
+          # Para x86, usa Docker Alpine para build estático
           docker run --rm --platform=${{ matrix.docker-platform }} \
             -v ${{ github.workspace }}:/workspace \
             -w /workspace \
-            i386/python:${{ env.PYTHON_VERSION }}-slim \
-            bash -c "
-              export PYTHONHASHSEED=1 && \
-              apt-get update && apt-get install -y gcc g++ zlib1g-dev zlib1g libc6-dev build-essential upx-ucl && \
-              pip install --no-cache-dir -r requirements.txt && \
-              pip install --no-cache-dir pyinstaller && \
-              pyinstaller --onefile --strip --upx-dir=/usr/bin --name ${{ matrix.artifact-name }} \
+            i386/alpine:latest \
+            sh -c "
+              apk add --no-cache python3 python3-dev py3-pip gcc musl-dev zlib-dev zlib-static && \
+              pip3 install --break-system-packages -r requirements.txt && \
+              pip3 install --break-system-packages pyinstaller && \
+              python3 -m PyInstaller --onefile --strip --name ${{ matrix.artifact-name }} \
                 --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
                 --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
                 --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
                 --distpath=dist --workpath=build/x86 win32_scraper.py
             "
         else
-          # Para x64, usa runner nativo
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller
-          pyinstaller --onefile --strip --name ${{ matrix.artifact-name }} \
-            --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
-            --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
-            --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
-            --distpath=dist --workpath=build/x64 win32_scraper.py
+          # Para x64, usa Alpine Linux para build completamente estático
+          docker run --rm --platform=linux/amd64 \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            alpine:latest \
+            sh -c "
+              apk add --no-cache python3 python3-dev py3-pip gcc musl-dev zlib-dev zlib-static && \
+              pip3 install --break-system-packages -r requirements.txt && \
+              pip3 install --break-system-packages pyinstaller && \
+              python3 -m PyInstaller --onefile --strip --name ${{ matrix.artifact-name }} \
+                --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
+                --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
+                --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
+                --distpath=dist --workpath=build/x64 win32_scraper.py
+            "
         fi
 
     - name: ✅ Test executable
