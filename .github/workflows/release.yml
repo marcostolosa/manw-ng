@@ -116,7 +116,7 @@ jobs:
 
     - name: 🔨 Build Windows ${{ matrix.arch }} executable
       run: |
-        pyinstaller --onefile --name ${{ matrix.artifact-name }} --icon=assets/icon.ico --version-file=version_info.txt win32_scraper.py
+        pyinstaller --clean --distpath=dist --workpath=build/${{ matrix.arch }} --name=${{ matrix.artifact-name }} win32_scraper.spec
       shell: cmd
 
     - name: ✅ Test executable
@@ -175,17 +175,17 @@ jobs:
             -w /workspace \
             i386/python:${{ env.PYTHON_VERSION }}-slim \
             bash -c "
-              apt-get update && apt-get install -y gcc g++ && \
+              apt-get update && apt-get install -y gcc g++ zlib1g-dev libc6-dev && \
               pip install --no-cache-dir -r requirements.txt && \
               pip install --no-cache-dir pyinstaller && \
-              pyinstaller --onefile --name ${{ matrix.artifact-name }} win32_scraper.py
+              pyinstaller --clean --distpath=dist --workpath=build/x86 --name=${{ matrix.artifact-name }} win32_scraper.spec
             "
         else
           # Para x64, usa runner nativo
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
-          pyinstaller --onefile --name ${{ matrix.artifact-name }} win32_scraper.py
+          pyinstaller --clean --distpath=dist --workpath=build/x64 --name=${{ matrix.artifact-name }} win32_scraper.spec
         fi
 
     - name: ✅ Test executable
