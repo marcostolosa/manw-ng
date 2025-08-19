@@ -31,12 +31,6 @@ Examples:
   manw-ng.py -l br VirtualAlloc         # Portuguese documentation  
   manw-ng.py --output json OpenProcess  # JSON output
   manw-ng.py --output markdown RegOpenKeyEx  # Markdown output
-
-Categories supported:
-  • Process/Thread Management  • Memory Management    • File Operations
-  • Registry Operations       • Network Functions    • Window Management
-  • Security & Access Control • Cryptography         • Services
-  • DLL/Library Loading      • System Information   • Error Handling
         """,
     )
 
