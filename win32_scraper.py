@@ -24,6 +24,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
+from rich.status import Status
 
 console = Console()
 
@@ -72,27 +73,38 @@ class Win32APIScraper:
         # Tenta cada URL encontrada até conseguir fazer o parse com sucesso
         all_urls = search_results if search_results else []
 
-        for i, url in enumerate(all_urls, 1):
-            try:
-                if not self.quiet:
-                    # Mostra progresso em tempo real
-                    console.print(
-                        f"[blue]\\[{i}/{len(all_urls)}] Testando: {self._format_url_display(url)}[/blue]"
-                    )
+        if not self.quiet and all_urls:
+            with Status("", console=console) as status:
+                for i, url in enumerate(all_urls, 1):
+                    try:
+                        # Atualiza o status com a URL atual
+                        status.update(f"[bold blue]\\[{i}/{len(all_urls)}] Testando:[/bold blue] {self._format_url_display(url)}")
 
-                result = self._parse_function_page(url)
+                        result = self._parse_function_page(url, status)
 
-                if not self.quiet:
-                    console.print(
-                        f"[green]Documentação encontrada: {self._format_url_display(url)}[/green]"
-                    )
+                        # Mostra sucesso e para o status
+                        status.stop()
+                        console.print(f"[green]Documentação encontrada:[/green] {self._format_url_display(url)}")
 
-                return result
+                        return result
 
-            except Exception as e:
-                # Não mostra falhas individuais, apenas continua
-                continue
+                    except Exception as e:
+                        # Continua para próxima URL
+                        continue
 
+                # Se chegou aqui, não encontrou nenhuma
+                status.stop()
+        else:
+            # Modo silencioso ou sem URLs
+            for i, url in enumerate(all_urls, 1):
+                try:
+                    result = self._parse_function_page(url)
+                    if not self.quiet:
+                        console.print(f"[green]Documentação encontrada:[/green] {self._format_url_display(url)}")
+                    return result
+                except Exception as e:
+                    continue
+        
         raise Exception(
             f"Função {function_name} não encontrada na documentação Microsoft"
         )
@@ -101,47 +113,194 @@ class Win32APIScraper:
         """
         Tenta construir URL direto para funções conhecidas
         """
-        # Mapeamento de funções conhecidas para suas URLs
+        # Top 100 funções mais usadas em engenharia reversa, análise de malware e CTFs
         known_functions = {
+            # Process/Thread Management (Critical for malware analysis)
             "createprocessw": "processthreadsapi/nf-processthreadsapi-createprocessw",
-            "createprocess": "processthreadsapi/nf-processthreadsapi-createprocessw",
-            "createfilea": "fileapi/nf-fileapi-createfilea",
-            "createfilew": "fileapi/nf-fileapi-createfilew",
-            "createfile": "fileapi/nf-fileapi-createfilea",
-            "messagebox": "winuser/nf-winuser-messagebox",
-            "messageboxw": "winuser/nf-winuser-messageboxw",
-            "messageboxa": "winuser/nf-winuser-messageboxa",
-            "readfile": "fileapi/nf-fileapi-readfile",
-            "writefile": "fileapi/nf-fileapi-writefile",
-            "closehandle": "handleapi/nf-handleapi-closehandle",
-            "getlasterror": "errhandlingapi/nf-errhandlingapi-getlasterror",
+            "createprocessa": "processthreadsapi/nf-processthreadsapi-createprocessa",
+            "createprocess": "processthreadsapi/nf-processthreadsapi-createprocessa",
+            "openprocess": "processthreadsapi/nf-processthreadsapi-openprocess",
+            "terminateprocess": "processthreadsapi/nf-processthreadsapi-terminateprocess",
+            "getcurrentprocess": "processthreadsapi/nf-processthreadsapi-getcurrentprocess",
+            "getcurrentprocessid": "processthreadsapi/nf-processthreadsapi-getcurrentprocessid",
+            "getcurrentthread": "processthreadsapi/nf-processthreadsapi-getcurrentthread",
+            "getcurrentthreadid": "processthreadsapi/nf-processthreadsapi-getcurrentthreadid",
+            "createthread": "processthreadsapi/nf-processthreadsapi-createthread",
+            "exitprocess": "processthreadsapi/nf-processthreadsapi-exitprocess",
+            "exitthread": "processthreadsapi/nf-processthreadsapi-exitthread",
+            "suspendthread": "processthreadsapi/nf-processthreadsapi-suspendthread",
+            "resumethread": "processthreadsapi/nf-processthreadsapi-resumethread",
+            "waitforsingleobject": "synchapi/nf-synchapi-waitforsingleobject",
+            "waitformultipleobjects": "synchapi/nf-synchapi-waitformultipleobjects",
+            "getexitcodeprocess": "processthreadsapi/nf-processthreadsapi-getexitcodeprocess",
+            "setthreadcontext": "processthreadsapi/nf-processthreadsapi-setthreadcontext",
+            "getthreadcontext": "processthreadsapi/nf-processthreadsapi-getthreadcontext",
+            
+            # Memory Management (Essential for exploitation)
             "virtualalloc": "memoryapi/nf-memoryapi-virtualalloc",
             "virtualfree": "memoryapi/nf-memoryapi-virtualfree",
+            "virtualprotect": "memoryapi/nf-memoryapi-virtualprotect",
+            "virtualquery": "memoryapi/nf-memoryapi-virtualquery",
+            "readprocessmemory": "memoryapi/nf-memoryapi-readprocessmemory",
+            "writeprocessmemory": "memoryapi/nf-memoryapi-writeprocessmemory",
             "heapalloc": "heapapi/nf-heapapi-heapalloc",
             "heapfree": "heapapi/nf-heapapi-heapfree",
             "heapcreate": "heapapi/nf-heapapi-heapcreate",
             "heapdestroy": "heapapi/nf-heapapi-heapdestroy",
             "getprocessheap": "heapapi/nf-heapapi-getprocessheap",
-            "getsysteminfo": "sysinfoapi/nf-sysinfoapi-getsysteminfo",
-            "getcurrentprocess": "processthreadsapi/nf-processthreadsapi-getcurrentprocess",
-            "getcurrentthread": "processthreadsapi/nf-processthreadsapi-getcurrentthread",
+            "globalalloc": "winbase/nf-winbase-globalalloc",
+            "globalfree": "winbase/nf-winbase-globalfree",
+            "localalloc": "winbase/nf-winbase-localalloc",
+            "localfree": "winbase/nf-winbase-localfree",
+            
+            # File Operations (Common in malware)
+            "createfilea": "fileapi/nf-fileapi-createfilea",
+            "createfilew": "fileapi/nf-fileapi-createfilew",
+            "createfile": "fileapi/nf-fileapi-createfilea",
+            "readfile": "fileapi/nf-fileapi-readfile",
+            "writefile": "fileapi/nf-fileapi-writefile",
+            "closehandle": "handleapi/nf-handleapi-closehandle",
+            "deletefilea": "fileapi/nf-fileapi-deletefilea",
+            "deletefilew": "fileapi/nf-fileapi-deletefilew",
+            "copyfile": "winbase/nf-winbase-copyfilea",
+            "copyfilea": "winbase/nf-winbase-copyfilea",
+            "copyfilew": "winbase/nf-winbase-copyfilew",
+            "movefile": "winbase/nf-winbase-movefilea",
+            "movefilea": "winbase/nf-winbase-movefilea",
+            "movefilew": "winbase/nf-winbase-movefilew",
+            "findfirstfile": "fileapi/nf-fileapi-findfirstfilea",
+            "findfirstfilea": "fileapi/nf-fileapi-findfirstfilea",
+            "findfirstfilew": "fileapi/nf-fileapi-findfirstfilew",
+            "findnextfile": "fileapi/nf-fileapi-findnextfilea",
+            "findnextfilea": "fileapi/nf-fileapi-findnextfilea",
+            "findnextfilew": "fileapi/nf-fileapi-findnextfilew",
+            "findclose": "fileapi/nf-fileapi-findclose",
+            "getfileattributes": "fileapi/nf-fileapi-getfileattributesa",
+            "setfileattributes": "fileapi/nf-fileapi-setfileattributesa",
+            "getfilesize": "fileapi/nf-fileapi-getfilesize",
+            "setfilepointer": "fileapi/nf-fileapi-setfilepointer",
+            
+            # DLL/Library Loading (Code injection techniques)
             "loadlibrary": "libloaderapi/nf-libloaderapi-loadlibrarya",
             "loadlibrarya": "libloaderapi/nf-libloaderapi-loadlibrarya",
             "loadlibraryw": "libloaderapi/nf-libloaderapi-loadlibraryw",
-            "getprocaddress": "libloaderapi/nf-libloaderapi-getprocaddress",
             "freelibrary": "libloaderapi/nf-libloaderapi-freelibrary",
+            "getprocaddress": "libloaderapi/nf-libloaderapi-getprocaddress",
+            "getmodulehandle": "libloaderapi/nf-libloaderapi-getmodulehandlea",
+            "getmodulehandlea": "libloaderapi/nf-libloaderapi-getmodulehandlea",
+            "getmodulehandlew": "libloaderapi/nf-libloaderapi-getmodulehandlew",
+            "getmodulefilename": "libloaderapi/nf-libloaderapi-getmodulefilenamea",
+            "getmodulefilenamea": "libloaderapi/nf-libloaderapi-getmodulefilenamea",
+            "getmodulefilenameW": "libloaderapi/nf-libloaderapi-getmodulefilenamew",
+            
+            # Registry (Persistence mechanisms)
+            "regopenkeyex": "winreg/nf-winreg-regopenkeyexa",
+            "regcreatekey": "winreg/nf-winreg-regcreatekeya",
+            "regcreatekeyex": "winreg/nf-winreg-regcreatekeyexa",
+            "regqueryvalueex": "winreg/nf-winreg-regqueryvalueexa",
+            "regsetvalueex": "winreg/nf-winreg-regsetvalueexa",
+            "regdeletekey": "winreg/nf-winreg-regdeletekeya",
+            "regdeletevalue": "winreg/nf-winreg-regdeletevaluea",
+            "regclosekey": "winreg/nf-winreg-regclosekey",
+            "regenumkey": "winreg/nf-winreg-regenumkeya",
+            "regenumvalue": "winreg/nf-winreg-regenumvaluea",
+            
+            # Network (C&C communication)
+            "wsastartup": "winsock/nf-winsock-wsastartup",
+            "wsacleanup": "winsock/nf-winsock-wsacleanup",
+            "socket": "winsock2/nf-winsock2-socket",
+            "connect": "winsock2/nf-winsock2-connect",
+            "bind": "winsock2/nf-winsock2-bind",
+            "listen": "winsock2/nf-winsock2-listen",
+            "accept": "winsock2/nf-winsock2-accept",
+            "send": "winsock2/nf-winsock2-send",
+            "recv": "winsock2/nf-winsock2-recv",
+            "sendto": "winsock2/nf-winsock2-sendto",
+            "recvfrom": "winsock2/nf-winsock2-recvfrom",
+            "closesocket": "winsock2/nf-winsock2-closesocket",
+            "gethostbyname": "winsock/nf-winsock-gethostbyname",
+            "inet_addr": "winsock2/nf-winsock2-inet_addr",
+            
+            # Window Management (GUI interaction)
             "findwindow": "winuser/nf-winuser-findwindowa",
             "findwindowa": "winuser/nf-winuser-findwindowa",
             "findwindoww": "winuser/nf-winuser-findwindoww",
-            "setwindowtext": "winuser/nf-winuser-setwindowtexta",
+            "findwindowex": "winuser/nf-winuser-findwindowexa",
+            "enumwindows": "winuser/nf-winuser-enumwindows",
             "getwindowtext": "winuser/nf-winuser-getwindowtexta",
+            "getwindowtexta": "winuser/nf-winuser-getwindowtexta",
+            "getwindowtextw": "winuser/nf-winuser-getwindowtextw",
+            "setwindowtext": "winuser/nf-winuser-setwindowtexta",
+            "setwindowtexta": "winuser/nf-winuser-setwindowtexta",
+            "setwindowtextw": "winuser/nf-winuser-setwindowtextw",
             "showwindow": "winuser/nf-winuser-showwindow",
+            "getforegroundwindow": "winuser/nf-winuser-getforegroundwindow",
+            "setforegroundwindow": "winuser/nf-winuser-setforegroundwindow",
+            "messagebox": "winuser/nf-winuser-messagebox",
+            "messageboxa": "winuser/nf-winuser-messageboxa",
+            "messageboxw": "winuser/nf-winuser-messageboxw",
+            
+            # System Information
+            "getsysteminfo": "sysinfoapi/nf-sysinfoapi-getsysteminfo",
+            "getsystemdirectory": "sysinfoapi/nf-sysinfoapi-getsystemdirectorya",
+            "getwindowsdirectory": "sysinfoapi/nf-sysinfoapi-getwindowsdirectorya",
+            "getcomputername": "winbase/nf-winbase-getcomputernamea",
+            "getusername": "winbase/nf-winbase-getusernamea",
+            "getusernamea": "winbase/nf-winbase-getusernamea",
+            "getusernamew": "winbase/nf-winbase-getusernamew",
+            "getversionex": "sysinfoapi/nf-sysinfoapi-getversionexa",
+            "gettickcount": "sysinfoapi/nf-sysinfoapi-gettickcount",
+            "getsystemtime": "sysinfoapi/nf-sysinfoapi-getsystemtime",
+            "getlocaltime": "sysinfoapi/nf-sysinfoapi-getlocaltime",
             "getsystemmetrics": "winuser/nf-winuser-getsystemmetrics",
+            
+            # Error Handling
+            "getlasterror": "errhandlingapi/nf-errhandlingapi-getlasterror",
+            "setlasterror": "errhandlingapi/nf-errhandlingapi-setlasterror",
+            "formatmessage": "winbase/nf-winbase-formatmessagea",
+            
+            # Cryptography (Common in malware)
+            "cryptacquirecontext": "wincrypt/nf-wincrypt-cryptacquirecontexta",
+            "cryptcreatehash": "wincrypt/nf-wincrypt-cryptcreatehash",
+            "crypthashdata": "wincrypt/nf-wincrypt-crypthashdata",
+            "cryptgethashparam": "wincrypt/nf-wincrypt-cryptgethashparam",
+            "cryptreleasecontext": "wincrypt/nf-wincrypt-cryptreleasecontext",
+            "cryptdestroyhash": "wincrypt/nf-wincrypt-cryptdestroyhash",
+            
+            # Services (Malware persistence)
+            "openscmanager": "winsvc/nf-winsvc-openscmanagera",
+            "createservice": "winsvc/nf-winsvc-createservicea",
+            "openservice": "winsvc/nf-winsvc-openservicea",
+            "startservice": "winsvc/nf-winsvc-startservicea",
+            "controlservice": "winsvc/nf-winsvc-controlservice",
+            "deleteservice": "winsvc/nf-winsvc-deleteservice",
+            "closeservicehandle": "winsvc/nf-winsvc-closeservicehandle",
+            
+            # Shell Operations
             "shgetfolderpath": "shlobj_core/nf-shlobj_core-shgetfolderpatha",
             "shgetfolderpatha": "shlobj_core/nf-shlobj_core-shgetfolderpatha",
             "shgetfolderpathw": "shlobj_core/nf-shlobj_core-shgetfolderpathw",
-            "openprocess": "processthreadsapi/nf-processthreadsapi-openprocess",
-            "terminateprocess": "processthreadsapi/nf-processthreadsapi-terminateprocess",
+            "shellexecute": "shellapi/nf-shellapi-shellexecutea",
+            "shellexecutea": "shellapi/nf-shellapi-shellexecutea",
+            "shellexecutew": "shellapi/nf-shellapi-shellexecutew",
+            "shellexecuteex": "shellapi/nf-shellapi-shellexecuteexa",
+            
+            # Security & Access Control
+            "openprocesstoken": "processthreadsapi/nf-processthreadsapi-openprocesstoken",
+            "adjusttokenprivileges": "securitybaseapi/nf-securitybaseapi-adjusttokenprivileges",
+            "lookupprivilegevalue": "winbase/nf-winbase-lookupprivilegevaluea",
+            "impersonateloggedonuser": "securitybaseapi/nf-securitybaseapi-impersonateloggedonuser",
+            "reverttoself": "securitybaseapi/nf-securitybaseapi-reverttoself",
+            
+            # Common functions for testing
+            "sleep": "synchapi/nf-synchapi-sleep",
+            "createtoolhelp32snapshot": "tlhelp32/nf-tlhelp32-createtoolhelp32snapshot",
+            "process32first": "tlhelp32/nf-tlhelp32-process32first",
+            "process32next": "tlhelp32/nf-tlhelp32-process32next",
+            "setwindowshookex": "winuser/nf-winuser-setwindowshookexa",
+            "callnexthookex": "winuser/nf-winuser-callnexthookex",
+            "unhookwindowshookex": "winuser/nf-winuser-unhookwindowshookex",
+            "isdebuggerpresent": "debugapi/nf-debugapi-isdebuggerpresent",
         }
 
         func_lower = function_name.lower()
@@ -152,20 +311,26 @@ class Win32APIScraper:
 
     def _search_function(self, function_name: str) -> List[str]:
         """
-        Sistema revolucionário de descoberta automática de URLs para qualquer função Win32
+        Sistema de descoberta inteligente baseado em técnicas de reverse engineering
+        Multi-stage discovery pipeline para encontrar qualquer função Win32
         """
         discovered_urls = []
 
-        # Estratégia 1: Busca inteligente na documentação Microsoft
+        # Pipeline de descoberta em ordem de eficiência
+        
+        # Estratégia 1: Fuzzing inteligente de patterns conhecidos (mais rápido)
+        discovered_urls.extend(self._intelligent_fuzzing(function_name))
+
+        # Estratégia 2: Busca oficial Microsoft (alta precisão)
         discovered_urls.extend(self._search_microsoft_docs(function_name))
 
-        # Estratégia 2: Inferência baseada em padrões de nomenclatura
-        discovered_urls.extend(self._infer_urls_from_patterns(function_name))
+        # Estratégia 3: Header-based discovery (cobertura ampla)
+        discovered_urls.extend(self._header_based_discovery(function_name))
+        
+        # Estratégia 4: Pattern mining avançado (fallback)
+        discovered_urls.extend(self._advanced_pattern_mining(function_name))
 
-        # Estratégia 3: Busca no Google especificamente para Microsoft Learn
-        discovered_urls.extend(self._search_google_microsoft_learn(function_name))
-
-        # Remove duplicatas mantendo ordem
+        # Remove duplicatas mantendo ordem de prioridade
         seen = set()
         unique_urls = []
         for url in discovered_urls:
@@ -173,9 +338,7 @@ class Win32APIScraper:
                 seen.add(url)
                 unique_urls.append(url)
 
-        # Não mostra mais as URLs descobertas, apenas o processo de teste
-
-        return unique_urls[:15]  # Retorna até 15 URLs para tentar
+        return unique_urls[:20]  # Aumenta para 20 tentativas
 
     def _search_microsoft_docs(self, function_name: str) -> List[str]:
         """Busca inteligente na documentação Microsoft"""
@@ -233,6 +396,233 @@ class Win32APIScraper:
                 console.print(f"[yellow]Busca Microsoft Docs falhou: {e}[/yellow]")
 
         return results[:5]
+
+    def _intelligent_fuzzing(self, function_name: str) -> List[str]:
+        """
+        Fuzzing inteligente baseado em padrões algorítmicos de reverse engineering
+        Gera URLs candidatas com alta probabilidade de sucesso
+        """
+        func_lower = function_name.lower()
+        urls = []
+        
+        # Todos os headers Win32 conhecidos (lista completa)
+        all_headers = [
+            # Core System APIs
+            "winbase", "winuser", "winreg", "winnt", "winnls", "wincon", "winerror",
+            # Process/Thread
+            "processthreadsapi", "synchapi", "handleapi", "namedpipeapi",
+            # Memory
+            "memoryapi", "heapapi", "virtualalloc",
+            # File System  
+            "fileapi", "winioctl", "ioapiset", "wow64apiset",
+            # Debugging
+            "debugapi", "minidumpapiset", "imagehlp", "dbghelp",
+            # Security
+            "securitybaseapi", "authz", "sddl", "wincrypt", "ncrypt", "bcrypt", 
+            # Services
+            "winsvc", "securityappcontainer",
+            # Registry (extended)
+            "winreg", "winperf",
+            # Threading (extended)
+            "threadpoollegacyapiset", "threadpoolapiset",
+            # Libraries
+            "libloaderapi", "errhandlingapi",
+            # System Info
+            "sysinfoapi", "systemtopologyapi", "processtopologyapi",
+            # UI Extended
+            "commctrl", "commdlg", "richedit", "shellapi", "shlobj_core", "shlwapi",
+            # GDI
+            "wingdi", "winuser", 
+            # Network
+            "winsock", "winsock2", "ws2tcpip", "wininet", "winhttp", "iphlpapi",
+            # COM
+            "objbase", "oleauto", "ole2", "olectl",
+            # DirectX/Graphics
+            "d3d11", "d3d12", "dxgi", "d2d1",
+            # Crypto Extended
+            "wintrust", "softpub", "mssip",
+            # Tools/Debug Extended  
+            "tlhelp32", "psapi", "toolhelp",
+            # Advanced
+            "ntddscsi", "ntdddisk", "ntddser", "winternl",
+        ]
+        
+        # Gera URLs para cada header usando o padrão oficial Microsoft
+        for header in all_headers:
+            # Padrão principal: nf-header-function
+            base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+            urls.append(base_url)
+            
+            # Variações A/W automáticas
+            if not func_lower.endswith('a') and not func_lower.endswith('w'):
+                urls.append(f"{base_url}a")
+                urls.append(f"{base_url}w")
+                
+        return urls[:15]  # Limita para não sobrecarregar
+
+    def _header_based_discovery(self, function_name: str) -> List[str]:
+        """
+        Descoberta baseada em análise de headers - técnica avançada de RE
+        Mapeia função para possíveis headers baseado em análise semântica
+        """
+        func_lower = function_name.lower()
+        candidate_urls = []
+        
+        # Mapeamento semântico inteligente função -> headers prováveis
+        semantic_mapping = {
+            # Process/Thread patterns
+            "process": ["processthreadsapi", "psapi", "toolhelp", "tlhelp32"],
+            "thread": ["processthreadsapi", "synchapi", "threadpoollegacyapiset"],
+            "create": ["processthreadsapi", "fileapi", "synchapi", "winbase"],
+            "open": ["processthreadsapi", "fileapi", "winreg", "winsvc"],
+            "close": ["handleapi", "winsvc", "winreg", "fileapi"],
+            "terminate": ["processthreadsapi"],
+            "suspend": ["processthreadsapi"],
+            "resume": ["processthreadsapi"],
+            
+            # Memory patterns
+            "virtual": ["memoryapi", "winbase"],
+            "heap": ["heapapi", "winbase"],
+            "memory": ["memoryapi", "heapapi", "winbase"],
+            "alloc": ["memoryapi", "heapapi", "winbase"],
+            "free": ["memoryapi", "heapapi", "winbase", "libloaderapi"],
+            "protect": ["memoryapi"],
+            "read": ["memoryapi", "fileapi", "winbase"],
+            "write": ["memoryapi", "fileapi", "winbase"],
+            
+            # File/IO patterns
+            "file": ["fileapi", "winbase", "winioctl"],
+            "directory": ["fileapi", "winbase"],
+            "find": ["fileapi", "winuser"],
+            "copy": ["winbase", "shellapi"],
+            "move": ["winbase", "shellapi"],
+            "delete": ["fileapi", "winbase"],
+            
+            # Registry patterns
+            "reg": ["winreg", "winperf"],
+            "key": ["winreg"],
+            "value": ["winreg"],
+            
+            # Security patterns  
+            "token": ["securitybaseapi", "processthreadsapi"],
+            "privilege": ["securitybaseapi", "winbase"],
+            "acl": ["securitybaseapi"],
+            "security": ["securitybaseapi", "authz"],
+            "impersonate": ["securitybaseapi"],
+            
+            # Window/UI patterns
+            "window": ["winuser", "dwmapi"],
+            "message": ["winuser"],
+            "dialog": ["winuser", "comdlg32"],
+            "menu": ["winuser"],
+            "hook": ["winuser"],
+            "enum": ["winuser", "tlhelp32", "psapi"],
+            
+            # Network patterns
+            "socket": ["winsock", "winsock2"],
+            "wsa": ["winsock", "winsock2"],
+            "inet": ["wininet", "ws2tcpip"],
+            "http": ["winhttp", "wininet"],
+            "connect": ["winsock2", "wininet"],
+            "send": ["winsock2", "wininet"],
+            "recv": ["winsock2", "wininet"],
+            
+            # Debug patterns
+            "debug": ["debugapi", "dbghelp"],
+            "dump": ["minidumpapiset", "dbghelp"],
+            "symbol": ["dbghelp", "imagehlp"],
+            
+            # Service patterns
+            "service": ["winsvc"],
+            "scm": ["winsvc"],
+            
+            # Library patterns
+            "library": ["libloaderapi"],
+            "module": ["libloaderapi", "psapi"],
+            "load": ["libloaderapi"],
+            "proc": ["libloaderapi"],
+            
+            # Crypto patterns
+            "crypt": ["wincrypt", "bcrypt", "ncrypt"],
+            "hash": ["wincrypt", "bcrypt"],
+            "encrypt": ["wincrypt", "bcrypt"],
+        }
+        
+        # Encontra headers relevantes baseado na análise semântica
+        relevant_headers = set()
+        for pattern, headers in semantic_mapping.items():
+            if pattern in func_lower:
+                relevant_headers.update(headers)
+                
+        # Se não encontrou padrões, usa headers mais comuns
+        if not relevant_headers:
+            relevant_headers = [
+                "winbase", "winuser", "fileapi", "processthreadsapi", 
+                "memoryapi", "winreg", "libloaderapi", "handleapi"
+            ]
+            
+        # Gera URLs candidatas para headers relevantes
+        for header in relevant_headers:
+            base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+            candidate_urls.append(base_url)
+            
+            # Variações A/W
+            if not func_lower.endswith('a') and not func_lower.endswith('w'):
+                candidate_urls.append(f"{base_url}a")
+                candidate_urls.append(f"{base_url}w")
+                
+        return candidate_urls[:10]
+
+    def _advanced_pattern_mining(self, function_name: str) -> List[str]:
+        """
+        Pattern mining avançado - técnica de reverse engineering para casos complexos
+        Analisa padrões de nomenclatura e gera variações inteligentes
+        """
+        func_lower = function_name.lower()
+        mined_urls = []
+        
+        # Análise de prefixos comuns Win32
+        common_prefixes = {
+            "nt": ["ntdll", "winternl"],  # Native API
+            "rtl": ["winternl", "ntdll"],  # Runtime Library
+            "zw": ["winternl", "ntdll"],   # System calls
+            "get": ["winbase", "winuser", "sysinfoapi", "psapi"],
+            "set": ["winbase", "winuser", "winreg"],
+            "create": ["processthreadsapi", "fileapi", "synchapi"],
+            "open": ["processthreadsapi", "fileapi", "winreg"],
+            "query": ["winreg", "winperf", "psapi"],
+            "enum": ["winuser", "psapi", "tlhelp32"],
+            "is": ["debugapi", "winbase"],
+        }
+        
+        # Detecta prefixo e mapeia para headers
+        for prefix, headers in common_prefixes.items():
+            if func_lower.startswith(prefix):
+                for header in headers:
+                    base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+                    mined_urls.append(base_url)
+                    
+                    # Variações A/W se aplicável
+                    if not func_lower.endswith('a') and not func_lower.endswith('w'):
+                        mined_urls.append(f"{base_url}a")
+                        mined_urls.append(f"{base_url}w")
+                break
+                
+        # Análise de sufixos comuns
+        common_suffixes = {
+            "ex": ["winuser", "winreg", "fileapi"],  # Extended versions
+            "32": ["tlhelp32", "kernel32"],          # 32-bit legacy
+            "w": ["winuser", "fileapi", "winbase"],  # Wide char
+            "a": ["winuser", "fileapi", "winbase"],  # ANSI
+        }
+        
+        for suffix, headers in common_suffixes.items():
+            if func_lower.endswith(suffix):
+                for header in headers:
+                    base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+                    mined_urls.append(base_url)
+                    
+        return mined_urls[:8]
 
     def _infer_urls_from_patterns(self, function_name: str) -> List[str]:
         """Infere URLs baseado em padrões conhecidos da API Win32"""
@@ -492,7 +882,7 @@ class Win32APIScraper:
         # Se não conseguir simplificar, mostra URL completa mas mais curta
         return url.replace("https://learn.microsoft.com/", "")
 
-    def _parse_function_page(self, url: str) -> Dict:
+    def _parse_function_page(self, url: str, status: Optional[Status] = None) -> Dict:
         """
         Parseia a página de documentação de uma função específica usando extração dinâmica
         """
@@ -503,7 +893,21 @@ class Win32APIScraper:
             response.raise_for_status()
             soup = BeautifulSoup(response.content, "html.parser")
         except Exception as e:
-            raise Exception(f"Erro ao acessar página: {e}")
+            # Se estivermos usando pt-br e der erro 404, tenta a versão em inglês
+            if self.language == "br" and "404" in str(e) and "pt-br" in url:
+                fallback_url = url.replace("learn.microsoft.com/pt-br", "learn.microsoft.com/en-us")
+                if not self.quiet and status:
+                    # Atualiza o status com mensagem de fallback
+                    status.update(f"[yellow]pt-br não encontrada, tentando en-us:[/yellow] {self._format_url_display(fallback_url)}")
+                try:
+                    response = self.session.get(fallback_url, timeout=15)
+                    response.raise_for_status()
+                    soup = BeautifulSoup(response.content, "html.parser")
+                    url = fallback_url  # Update URL for the rest of the function
+                except Exception as fallback_e:
+                    raise Exception(f"Erro ao acessar página (pt-br): {e}, (en-us): {fallback_e}")
+            else:
+                raise Exception(f"Erro ao acessar página: {e}")
 
         function_info = {
             "url": url,
@@ -1024,36 +1428,36 @@ class Win32APIScraper:
                     ["p", "div", "dt", "dd"],
                     string=re.compile(r"return|retorno", re.IGNORECASE),
                 )
+                
+                for elem in return_elements:
+                    parent = elem.parent if hasattr(elem, "parent") else elem
 
-            for elem in return_elements:
-                parent = elem.parent if hasattr(elem, "parent") else elem
-
-                # Se é um elemento de definição (dt/dd), pega o dd correspondente
-                if parent.name == "dt":
-                    dd = parent.find_next_sibling("dd")
-                    if dd:
-                        return_desc = dd.get_text().strip()
-                        break
-                elif parent.name in ["p", "div"]:
-                    text = parent.get_text().strip()
-                    # Procura por texto que pareça ser descrição de retorno
-                    if len(text) > 20 and (
-                        "succeed" in text.lower()
-                        or "fail" in text.lower()
-                        or "nonzero" in text.lower()
-                        or "zero" in text.lower()
-                        or "true" in text.lower()
-                        or "false" in text.lower()
-                        or "sucesso" in text.lower()
-                        or "falha" in text.lower()
-                        or "êxito" in text.lower()
-                        or "erro" in text.lower()
-                        or "retorna" in text.lower()
-                        or "ponteiro" in text.lower()
-                        or "null" in text.lower()
-                    ):
-                        return_desc = text
-                        break
+                    # Se é um elemento de definição (dt/dd), pega o dd correspondente
+                    if parent.name == "dt":
+                        dd = parent.find_next_sibling("dd")
+                        if dd:
+                            return_desc = dd.get_text().strip()
+                            break
+                    elif parent.name in ["p", "div"]:
+                        text = parent.get_text().strip()
+                        # Procura por texto que pareça ser descrição de retorno
+                        if len(text) > 20 and (
+                            "succeed" in text.lower()
+                            or "fail" in text.lower()
+                            or "nonzero" in text.lower()
+                            or "zero" in text.lower()
+                            or "true" in text.lower()
+                            or "false" in text.lower()
+                            or "sucesso" in text.lower()
+                            or "falha" in text.lower()
+                            or "êxito" in text.lower()
+                            or "erro" in text.lower()
+                            or "retorna" in text.lower()
+                            or "ponteiro" in text.lower()
+                            or "null" in text.lower()
+                        ):
+                            return_desc = text
+                            break
 
         # Tenta extrair o tipo de retorno da assinatura
         signature = self._extract_signature(soup)
