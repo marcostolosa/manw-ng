@@ -193,14 +193,17 @@ class TestWin32APIScraperIntegration(unittest.TestCase):
     @pytest.mark.integration
     @patch("win32_scraper.requests.Session.get")
     def test_search_function_no_results(self, mock_get):
-        """Testa busca sem resultados"""
+        """Testa busca sem resultados - mas ainda retorna URLs de fallback"""
         mock_response = Mock()
         mock_response.raise_for_status.return_value = None
         mock_response.content = b"<html><body></body></html>"
         mock_get.return_value = mock_response
 
         results = self.scraper._search_function("NonExistentFunction")
-        self.assertEqual(len(results), 0)
+        # O novo sistema sempre retorna URLs de fallback, nunca lista vazia
+        self.assertGreater(len(results), 0)
+        # Verifica que as URLs são de fallback inteligente
+        self.assertTrue(any("nonexistentfunction" in url.lower() for url in results))
 
     @pytest.mark.integration
     @patch("win32_scraper.requests.Session.get")

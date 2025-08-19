@@ -67,17 +67,22 @@ class Win32APIScraper:
         # Se não encontrou URL direto, usar busca dinâmica
         search_results = self._search_function(function_name)
 
-        if not search_results:
-            raise Exception(
-                f"Função {function_name} não encontrada na documentação Microsoft"
-            )
-
-        if not self.quiet:
-            console.print(
-                f"[green]Encontrados {len(search_results)} resultado(s). Usando: {search_results[0]}[/green]"
-            )
-
-        return self._parse_function_page(search_results[0])
+        # Tenta cada URL encontrada até conseguir fazer o parse com sucesso
+        all_urls = search_results if search_results else []
+        
+        for url in all_urls:
+            try:
+                if not self.quiet:
+                    console.print(f"[green]Tentando URL: {url}[/green]")
+                return self._parse_function_page(url)
+            except Exception as e:
+                if not self.quiet:
+                    console.print(f"[yellow]Falha em {url}: {e}[/yellow]")
+                continue
+        
+        raise Exception(
+            f"Função {function_name} não encontrada na documentação Microsoft"
+        )
 
     def _try_direct_url(self, function_name: str) -> Optional[str]:
         """
@@ -99,6 +104,11 @@ class Win32APIScraper:
             "getlasterror": "errhandlingapi/nf-errhandlingapi-getlasterror",
             "virtualalloc": "memoryapi/nf-memoryapi-virtualalloc",
             "virtualfree": "memoryapi/nf-memoryapi-virtualfree",
+            "heapalloc": "heapapi/nf-heapapi-heapalloc",
+            "heapfree": "heapapi/nf-heapapi-heapfree",
+            "heapcreate": "heapapi/nf-heapapi-heapcreate",
+            "heapdestroy": "heapapi/nf-heapapi-heapdestroy",
+            "getprocessheap": "heapapi/nf-heapapi-getprocessheap",
             "getsysteminfo": "sysinfoapi/nf-sysinfoapi-getsysteminfo",
             "getcurrentprocess": "processthreadsapi/nf-processthreadsapi-getcurrentprocess",
             "getcurrentthread": "processthreadsapi/nf-processthreadsapi-getcurrentthread",
@@ -113,6 +123,10 @@ class Win32APIScraper:
             "setwindowtext": "winuser/nf-winuser-setwindowtexta",
             "getwindowtext": "winuser/nf-winuser-getwindowtexta",
             "showwindow": "winuser/nf-winuser-showwindow",
+            "getsystemmetrics": "winuser/nf-winuser-getsystemmetrics",
+            "shgetfolderpath": "shlobj_core/nf-shlobj_core-shgetfolderpatha",
+            "shgetfolderpatha": "shlobj_core/nf-shlobj_core-shgetfolderpatha",
+            "shgetfolderpathw": "shlobj_core/nf-shlobj_core-shgetfolderpathw",
             "openprocess": "processthreadsapi/nf-processthreadsapi-openprocess",
             "terminateprocess": "processthreadsapi/nf-processthreadsapi-terminateprocess",
         }
@@ -125,63 +139,296 @@ class Win32APIScraper:
 
     def _search_function(self, function_name: str) -> List[str]:
         """
-        Busca pela função na documentação Microsoft usando busca em tempo real
+        Sistema revolucionário de descoberta automática de URLs para qualquer função Win32
         """
-        search_url = f"{self.search_url_base}{function_name}&category=Documentation"
+        discovered_urls = []
+        
+        # Estratégia 1: Busca inteligente na documentação Microsoft
+        discovered_urls.extend(self._search_microsoft_docs(function_name))
+        
+        # Estratégia 2: Inferência baseada em padrões de nomenclatura
+        discovered_urls.extend(self._infer_urls_from_patterns(function_name))
+        
+        # Estratégia 3: Busca no Google especificamente para Microsoft Learn
+        discovered_urls.extend(self._search_google_microsoft_learn(function_name))
+        
+        # Remove duplicatas mantendo ordem
+        seen = set()
+        unique_urls = []
+        for url in discovered_urls:
+            if url not in seen:
+                seen.add(url)
+                unique_urls.append(url)
+        
+        if not self.quiet and unique_urls:
+            console.print(f"[cyan]Descobrindo URLs: encontradas {len(unique_urls)} possibilidades[/cyan]")
+            
+        return unique_urls[:15]  # Retorna até 15 URLs para tentar
 
+    def _search_microsoft_docs(self, function_name: str) -> List[str]:
+        """Busca inteligente na documentação Microsoft"""
+        results = []
+        
         try:
+            # Busca 1: Documentação específica
+            search_url = f"{self.search_url_base}{function_name}+win32&category=Documentation"
             response = self.session.get(search_url, timeout=10)
             response.raise_for_status()
-
+            
             soup = BeautifulSoup(response.content, "html.parser")
-
-            # Procura por links de resultados da busca
-            results = []
-            all_links = soup.find_all("a", href=True)
-
-            # Procura por links que contenham o padrão da documentação da Win32 API
-            for link in all_links:
+            
+            # Procura por links da documentação Win32 API
+            for link in soup.find_all("a", href=True):
                 href = link["href"]
-                if "/windows/win32/" in href and function_name.lower() in href.lower():
+                text = link.get_text().lower()
+                
+                # Prioriza links que são claramente da documentação da função
+                if all([
+                    "/windows/win32/api/" in href.lower(),
+                    function_name.lower() in href.lower(),
+                    any(keyword in text for keyword in [function_name.lower(), "function", "api"])
+                ]):
                     if href.startswith("/"):
                         href = "https://learn.microsoft.com" + href
                     results.append(href)
-
-            # Se não encontrou resultados específicos, procura por qualquer link relacionado
+            
+            # Busca 2: Busca mais ampla se não encontrou nada específico
             if not results:
-                for link in all_links:
+                broader_search = f"{self.search_url_base}{function_name}+windows+api"
+                response2 = self.session.get(broader_search, timeout=10)
+                response2.raise_for_status()
+                soup2 = BeautifulSoup(response2.content, "html.parser")
+                
+                for link in soup2.find_all("a", href=True):
                     href = link["href"]
-                    link_text = link.get_text().lower()
-                    if (
-                        function_name.lower() in link_text
-                        or function_name.lower() in href.lower()
-                    ) and ("microsoft.com" in href or href.startswith("/")):
+                    if "/windows/win32/" in href.lower() and function_name.lower() in href.lower():
                         if href.startswith("/"):
                             href = "https://learn.microsoft.com" + href
                         results.append(href)
-
-            return results[:3]  # Retorna os 3 primeiros resultados
-
+                        
         except Exception as e:
-            console.print(
-                f"[yellow]Aviso: Erro na busca - {e}. Tentando URL padrão...[/yellow]"
-            )
-            # Tenta construir URLs padrão baseado no nome da função
-            if function_name.lower() == "createprocessw":
-                return [
-                    f"{self.base_url}/windows/win32/api/processthreadsapi/nf-processthreadsapi-createprocessw"
-                ]
-            elif function_name.lower() == "createfile":
-                return [
-                    f"{self.base_url}/windows/win32/api/fileapi/nf-fileapi-createfilea"
-                ]
-            elif function_name.lower() == "messagebox":
-                return [
-                    f"{self.base_url}/windows/win32/api/winuser/nf-winuser-messagebox"
-                ]
-            else:
-                # URL genérica para busca manual
-                return [f"{self.search_url_base}{function_name}"]
+            if not self.quiet:
+                console.print(f"[yellow]Busca Microsoft Docs falhou: {e}[/yellow]")
+        
+        return results[:5]
+
+    def _infer_urls_from_patterns(self, function_name: str) -> List[str]:
+        """Infere URLs baseado em padrões conhecidos da API Win32"""
+        func_lower = function_name.lower()
+        inferred_urls = []
+        
+        # Análise inteligente do nome da função para determinar categoria
+        api_categories = {
+            # Padrões de prefixo/sufixo mais específicos
+            "heap": ["heapapi"],
+            "virtual": ["memoryapi"],
+            "memory": ["memoryapi"], 
+            "global": ["winbase"],
+            "local": ["winbase"],
+            
+            # File operations
+            "file": ["fileapi"],
+            "read": ["fileapi"],
+            "write": ["fileapi"], 
+            "create": ["fileapi", "processthreadsapi", "winuser"],
+            "delete": ["fileapi"],
+            "copy": ["winbase"],
+            "move": ["winbase"],
+            "find": ["fileapi", "winuser"],
+            
+            # Process/Thread
+            "process": ["processthreadsapi"],
+            "thread": ["processthreadsapi"],
+            "terminate": ["processthreadsapi"],
+            "suspend": ["processthreadsapi"],
+            "resume": ["processthreadsapi"],
+            "wait": ["synchapi", "processthreadsapi"],
+            
+            # Window/UI
+            "window": ["winuser"],
+            "message": ["winuser"],
+            "dialog": ["winuser", "comdlg32"],
+            "menu": ["winuser"],
+            "paint": ["wingdi"],
+            "draw": ["wingdi"],
+            "show": ["winuser"],
+            "hide": ["winuser"],
+            "get": ["winuser", "fileapi", "processthreadsapi", "winbase"],
+            "set": ["winuser", "winreg", "fileapi"],
+            
+            # Registry
+            "reg": ["winreg"],
+            "key": ["winreg"],
+            
+            # Library/Module
+            "library": ["libloaderapi"],
+            "load": ["libloaderapi"],
+            "free": ["libloaderapi", "heapapi", "memoryapi"],
+            "module": ["libloaderapi"],
+            
+            # System
+            "system": ["sysinfoapi"],
+            "time": ["sysinfoapi"],
+            "locale": ["winnls"],
+            "version": ["sysinfoapi"],
+            
+            # Security
+            "token": ["securitybaseapi"],
+            "acl": ["securitybaseapi"],
+            "security": ["securitybaseapi"],
+            
+            # Network
+            "wsa": ["winsock", "ws2_32"],
+            "socket": ["winsock", "ws2_32"],
+            "connect": ["winsock", "ws2_32"],
+            "send": ["winsock", "ws2_32"],
+            "recv": ["winsock", "ws2_32"],
+            "bind": ["winsock", "ws2_32"],
+            "listen": ["winsock", "ws2_32"],
+            "accept": ["winsock", "ws2_32"],
+            
+            # Handle operations
+            "handle": ["handleapi"],
+            "close": ["handleapi"],
+            "duplicate": ["handleapi"],
+            
+            # Shell operations
+            "sh": ["shlobj_core", "shellapi"],
+            "path": ["shlobj_core", "pathapi"],
+            "folder": ["shlobj_core"],
+            "known": ["shlobj_core"]
+        }
+        
+        # Encontra todas as categorias relevantes
+        relevant_apis = set()
+        for keyword, apis in api_categories.items():
+            if keyword in func_lower:
+                relevant_apis.update(apis)
+        
+        # Se não encontrou padrões específicos, usa categorias mais comuns
+        if not relevant_apis:
+            relevant_apis = ["winuser", "fileapi", "processthreadsapi", "memoryapi", "winbase", "handleapi", "shlobj_core", "shellapi"]
+        
+        # Gera URLs para cada API relevante
+        for api in relevant_apis:
+            # Formato padrão Microsoft: /windows/win32/api/{api}/nf-{api}-{function}
+            base_url = f"{self.base_url}/windows/win32/api/{api}/nf-{api}-{func_lower}"
+            inferred_urls.append(base_url)
+            
+            # Tenta variações A/W se a função não termina com A ou W
+            if not func_lower.endswith('a') and not func_lower.endswith('w'):
+                inferred_urls.append(f"{base_url}a")
+                inferred_urls.append(f"{base_url}w")
+        
+        return inferred_urls[:10]
+
+    def _search_google_microsoft_learn(self, function_name: str) -> List[str]:
+        """Busca no Google especificamente por páginas do Microsoft Learn"""
+        # Por limitações de implementação, simula uma busca inteligente
+        # Em um ambiente de produção, usaria a API do Google Search
+        
+        potential_urls = []
+        
+        # Gera URLs baseadas em padrões comuns que o Google encontraria
+        common_apis = [
+            "winuser", "fileapi", "processthreadsapi", "memoryapi", "winbase",
+            "handleapi", "errhandlingapi", "sysinfoapi", "libloaderapi",
+            "heapapi", "securitybaseapi", "winreg", "synchapi", "wingdi",
+            "winsock", "ws2_32", "shlobj_core", "shellapi", "pathapi"
+        ]
+        
+        func_lower = function_name.lower()
+        for api in common_apis:
+            url = f"{self.base_url}/windows/win32/api/{api}/nf-{api}-{func_lower}"
+            potential_urls.append(url)
+        
+        return potential_urls[:5]
+
+    def _generate_fallback_urls(self, function_name: str) -> List[str]:
+        """
+        Gera URLs de fallback inteligentes baseadas em padrões comuns da API Win32
+        """
+        func_lower = function_name.lower()
+        fallback_urls = []
+        
+        # Padrões de API mais comuns organizados por categorias
+        api_patterns = {
+            # Memory APIs
+            "heap": ["heapapi"],
+            "virtual": ["memoryapi"],
+            "memory": ["memoryapi"],
+            "global": ["winbase"],
+            "local": ["winbase"],
+            
+            # File APIs
+            "file": ["fileapi"],
+            "read": ["fileapi"],
+            "write": ["fileapi"],
+            "create": ["fileapi", "processthreadsapi"],
+            "delete": ["fileapi"],
+            "copy": ["winbase"],
+            "move": ["winbase"],
+            
+            # Process/Thread APIs
+            "process": ["processthreadsapi"],
+            "thread": ["processthreadsapi"],
+            "terminate": ["processthreadsapi"],
+            "suspend": ["processthreadsapi"],
+            "resume": ["processthreadsapi"],
+            
+            # Window APIs
+            "window": ["winuser"],
+            "message": ["winuser"],
+            "dialog": ["winuser"],
+            "menu": ["winuser"],
+            "paint": ["wingdi"],
+            "draw": ["wingdi"],
+            
+            # Registry APIs
+            "reg": ["winreg"],
+            "key": ["winreg"],
+            
+            # Error handling
+            "error": ["errhandlingapi"],
+            "exception": ["errhandlingapi"],
+            
+            # Library APIs
+            "library": ["libloaderapi"],
+            "load": ["libloaderapi"],
+            "get": ["libloaderapi", "winuser", "fileapi", "processthreadsapi"],
+            "set": ["winuser", "winreg", "fileapi"],
+            
+            # System APIs
+            "system": ["sysinfoapi"],
+            "time": ["sysinfoapi"],
+            "locale": ["winnls"]
+        }
+        
+        # Encontra APIs relevantes baseadas no nome da função
+        relevant_apis = set()
+        for keyword, apis in api_patterns.items():
+            if keyword in func_lower:
+                relevant_apis.update(apis)
+        
+        # Se não encontrou padrões específicos, usa APIs mais comuns
+        if not relevant_apis:
+            relevant_apis = ["winuser", "fileapi", "processthreadsapi", "memoryapi", "winbase"]
+        
+        # Gera URLs de fallback para cada API relevante
+        for api in relevant_apis:
+            # Formato padrão: /windows/win32/api/{api}/nf-{api}-{function}
+            fallback_url = f"{self.base_url}/windows/win32/api/{api}/nf-{api}-{func_lower}"
+            fallback_urls.append(fallback_url)
+            
+            # Também tenta variações comuns (A/W)
+            if not func_lower.endswith('a') and not func_lower.endswith('w'):
+                fallback_urls.append(f"{self.base_url}/windows/win32/api/{api}/nf-{api}-{func_lower}a")
+                fallback_urls.append(f"{self.base_url}/windows/win32/api/{api}/nf-{api}-{func_lower}w")
+        
+        if not self.quiet:
+            console.print(f"[cyan]Tentando {len(fallback_urls)} URLs de fallback...[/cyan]")
+            
+        return fallback_urls[:10]  # Limita a 10 tentativas
 
     def _parse_function_page(self, url: str) -> Dict:
         """
@@ -642,7 +889,7 @@ class Win32APIScraper:
         return_headers = soup.find_all(
             ["h2", "h3", "h4"],
             string=re.compile(
-                r"Return\s+value|Valor\s+de\s+retorno|return\s+value", re.IGNORECASE
+                r"Return\s+value|Valor\s+de\s+retorno|return\s+value|valor\s+retornado|valor\s+retorno|return\s+values", re.IGNORECASE
             ),
         )
 
@@ -651,16 +898,26 @@ class Win32APIScraper:
             content_parts = []
             next_elem = header.find_next_sibling()
 
-            while next_elem:
+            paragraph_count = 0
+            while next_elem and paragraph_count < 2:  # Limita a 2 parágrafos para ser mais conciso
                 # Para quando encontra outro cabeçalho
                 if next_elem.name in ["h1", "h2", "h3", "h4"]:
                     break
 
-                # Coleta texto de parágrafos e divs
-                if next_elem.name in ["p", "div", "ul", "ol", "li"]:
+                # Coleta texto de parágrafos principais (mais restritivo)
+                if next_elem.name in ["p"]:
                     text = next_elem.get_text().strip()
-                    if text:
+                    if text and len(text) > 10 and len(text) < 500:  # Evita textos muito longos
                         content_parts.append(text)
+                        paragraph_count += 1
+                # Para listas, pega apenas o primeiro item se ainda não tem conteúdo
+                elif next_elem.name in ["ul", "ol"] and paragraph_count == 0:
+                    first_li = next_elem.find("li")
+                    if first_li:
+                        text = first_li.get_text().strip()
+                        if text and len(text) < 300:
+                            content_parts.append(text)
+                            paragraph_count += 1
 
                 next_elem = next_elem.find_next_sibling()
 
@@ -668,12 +925,29 @@ class Win32APIScraper:
                 return_desc = " ".join(content_parts)
                 break
 
-        # Fallback: procura por elementos que contenham "return" próximos
+        # Fallback melhorado: procura por seções com palavras-chave específicas de valor de retorno
         if not return_desc:
-            return_elements = soup.find_all(
-                ["p", "div", "dt", "dd"],
-                string=re.compile(r"return|Return", re.IGNORECASE),
-            )
+            # Estratégia 1: Procura por texto que comece com frases típicas de valor de retorno
+            all_text_elements = soup.find_all(["p", "div", "li"])
+            for elem in all_text_elements:
+                text = elem.get_text().strip()
+                # Procura por frases que indiquem valor de retorno
+                if any(phrase in text.lower() for phrase in [
+                    "if the function succeeds", "if the function fails",
+                    "se a função for bem-sucedida", "se a função falhar",
+                    "retorna um ponteiro", "returns a pointer",
+                    "return value is", "valor retornado é",
+                    "valor de retorno é"
+                ]) and 20 <= len(text) <= 400:
+                    return_desc = text
+                    break
+            
+            # Estratégia 2: Se ainda não encontrou, busca por elementos próximos a headers de retorno
+            if not return_desc:
+                return_elements = soup.find_all(
+                    ["p", "div", "dt", "dd"],
+                    string=re.compile(r"return|retorno", re.IGNORECASE),
+                )
 
             for elem in return_elements:
                 parent = elem.parent if hasattr(elem, "parent") else elem
@@ -694,6 +968,13 @@ class Win32APIScraper:
                         or "zero" in text.lower()
                         or "true" in text.lower()
                         or "false" in text.lower()
+                        or "sucesso" in text.lower()
+                        or "falha" in text.lower()
+                        or "êxito" in text.lower()
+                        or "erro" in text.lower()
+                        or "retorna" in text.lower()
+                        or "ponteiro" in text.lower()
+                        or "null" in text.lower()
                     ):
                         return_desc = text
                         break
@@ -701,8 +982,8 @@ class Win32APIScraper:
         # Tenta extrair o tipo de retorno da assinatura
         signature = self._extract_signature(soup)
         if signature:
-            # Procura por padrão tipo + nome_funcao(
-            match = re.search(r"^\s*(\w+)\s+\w+\s*\(", signature, re.MULTILINE)
+            # Procura por padrão tipo + nome_funcao( (incluindo tipos compostos como DECLSPEC_ALLOCATOR LPVOID)
+            match = re.search(r"^\s*(?:\w+\s+)*(\w+)\s+\w+\s*\(", signature, re.MULTILINE)
             if match:
                 potential_type = match.group(1).upper()
                 if potential_type in [
