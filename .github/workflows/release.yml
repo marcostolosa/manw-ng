@@ -127,29 +127,72 @@ jobs:
 
     - name: 🔨 Build Windows ${{ matrix.arch }} executable
       run: |
-        pyinstaller --onefile --noupx --clean --name ${{ matrix.artifact-name }} ^
+        pyinstaller --onefile --noupx --clean --strip --console ^
+          --name ${{ matrix.artifact-name }} ^
+          --add-data "manw_ng;manw_ng" ^
           --hidden-import=requests --hidden-import=requests.adapters ^
           --hidden-import=requests.packages --hidden-import=requests.packages.urllib3 ^
+          --hidden-import=requests.packages.urllib3.util --hidden-import=requests.packages.urllib3.util.retry ^
           --hidden-import=bs4 --hidden-import=bs4.builder --hidden-import=bs4.builder._lxml ^
+          --hidden-import=lxml --hidden-import=lxml.etree --hidden-import=lxml._elementpath ^
           --hidden-import=rich --hidden-import=rich.console --hidden-import=rich.text ^
+          --hidden-import=rich.markdown --hidden-import=rich.panel --hidden-import=rich.table ^
           --hidden-import=urllib3 --hidden-import=urllib3.util --hidden-import=urllib3.util.retry ^
+          --hidden-import=urllib3.poolmanager --hidden-import=urllib3.connection ^
           --hidden-import=certifi --hidden-import=charset_normalizer --hidden-import=idna ^
+          --hidden-import=email --hidden-import=email.mime --hidden-import=email.mime.multipart ^
+          --collect-all=certifi --collect-all=charset_normalizer ^
           --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy ^
           --exclude-module=pandas --exclude-module=PIL --exclude-module=PyQt5 ^
+          --exclude-module=PyQt6 --exclude-module=PySide2 --exclude-module=PySide6 ^
+          --exclude-module=scipy --exclude-module=IPython --exclude-module=jupyter ^
           --distpath=dist --workpath=build/${{ matrix.arch }} manw-ng.py
       shell: cmd
 
     - name: ✅ Test executable
       run: |
         cd dist
+        echo "Testing ${{ matrix.artifact-name }} executable..."
+        ./${{ matrix.artifact-name }} --version
         ./${{ matrix.artifact-name }} --help
+        echo "Testing actual function lookup..."
+        ./${{ matrix.artifact-name }} CreateProcessW --output json > test_output.json
+        echo "Checking output contains expected JSON structure..."
+        if grep -q "signature" test_output.json; then
+          echo "✅ Function lookup working correctly"
+        else
+          echo "❌ Function lookup failed"
+          exit 1
+        fi
       shell: bash
 
-    - name: 📊 Get file info
+    - name: 📊 Get file info and verify static build
       run: |
         cd dist
+        echo "=== File Information ==="
         ls -la ${{ matrix.artifact-name }}
         file ${{ matrix.artifact-name }} || echo "file command not available"
+        
+        echo ""
+        echo "=== Checking for static linking ==="
+        # Check if executable is portable (no external DLL dependencies)
+        echo "Dependencies check..."
+        if command -v ldd >/dev/null 2>&1; then
+          ldd ${{ matrix.artifact-name }} || echo "No dynamic dependencies (good for portability)"
+        else
+          echo "ldd not available, using dumpbin..."
+          # Use Windows dumpbin if available
+          if command -v dumpbin >/dev/null 2>&1; then
+            dumpbin /DEPENDENTS ${{ matrix.artifact-name }} || echo "dumpbin failed"
+          else
+            echo "No dependency checking tools available"
+          fi
+        fi
+        
+        echo ""
+        echo "=== Size Information ==="
+        du -h ${{ matrix.artifact-name }}
+        echo "Build completed successfully!"
       shell: bash
 
     - name: 📤 Upload Windows ${{ matrix.arch }} Binary

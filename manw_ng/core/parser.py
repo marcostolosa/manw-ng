@@ -27,6 +27,7 @@ class Win32PageParser:
             "parameter_count": 0,
             "architectures": ["x86", "x64"],
             "signature": "",
+            "signature_language": "c",
             "return_type": "",
             "return_description": "",
             "description": "",
@@ -35,7 +36,9 @@ class Win32PageParser:
         # Extract all information
         function_info["name"] = self._extract_function_name(soup)
         function_info["dll"] = self._extract_dll(soup)
-        function_info["signature"] = self._extract_signature(soup)
+        signature_info = self._extract_signature_with_language(soup)
+        function_info["signature"] = signature_info["signature"]
+        function_info["signature_language"] = signature_info["language"]
         function_info["parameters"] = self._extract_parameters(soup)
         function_info["parameter_count"] = len(function_info["parameters"])
         function_info["return_type"], function_info["return_description"] = (
@@ -82,16 +85,16 @@ class Win32PageParser:
 
         return "kernel32.dll"
 
-    def _extract_signature(self, soup: BeautifulSoup) -> str:
-        """Extract function signature"""
+    def _extract_signature_with_language(self, soup: BeautifulSoup) -> Dict:
+        """Extract function signature with language detection"""
         # Look for div with class='has-inner-focus'
         focus_div = soup.find("div", class_="has-inner-focus")
         if focus_div:
             signature = focus_div.get_text().strip()
             if signature and "(" in signature and ")" in signature:
-                return signature
+                return self._format_signature_with_language(signature, focus_div)
 
-        # Fallback: look for Syntax section
+        # Look for Syntax section
         syntax_headers = soup.find_all(
             ["h2", "h3", "h4"],
             string=re.compile(r"Syntax|Sintaxe|syntax|sintaxe", re.IGNORECASE),
@@ -103,18 +106,142 @@ class Win32PageParser:
                 if next_elem.name in ["pre", "code"]:
                     signature = next_elem.get_text().strip()
                     if "(" in signature and ")" in signature:
-                        return signature
-                elif next_elem.name == "div" and "has-inner-focus" in next_elem.get(
-                    "class", []
-                ):
-                    signature = next_elem.get_text().strip()
-                    if "(" in signature and ")" in signature:
-                        return signature
+                        return self._format_signature_with_language(
+                            signature, next_elem
+                        )
+                elif next_elem.name == "div":
+                    # Check for code blocks within divs
+                    code_elem = next_elem.find(["pre", "code"])
+                    if code_elem:
+                        signature = code_elem.get_text().strip()
+                        if "(" in signature and ")" in signature:
+                            return self._format_signature_with_language(
+                                signature, code_elem
+                            )
+                    # Check for has-inner-focus class
+                    elif "has-inner-focus" in next_elem.get("class", []):
+                        signature = next_elem.get_text().strip()
+                        if "(" in signature and ")" in signature:
+                            return self._format_signature_with_language(
+                                signature, next_elem
+                            )
+
                 next_elem = next_elem.find_next_sibling()
                 if next_elem and next_elem.name in ["h1", "h2", "h3", "h4"]:
                     break
 
-        return ""
+        return {"signature": "", "language": "c"}
+
+    def _format_signature_with_language(self, signature: str, element) -> Dict:
+        """Format signature with proper language detection"""
+        # Detect language from element attributes
+        language = self._detect_code_language(element)
+
+        # Clean and format the signature
+        cleaned_signature = self._clean_signature(signature)
+
+        return {"signature": cleaned_signature, "language": language}
+
+    def _extract_signature(self, soup: BeautifulSoup) -> str:
+        """Legacy method for backward compatibility"""
+        result = self._extract_signature_with_language(soup)
+        return result["signature"]
+
+    def _detect_code_language(self, element) -> str:
+        """Detect programming language from code element"""
+        # Check for language classes
+        classes = element.get("class", [])
+        for cls in classes:
+            if "lang-" in cls:
+                return cls.replace("lang-", "")
+            if "language-" in cls:
+                return cls.replace("language-", "")
+            if cls in [
+                "cpp",
+                "c",
+                "csharp",
+                "javascript",
+                "python",
+                "powershell",
+                "bash",
+            ]:
+                return cls
+
+        # Check parent elements for language indicators
+        parent = element.parent
+        while parent:
+            parent_classes = parent.get("class", [])
+            for cls in parent_classes:
+                if "lang-" in cls:
+                    return cls.replace("lang-", "")
+                if "language-" in cls:
+                    return cls.replace("language-", "")
+            parent = parent.parent
+
+        # Check for data attributes
+        lang_attr = element.get("data-lang") or element.get("data-language")
+        if lang_attr:
+            return lang_attr
+
+        # Detect by content patterns
+        content = element.get_text().strip()
+        if self._looks_like_cpp(content):
+            return "cpp"
+        elif self._looks_like_csharp(content):
+            return "csharp"
+        elif self._looks_like_powershell(content):
+            return "powershell"
+        elif self._looks_like_javascript(content):
+            return "javascript"
+
+        # Default fallback for Win32 API
+        return "c"
+
+    def _looks_like_cpp(self, content: str) -> bool:
+        """Check if content looks like C/C++ code"""
+        cpp_patterns = [
+            r"\b(BOOL|DWORD|HANDLE|HWND|LPCSTR|LPCWSTR|LPVOID|NTSTATUS)\b",
+            r"\[in\]|\[out\]|\[in,\s*out\]|\[optional\]",
+            r"__\w+\s+\w+\s*\(",  # __stdcall, __cdecl, etc.
+        ]
+        return any(re.search(pattern, content) for pattern in cpp_patterns)
+
+    def _looks_like_csharp(self, content: str) -> bool:
+        """Check if content looks like C# code"""
+        csharp_patterns = [
+            r"\busing\s+System\b",
+            r"\bpublic\s+static\s+extern\b",
+            r"\[DllImport\(",
+            r"\bstring\b.*\w+\s*\(",
+        ]
+        return any(re.search(pattern, content) for pattern in csharp_patterns)
+
+    def _looks_like_powershell(self, content: str) -> bool:
+        """Check if content looks like PowerShell code"""
+        ps_patterns = [
+            r"^\s*\$\w+",
+            r"\bGet-\w+|\bSet-\w+|\bNew-\w+",
+            r"-\w+\s+",  # PowerShell parameters
+        ]
+        return any(re.search(pattern, content, re.MULTILINE) for pattern in ps_patterns)
+
+    def _looks_like_javascript(self, content: str) -> bool:
+        """Check if content looks like JavaScript code"""
+        js_patterns = [
+            r"\bfunction\s+\w+\s*\(",
+            r"\bvar\s+\w+\s*=",
+            r"\blet\s+\w+\s*=",
+            r"\bconst\s+\w+\s*=",
+        ]
+        return any(re.search(pattern, content) for pattern in js_patterns)
+
+    def _clean_signature(self, signature: str) -> str:
+        """Clean and format function signature"""
+        # Remove extra whitespace and normalize line breaks
+        lines = [line.strip() for line in signature.split("\n") if line.strip()]
+
+        # Rejoin with proper formatting
+        return "\n".join(lines)
 
     def _extract_parameters(self, soup: BeautifulSoup) -> List[Dict]:
         """Extract detailed parameter information"""
@@ -168,6 +295,13 @@ class Win32PageParser:
                             ):
                                 current_param["description"] = desc_text
 
+                                # Check for value tables within this description
+                                value_tables = self._extract_parameter_value_tables(
+                                    next_elem
+                                )
+                                if value_tables:
+                                    current_param["values"] = value_tables
+
                 # Legacy format: <dt><dd>
                 elif next_elem.name == "dt":
                     if current_param.get("name"):
@@ -193,6 +327,128 @@ class Win32PageParser:
                 break
 
         return parameters
+
+    def _extract_parameter_value_tables(self, element) -> List[Dict]:
+        """Extract value/meaning tables for parameters"""
+        value_tables = []
+
+        # Look for tables within this element and its siblings
+        current = element
+        while current:
+            if current.name == "table":
+                table_data = self._parse_value_table(current)
+                if table_data:
+                    value_tables.append(table_data)
+            elif current.name in ["h1", "h2", "h3", "h4"]:
+                # Stop at next major section
+                break
+
+            # Also check for tables in child elements
+            tables = current.find_all("table") if hasattr(current, "find_all") else []
+            for table in tables:
+                table_data = self._parse_value_table(table)
+                if table_data:
+                    value_tables.append(table_data)
+
+            current = current.find_next_sibling()
+            if not current:
+                break
+
+        return value_tables
+
+    def _parse_value_table(self, table) -> Dict:
+        """Parse a value/meaning table"""
+        # Check if this is a value table by looking at headers
+        headers = table.find_all(["th", "td"])
+        if not headers:
+            return None
+
+        header_texts = [h.get_text().strip().lower() for h in headers[:3]]
+
+        # Look for common value table patterns
+        value_patterns = ["value", "valor", "flag", "constant", "constante"]
+        meaning_patterns = ["meaning", "significado", "description", "descrição"]
+
+        has_value_col = any(
+            pattern in " ".join(header_texts) for pattern in value_patterns
+        )
+        has_meaning_col = any(
+            pattern in " ".join(header_texts) for pattern in meaning_patterns
+        )
+
+        if not (has_value_col and has_meaning_col):
+            return None
+
+        # Extract table data
+        rows = table.find_all("tr")
+        if len(rows) < 2:  # Need at least header + 1 data row
+            return None
+
+        # Get header indices
+        header_row = rows[0]
+        header_cells = header_row.find_all(["th", "td"])
+
+        value_idx = -1
+        meaning_idx = -1
+
+        for i, cell in enumerate(header_cells):
+            text = cell.get_text().strip().lower()
+            if any(pattern in text for pattern in value_patterns) and value_idx == -1:
+                value_idx = i
+            elif (
+                any(pattern in text for pattern in meaning_patterns)
+                and meaning_idx == -1
+            ):
+                meaning_idx = i
+
+        if value_idx == -1 or meaning_idx == -1:
+            return None
+
+        # Extract data rows
+        table_data = {
+            "type": "values",
+            "title": self._get_table_title(table),
+            "entries": [],
+        }
+
+        for row in rows[1:]:  # Skip header row
+            cells = row.find_all(["td", "th"])
+            if len(cells) > max(value_idx, meaning_idx):
+                value = (
+                    cells[value_idx].get_text().strip()
+                    if value_idx < len(cells)
+                    else ""
+                )
+                meaning = (
+                    cells[meaning_idx].get_text().strip()
+                    if meaning_idx < len(cells)
+                    else ""
+                )
+
+                if value and meaning:
+                    table_data["entries"].append({"value": value, "meaning": meaning})
+
+        return table_data if table_data["entries"] else None
+
+    def _get_table_title(self, table) -> str:
+        """Get title for a table by looking at preceding elements"""
+        # Look for preceding heading or caption
+        prev_elem = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "caption"])
+        if prev_elem and prev_elem.name == "caption":
+            return prev_elem.get_text().strip()
+        elif prev_elem and prev_elem.name.startswith("h"):
+            # Check if heading is close to the table
+            siblings_between = []
+            current = prev_elem.find_next_sibling()
+            while current and current != table:
+                siblings_between.append(current)
+                current = current.find_next_sibling()
+
+            # If only a few elements between heading and table, use the heading
+            if len(siblings_between) <= 3:
+                return prev_elem.get_text().strip()
+
+        return "Values"
 
     def _extract_param_type_from_signature(
         self, soup: BeautifulSoup, param_name: str
@@ -315,6 +571,61 @@ class Win32PageParser:
     def _extract_description(self, soup: BeautifulSoup) -> str:
         """Extract function description"""
         title = soup.find("h1")
+        if title:
+            description_parts = []
+            current_elem = title.find_next_sibling()
+            paragraph_count = 0
+            max_paragraphs = 5  # Limit to avoid getting too much content
+
+            while current_elem and paragraph_count < max_paragraphs:
+                # Stop at the next section header (h2, h3, h4, etc.)
+                if current_elem.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+                    break
+
+                # Collect paragraph text
+                if current_elem.name == "p":
+                    text = current_elem.get_text().strip()
+                    if text and len(text) > 10:  # Skip very short paragraphs
+                        # Skip paragraphs that look like navigation or metadata
+                        if not any(
+                            skip_word in text.lower()
+                            for skip_word in [
+                                "requirements",
+                                "see also",
+                                "library",
+                                "dll",
+                                "header",
+                                "unicode",
+                                "ansi",
+                            ]
+                        ):
+                            description_parts.append(text)
+                            paragraph_count += 1
+
+                current_elem = current_elem.find_next_sibling()
+
+            if description_parts:
+                return " ".join(description_parts)
+
+        # Alternative approach: look for content between h1 and first h2/h3
+        if title:
+            # Find the section containing the main description
+            next_section = title.find_next(["h2", "h3", "h4"])
+            if next_section:
+                description_parts = []
+                current = title.next_sibling
+                while current and current != next_section:
+                    if hasattr(current, "name") and current.name == "p":
+                        text = current.get_text().strip()
+                        if text and len(text) > 10:
+                            description_parts.append(text)
+                    current = current.next_sibling
+                if description_parts:
+                    return " ".join(
+                        description_parts[:3]
+                    )  # Limit to first 3 paragraphs
+
+        # Final fallback: just get the first paragraph after h1
         if title:
             next_p = title.find_next("p")
             if next_p:

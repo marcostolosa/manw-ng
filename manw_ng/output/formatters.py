@@ -65,9 +65,11 @@ class RichFormatter:
 
         # Assinatura da função
         if function_info["signature"]:
+            # Use detected language or fallback to 'c'
+            lang = function_info.get("signature_language", "c")
             self.console.print(
                 Panel(
-                    Markdown(f"```c\n{function_info['signature']}\n```"),
+                    Markdown(f"```{lang}\n{function_info['signature']}\n```"),
                     title="Assinatura da Função",
                 )
             )
@@ -86,10 +88,22 @@ class RichFormatter:
             )
 
             for param in function_info["parameters"]:
+                # Build description with value tables if available
+                description = param["description"] or "Sem descrição disponível"
+
+                # Add value tables if present
+                if "values" in param and param["values"]:
+                    description += "\n\n"
+                    for value_table in param["values"]:
+                        description += f"**{value_table.get('title', 'Values')}:**\n"
+                        for entry in value_table.get("entries", []):
+                            description += f"• `{entry['value']}`: {entry['meaning']}\n"
+                        description += "\n"
+
                 param_table.add_row(
                     param["name"],
                     param.get("type", "UNKNOWN"),
-                    param["description"] or "Sem descrição disponível",
+                    description.strip(),
                 )
 
             self.console.print(param_table)
@@ -128,7 +142,7 @@ class MarkdownFormatter:
 
 ## Assinatura
 
-```c
+```{function_info.get('signature_language', 'c')}
 {function_info['signature']}
 ```
 
@@ -141,6 +155,17 @@ class MarkdownFormatter:
 
         for param in function_info.get("parameters", []):
             md_content += f"\n### {param['name']}\n{param['description']}\n"
+
+            # Add value tables if present
+            if "values" in param and param["values"]:
+                for value_table in param["values"]:
+                    md_content += f"\n#### {value_table.get('title', 'Values')}\n\n"
+                    md_content += "| Value | Meaning |\n|-------|---------|\n"
+                    for entry in value_table.get("entries", []):
+                        value = entry["value"].replace("|", "\\|")
+                        meaning = entry["meaning"].replace("|", "\\|")
+                        md_content += f"| `{value}` | {meaning} |\n"
+                    md_content += "\n"
 
         if function_info.get("return_description"):
             md_content += (
