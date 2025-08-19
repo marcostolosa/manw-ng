@@ -52,7 +52,7 @@ jobs:
 
     - name: 🧪 Run unit tests
       run: |
-        python -m pytest tests/ -v --tb=short --cov=win32_scraper --cov-report=xml --cov-report=term-missing
+        python -m pytest tests/ -v --tb=short --cov=manw_ng --cov-report=xml --cov-report=term-missing
 
     - name: 📊 Upload coverage to Codecov
       if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.9'
@@ -95,7 +95,7 @@ jobs:
     - name: 🎯 Test CLI functionality
       run: |
         # Testa se o CLI funciona com funções conhecidas
-        python win32_scraper.py CreateProcessW --output json > test_output.json
+        python manw-ng.py CreateProcessW --output json > test_output.json
         cat test_output.json
         # Verifica se o JSON é válido
         python -c "import json; json.load(open('test_output.json'))"
@@ -161,7 +161,7 @@ jobs:
 
     - name: 📝 Type checking with MyPy
       run: |
-        mypy win32_scraper.py --ignore-missing-imports || true
+        mypy manw-ng.py --ignore-missing-imports || true
 
     - name: 📊 Generate complexity report
       run: |
@@ -198,7 +198,7 @@ jobs:
         # Testa performance de funções críticas
         python -c "
         import time
-        from win32_scraper import Win32APIScraper
+        from manw_ng.core.scraper import Win32APIScraper
         
         scraper = Win32APIScraper()
         

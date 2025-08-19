@@ -37,21 +37,21 @@ def main():
     project_root = Path(__file__).parent.parent
     os.chdir(project_root)
 
-    print("🧪 Win32 API Scraper - Test Suite")
+    print("🧪 MANW-NG - Test Suite")
     print("=" * 50)
 
     tests = [
         ("python -m pytest tests/ -v --tb=short", "Unit Tests"),
         (
-            "python -m pytest tests/ -v --cov=win32_scraper --cov-report=html",
+            "python -m pytest tests/ -v --cov=manw_ng --cov-report=html",
             "Coverage Report",
         ),
         ("flake8 . --count --statistics", "Code Linting"),
         (
-            "python -c \"import win32_scraper; print('✅ Import test passed')\"",
+            "python -c \"import manw_ng; print('✅ Import test passed')\"",
             "Import Test",
         ),
-        ("python win32_scraper.py CreateProcessW --output json", "CLI Test"),
+        ("python manw-ng.py CreateProcessW --output json", "CLI Test"),
     ]
 
     results = []

@@ -23,7 +23,7 @@ def run_command(command, description):
 
 def main():
     """Configura o ambiente de desenvolvimento"""
-    print("🚀 Setting up Win32 API Scraper Development Environment")
+    print("🚀 Setting up MANW-NG Development Environment")
     print("=" * 60)
 
     # Muda para o diretório raiz do projeto
@@ -35,7 +35,7 @@ def main():
         ("pip install -r requirements.txt", "Installing production dependencies"),
         ("pip install -r requirements-dev.txt", "Installing development dependencies"),
         (
-            "python -c \"import win32_scraper; print('Import test successful')\"",
+            "python -c \"import manw_ng.core.scraper; print('Import test successful')\"",
             "Testing imports",
         ),
     ]
@@ -59,7 +59,7 @@ def main():
         print("🎉 Development environment setup complete!")
         print("\n📋 Next steps:")
         print("1. Run tests: python scripts/run_tests.py")
-        print("2. Start coding: python win32_scraper.py CreateProcessW")
+        print("2. Start coding: python manw-ng.py CreateProcessW")
         print("3. Format code: black .")
         print("4. Check linting: flake8 .")
         return 0

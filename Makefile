@@ -1,4 +1,4 @@
-# Makefile para Win32 API Scraper
+# Makefile para MANW-NG
 # Facilita execução de comandos comuns de desenvolvimento
 
 .PHONY: help install install-dev test test-unit test-integration test-cli coverage lint format security clean docs
@@ -10,7 +10,7 @@ RED=\033[0;31m
 NC=\033[0m # No Color
 
 help: ## Mostra esta ajuda
-	@echo "$(GREEN)Win32 API Scraper - Comandos Disponíveis$(NC)"
+	@echo "$(GREEN)MANW-NG - Comandos Disponíveis$(NC)"
 	@echo "=========================================="
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "$(YELLOW)%-20s$(NC) %s\n", $$1, $$2}'
 
@@ -38,13 +38,13 @@ test-integration: ## Executa testes de integração
 
 test-cli: ## Testa interface CLI
 	@echo "$(GREEN)💻 Testando interface CLI...$(NC)"
-	python win32_scraper.py CreateProcessW --output json > /dev/null
-	python win32_scraper.py MessageBox --output json > /dev/null
+	python manw-ng.py CreateProcessW --output json > /dev/null
+	python manw-ng.py MessageBox --output json > /dev/null
 	@echo "$(GREEN)✅ CLI funcionando corretamente!$(NC)"
 
 coverage: ## Gera relatório de cobertura
 	@echo "$(GREEN)📊 Gerando relatório de cobertura...$(NC)"
-	python -m pytest tests/ --cov=win32_scraper --cov-report=html --cov-report=term-missing
+	python -m pytest tests/ --cov=manw_ng --cov-report=html --cov-report=term-missing
 	@echo "$(GREEN)📋 Relatório disponível em htmlcov/index.html$(NC)"
 
 lint: ## Executa linting do código
@@ -69,11 +69,11 @@ security: ## Executa análise de segurança
 
 type-check: ## Executa verificação de tipos
 	@echo "$(GREEN)📝 Verificando tipos...$(NC)"
-	mypy win32_scraper.py --ignore-missing-imports || true
+	mypy manw-ng.py --ignore-missing-imports || true
 
 benchmark: ## Executa benchmarks de performance
 	@echo "$(GREEN)⚡ Executando benchmarks...$(NC)"
-	python -c "import time; from win32_scraper import Win32APIScraper; s = Win32APIScraper(); start = time.time(); s._try_direct_url('CreateProcessW'); print(f'Direct URL: {(time.time()-start)*1000:.2f}ms')"
+	python -c "import time; from manw_ng.core.scraper import Win32APIScraper; s = Win32APIScraper(); start = time.time(); s._try_direct_url('CreateProcessW'); print(f'Direct URL: {(time.time()-start)*1000:.2f}ms')"
 
 clean: ## Limpa arquivos temporários
 	@echo "$(GREEN)🧹 Limpando arquivos temporários...$(NC)"
@@ -90,20 +90,20 @@ clean: ## Limpa arquivos temporários
 docs: ## Gera documentação
 	@echo "$(GREEN)📚 Gerando documentação...$(NC)"
 	@echo "$(YELLOW)README.md está atualizado$(NC)"
-	@echo "$(YELLOW)Para documentação da API, use: python -c 'import win32_scraper; help(win32_scraper)'$(NC)"
+	@echo "$(YELLOW)Para documentação da API, use: python -c 'import manw_ng.core.scraper; help(manw_ng.core.scraper)'$(NC)"
 
 run-example: ## Executa exemplo com CreateProcessW
 	@echo "$(GREEN)🚀 Executando exemplo...$(NC)"
-	python win32_scraper.py CreateProcessW
+	python manw-ng.py CreateProcessW
 
 run-all-examples: ## Executa exemplos com várias funções
 	@echo "$(GREEN)🚀 Executando exemplos com várias funções...$(NC)"
 	@echo "$(YELLOW)CreateProcessW:$(NC)"
-	python win32_scraper.py CreateProcessW --output json | head -5
+	python manw-ng.py CreateProcessW --output json | head -5
 	@echo "\n$(YELLOW)MessageBox:$(NC)"
-	python win32_scraper.py MessageBox --output json | head -5
+	python manw-ng.py MessageBox --output json | head -5
 	@echo "\n$(YELLOW)GetSystemInfo:$(NC)"
-	python win32_scraper.py GetSystemInfo --output json | head -5
+	python manw-ng.py GetSystemInfo --output json | head -5
 
 setup: install-dev ## Configuração completa do ambiente
 	@echo "$(GREEN)🚀 Configuração completa do ambiente...$(NC)"

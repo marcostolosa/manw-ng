@@ -1,20 +1,22 @@
-# Win32 API Documentation Scraper 🔧
+# MANW-NG: Win32 API Documentation Scraper (Next Generation) 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey)](https://github.com/your-username/win32-api-scraper)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey)](https://github.com/marcostolosa/manw-ng)
 
-A **revolutionary tool** for reverse engineers and Windows developers to extract detailed information about Win32 API functions directly from Microsoft's official documentation.
+A **revolutionary modular tool** for reverse engineers and Windows developers to extract detailed information about Win32 API functions directly from Microsoft's official documentation.
 
 ## ✨ Features
 
-- 🌐 **Multi-language support**: English and Portuguese documentation
-- 📝 **Precise extraction**: Function signatures from exact HTML elements (`has-inner-focus` divs)
+- 🏗️ **Modular Architecture**: Clean, maintainable codebase with separated concerns
+- 🌐 **Multi-language support**: English and Portuguese documentation with automatic fallback
+- 🔍 **Intelligent Discovery**: Multi-stage discovery pipeline finds ANY Win32 function
+- 📝 **Precise extraction**: Function signatures from exact HTML elements
 - 📋 **Detailed parameters**: Complete parameter descriptions with types and directions
 - 🎯 **Return values**: Comprehensive return value documentation
-- 🎨 **Rich output**: Beautiful terminal output with syntax highlighting
-- 🔍 **Smart search**: Automatic function discovery with fallback mechanisms
-- ⚡ **Fast & reliable**: Efficient scraping with error handling
+- 🎨 **Rich Status**: Dynamic progress display with animated spinner
+- ⚡ **100+ Known Functions**: Pre-mapped functions for reverse engineering and malware analysis
+- 🚀 **Expert Techniques**: Based on reverse engineering best practices
 
 ## 🚀 Installation
 
@@ -33,29 +35,32 @@ pip install -r requirements.txt
 
 ```bash
 # Extract CreateProcessW documentation in English
-python win32_scraper.py CreateProcessW
+python manw-ng.py CreateProcessW
 
 # Extract MessageBoxA documentation in Portuguese
-python win32_scraper.py MessageBoxA -l br
+python manw-ng.py MessageBoxA -l br
 
 # Get help
-python win32_scraper.py -h
+python manw-ng.py -h
 ```
 
 ### Command Line Options
 
 ```
-usage: win32_scraper.py [-h] [-l {br,us}] [--output {rich,json,markdown}] function_name
+usage: manw-ng.py [-h] [-l {br,us}] [--output {rich,json,markdown}] [--version] function_name
+
+MANW-NG - Win32 API Documentation Scraper (Next Generation)
 
 positional arguments:
-  function_name         Win32 function name (e.g., CreateProcessW)
+  function_name         Nome da função Win32 para fazer scraping (ex: CreateProcessW, VirtualAlloc)
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -l {br,us}, --language {br,us}
-                        Documentation language: 'br' for Portuguese or 'us' for English (default: us)
+                        Idioma da documentação: 'br' para português ou 'us' para inglês (padrão: us)
   --output {rich,json,markdown}
-                        Output format (default: rich)
+                        Formato de saída (padrão: rich)
+  --version             show program's version number and exit
 ```
 
 ## 🎯 Perfect for Reverse Engineers
@@ -79,21 +84,31 @@ The tool supports **all Win32 API functions** documented on Microsoft Learn, inc
 - **Registry Operations** (`RegOpenKey`, `RegQueryValue`, etc.)
 - **And many more...**
 
-### Pre-mapped Functions (25+)
+### Pre-mapped Functions (100+)
 <details>
-<summary>View complete list of optimized functions</summary>
+<summary>View complete list of optimized functions for reverse engineering</summary>
 
-- `CreateProcessW` - Process creation
-- `CreateFileA/W` - File operations
-- `MessageBoxA/W` - User interface
-- `ReadFile/WriteFile` - File I/O
-- `VirtualAlloc/VirtualFree` - Memory management
-- `LoadLibrary/GetProcAddress` - DLL operations
-- `FindWindow/ShowWindow` - Window management
-- `OpenProcess/TerminateProcess` - Process control
-- `GetSystemInfo` - System information
-- `CloseHandle` - Handle management
-- And more...
+**Process/Thread Management (19 functions)**
+- `CreateProcess`, `OpenProcess`, `TerminateProcess`
+- `CreateThread`, `SuspendThread`, `ResumeThread`
+- `GetCurrentProcess`, `WaitForSingleObject`, etc.
+
+**Memory Management (15 functions)**  
+- `VirtualAlloc`, `VirtualProtect`, `ReadProcessMemory`
+- `WriteProcessMemory`, `HeapAlloc`, `GlobalAlloc`, etc.
+
+**File Operations (20 functions)**
+- `CreateFile`, `ReadFile`, `WriteFile`, `DeleteFile`
+- `CopyFile`, `MoveFile`, `FindFirstFile`, etc.
+
+**Registry (10 functions)**
+- `RegOpenKeyEx`, `RegCreateKey`, `RegSetValueEx`
+- `RegQueryValueEx`, `RegDeleteKey`, etc.
+
+**Network (10 functions)**
+- `WSAStartup`, `socket`, `connect`, `send`, `recv`, etc.
+
+**And many more categories...**
 
 </details>
 
@@ -101,7 +116,7 @@ The tool supports **all Win32 API functions** documented on Microsoft Learn, inc
 
 ### English Documentation
 ```bash
-python win32_scraper.py CreateProcessW -l us
+python manw-ng.py CreateProcessW -l us
 ```
 
 ```
@@ -169,7 +184,7 @@ Beautiful terminal output with colors, tables, and syntax highlighting.
 
 ### JSON
 ```bash
-python win32_scraper.py CreateProcessW --output json > createprocessw.json
+python manw-ng.py CreateProcessW --output json > createprocessw.json
 ```
 
 Perfect for automation and integration with other tools:
@@ -190,10 +205,10 @@ Perfect for automation and integration with other tools:
 
 ```bash
 # English documentation (default)
-python win32_scraper.py CreateProcessW -l us
+python manw-ng.py CreateProcessW -l us
 
 # Portuguese documentation  
-python win32_scraper.py CreateProcessW -l br
+python manw-ng.py CreateProcessW -l br
 ```
 
 Access documentation in your preferred language:

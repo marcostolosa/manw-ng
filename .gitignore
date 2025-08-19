@@ -1,5 +1,5 @@
-# 🔍 Win32 API Scraper - GitIgnore
-# =====================================
+# 🚀 MANW-NG - GitIgnore
+# =======================
 
 # 🐍 Python
 # ---------
@@ -9,7 +9,6 @@ __pycache__/
 *.so
 .Python
 build/
-build.py
 develop-eggs/
 dist/
 downloads/
@@ -285,7 +284,6 @@ local_settings.py
 # --------------------
 test_output.json
 test_output.xml
-output/
 results/
 
 # 📈 Performance & Profiling
