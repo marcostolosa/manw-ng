@@ -161,6 +161,12 @@ class Win32PageParser:
                         desc_text = next_elem.get_text().strip()
                         # Skip short texts or ones that look like parameter declarations
                         if len(desc_text) > 20 and not re.match(r"^\[.*?\]", desc_text):
+                            # Limit to first 2 sentences or ~200 chars
+                            sentences = desc_text.split(". ")
+                            if len(sentences) >= 2:
+                                desc_text = ". ".join(sentences[:2]) + "."
+                            elif len(desc_text) > 200:
+                                desc_text = desc_text[:200] + "..."
                             current_param["description"] = desc_text
 
                 # Legacy format: <dt><dd>

@@ -59,18 +59,16 @@ class RichFormatter:
 
         # Parâmetros
         if function_info["parameters"]:
-            param_table = Table(title="Parâmetros")
-            param_table.add_column("Nome", style="cyan")
-            param_table.add_column("Descrição", style="green")
+            param_table = Table(title="Parâmetros", expand=True)
+            param_table.add_column("Nome", style="cyan", width=20)
+            param_table.add_column("Tipo", style="yellow", width=15)
+            param_table.add_column("Descrição", style="green", no_wrap=False)
 
             for param in function_info["parameters"]:
                 param_table.add_row(
                     param["name"],
-                    (
-                        param["description"][:100] + "..."
-                        if len(param["description"]) > 100
-                        else param["description"]
-                    ),
+                    param.get("type", "UNKNOWN"),
+                    param["description"] or "Sem descrição disponível",
                 )
 
             self.console.print(param_table)
