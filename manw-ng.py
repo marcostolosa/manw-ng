@@ -27,10 +27,10 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  manw-ng.py CreateProcess              # English documentation
-  manw-ng.py -l br VirtualAlloc         # Portuguese documentation  
-  manw-ng.py --output json OpenProcess  # JSON output
-  manw-ng.py --output markdown RegOpenKeyEx  # Markdown output
+  manw-ng.py CreateProcess                    # English documentation
+  manw-ng.py -l br VirtualAlloc               # Portuguese documentation
+  manw-ng.py --output json OpenProcess        # JSON output
+  manw-ng.py --output markdown RegOpenKeyEx   # Markdown output
         """,
     )
 
