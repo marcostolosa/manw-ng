@@ -319,19 +319,3 @@ temp_*.html
 .claude
 *.claude
 
-# === IMPORTANT FILES TO KEEP ===
-# ===============================
-# These files SHOULD be in version control:
-# - README.md
-# - requirements.txt
-# - requirements-dev.txt
-# - win32_scraper.py
-# - main.py
-# - tests/
-# - .github/workflows/
-# - pytest.ini
-# - conftest.py
-# - setup.cfg
-# - Makefile
-# - scripts/
-# - .gitignore (this file)
