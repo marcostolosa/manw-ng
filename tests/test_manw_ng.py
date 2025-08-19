@@ -103,7 +103,7 @@ class TestWin32PageParser(unittest.TestCase):
     def setUp(self):
         """Configuração para testes do parser"""
         self.parser = Win32PageParser()
-        
+
         self.sample_html = """
         <html>
             <head><title>CreateProcessW function</title></head>
@@ -157,7 +157,7 @@ class TestWin32PageParser(unittest.TestCase):
         # Com a nova estrutura, podemos ter 0 parâmetros se não for encontrada a seção
         # Vamos verificar se pelo menos encontra algo ou testa a estrutura
         self.assertIsInstance(parameters, list)
-        
+
         # Se encontrar parâmetros, testa a estrutura
         if len(parameters) > 0:
             param_names = [p["name"] for p in parameters]
@@ -167,7 +167,9 @@ class TestWin32PageParser(unittest.TestCase):
     def test_extract_type_from_text(self):
         """Testa extração de tipo de dados"""
         self.assertEqual(self.parser._extract_type_from_text("BOOL value"), "BOOL")
-        self.assertEqual(self.parser._extract_type_from_text("LPCWSTR string"), "LPCWSTR")
+        self.assertEqual(
+            self.parser._extract_type_from_text("LPCWSTR string"), "LPCWSTR"
+        )
         self.assertEqual(self.parser._extract_type_from_text("unknown type"), "UNKNOWN")
 
 
@@ -178,15 +180,13 @@ class TestWin32DiscoveryEngine(unittest.TestCase):
         """Configuração para testes do discovery engine"""
         self.session = requests.Session()
         self.engine = Win32DiscoveryEngine(
-            "https://learn.microsoft.com/en-us", 
-            self.session, 
-            quiet=True
+            "https://learn.microsoft.com/en-us", self.session, quiet=True
         )
 
     def test_intelligent_fuzzing(self):
         """Testa fuzzing inteligente"""
         urls = self.engine._intelligent_fuzzing("CreateProcess")
-        
+
         self.assertGreater(len(urls), 0)
         # Verifica se pelo menos uma URL contém o padrão correto
         self.assertTrue(any("createprocess" in url.lower() for url in urls))
@@ -201,14 +201,14 @@ class TestWin32DiscoveryEngine(unittest.TestCase):
     def test_header_based_discovery(self):
         """Testa descoberta baseada em headers"""
         urls = self.engine._header_based_discovery("VirtualAlloc")
-        
+
         self.assertGreater(len(urls), 0)
         self.assertTrue(any("memoryapi" in url for url in urls))
 
     def test_pattern_mining(self):
         """Testa pattern mining avançado"""
         urls = self.engine._advanced_pattern_mining("GetSystemInfo")
-        
+
         self.assertGreater(len(urls), 0)
         self.assertTrue(any("getsysteminfo" in url.lower() for url in urls))
 
@@ -216,7 +216,7 @@ class TestWin32DiscoveryEngine(unittest.TestCase):
         """Testa remoção de duplicatas"""
         urls = ["url1", "url2", "url1", "url3", "url2"]
         unique = self.engine._deduplicate_urls(urls)
-        
+
         self.assertEqual(len(unique), 3)
         self.assertEqual(unique, ["url1", "url2", "url3"])
 
@@ -231,8 +231,16 @@ class TestOutputFormatters(unittest.TestCase):
             "dll": "Kernel32.dll",
             "calling_convention": "__stdcall",
             "parameters": [
-                {"name": "lpApplicationName", "type": "LPCWSTR", "description": "Application name"},
-                {"name": "lpCommandLine", "type": "LPWSTR", "description": "Command line"},
+                {
+                    "name": "lpApplicationName",
+                    "type": "LPCWSTR",
+                    "description": "Application name",
+                },
+                {
+                    "name": "lpCommandLine",
+                    "type": "LPWSTR",
+                    "description": "Command line",
+                },
             ],
             "parameter_count": 2,
             "architectures": ["x86", "x64"],
@@ -240,18 +248,19 @@ class TestOutputFormatters(unittest.TestCase):
             "return_type": "BOOL",
             "return_description": "Nonzero if successful",
             "description": "Creates a new process",
-            "url": "https://example.com/test"
+            "url": "https://example.com/test",
         }
 
     def test_json_formatter(self):
         """Testa formatador JSON"""
         formatter = JSONFormatter()
         result = formatter.format_output(self.sample_function_info)
-        
+
         self.assertIn("CreateProcessW", result)
         self.assertIn("Kernel32.dll", result)
         # Deve ser JSON válido
         import json
+
         parsed = json.loads(result)
         self.assertEqual(parsed["name"], "CreateProcessW")
 
@@ -259,7 +268,7 @@ class TestOutputFormatters(unittest.TestCase):
         """Testa formatador Markdown"""
         formatter = MarkdownFormatter()
         result = formatter.format_output(self.sample_function_info)
-        
+
         self.assertIn("# CreateProcessW", result)
         self.assertIn("## Informações Básicas", result)
         self.assertIn("```c", result)
@@ -270,10 +279,10 @@ class TestOutputFormatters(unittest.TestCase):
         """Testa formatador Rich"""
         mock_console = Mock()
         mock_console_class.return_value = mock_console
-        
+
         formatter = RichFormatter()
         formatter.format_output(self.sample_function_info)
-        
+
         # Verifica se métodos do console foram chamados
         self.assertTrue(mock_console.print.called)
 
@@ -296,10 +305,16 @@ class TestKnownFunctions(unittest.TestCase):
     def test_critical_functions_present(self):
         """Testa se funções críticas estão presentes"""
         critical_functions = [
-            "createprocess", "openprocess", "virtualalloc", "readprocessmemory",
-            "writeprocessmemory", "loadlibrary", "getprocaddress", "regopenkeyex"
+            "createprocess",
+            "openprocess",
+            "virtualalloc",
+            "readprocessmemory",
+            "writeprocessmemory",
+            "loadlibrary",
+            "getprocaddress",
+            "regopenkeyex",
         ]
-        
+
         for func in critical_functions:
             self.assertIn(func, KNOWN_FUNCTIONS)
 

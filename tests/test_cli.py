@@ -16,12 +16,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import importlib.util
 
 # Import manw-ng main function
-spec = importlib.util.spec_from_file_location("manw_ng_main", os.path.join(os.path.dirname(os.path.dirname(__file__)), "manw-ng.py"))
+spec = importlib.util.spec_from_file_location(
+    "manw_ng_main",
+    os.path.join(os.path.dirname(os.path.dirname(__file__)), "manw-ng.py"),
+)
 manw_ng_main = importlib.util.module_from_spec(spec)
 sys.modules["manw_ng_main"] = manw_ng_main
 spec.loader.exec_module(manw_ng_main)
 
 from manw_ng.core.scraper import Win32APIScraper
+
 main = manw_ng_main.main
 
 

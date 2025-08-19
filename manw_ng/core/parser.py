@@ -53,7 +53,9 @@ class Win32PageParser:
             title_text = title.get_text().strip()
             title_text = re.sub(
                 r"\s+(function|api|Function|API).*$",
-                "", title_text, flags=re.IGNORECASE
+                "",
+                title_text,
+                flags=re.IGNORECASE,
             )
             if title_text:
                 return title_text
@@ -72,7 +74,7 @@ class Win32PageParser:
         """Extract DLL name"""
         dll_patterns = [r"(\w+\.dll)", r"Library:\s*(\w+\.dll)", r"DLL:\s*(\w+\.dll)"]
         text = soup.get_text()
-        
+
         for pattern in dll_patterns:
             match = re.search(pattern, text, re.IGNORECASE)
             if match:
@@ -94,7 +96,7 @@ class Win32PageParser:
             ["h2", "h3", "h4"],
             string=re.compile(r"Syntax|Sintaxe|syntax|sintaxe", re.IGNORECASE),
         )
-        
+
         for header in syntax_headers:
             next_elem = header.find_next()
             while next_elem:
@@ -102,7 +104,9 @@ class Win32PageParser:
                     signature = next_elem.get_text().strip()
                     if "(" in signature and ")" in signature:
                         return signature
-                elif next_elem.name == "div" and "has-inner-focus" in next_elem.get("class", []):
+                elif next_elem.name == "div" and "has-inner-focus" in next_elem.get(
+                    "class", []
+                ):
                     signature = next_elem.get_text().strip()
                     if "(" in signature and ")" in signature:
                         return signature
@@ -168,9 +172,24 @@ class Win32PageParser:
     def _extract_type_from_text(self, text: str) -> str:
         """Extract Win32 data type from text"""
         win32_types = [
-            "BOOL", "DWORD", "HANDLE", "HWND", "LPCSTR", "LPCWSTR", 
-            "LPSTR", "LPWSTR", "LPVOID", "PVOID", "UINT", "INT", 
-            "LONG", "ULONG", "BYTE", "WORD", "SIZE_T", "HMODULE"
+            "BOOL",
+            "DWORD",
+            "HANDLE",
+            "HWND",
+            "LPCSTR",
+            "LPCWSTR",
+            "LPSTR",
+            "LPWSTR",
+            "LPVOID",
+            "PVOID",
+            "UINT",
+            "INT",
+            "LONG",
+            "ULONG",
+            "BYTE",
+            "WORD",
+            "SIZE_T",
+            "HMODULE",
         ]
 
         text_upper = text.upper()
@@ -197,7 +216,7 @@ class Win32PageParser:
             content_parts = []
             next_elem = header.find_next_sibling()
             paragraph_count = 0
-            
+
             while next_elem and paragraph_count < 2:
                 if next_elem.name in ["h1", "h2", "h3", "h4"]:
                     break
@@ -217,11 +236,24 @@ class Win32PageParser:
         # Extract return type from signature
         signature = self._extract_signature(soup)
         if signature:
-            match = re.search(r"^\s*(?:\w+\s+)*(\w+)\s+\w+\s*\(", signature, re.MULTILINE)
+            match = re.search(
+                r"^\s*(?:\w+\s+)*(\w+)\s+\w+\s*\(", signature, re.MULTILINE
+            )
             if match:
                 potential_type = match.group(1).upper()
-                if potential_type in ["BOOL", "DWORD", "HANDLE", "HWND", "INT", "UINT", 
-                                    "LONG", "ULONG", "VOID", "LPVOID", "HMODULE"]:
+                if potential_type in [
+                    "BOOL",
+                    "DWORD",
+                    "HANDLE",
+                    "HWND",
+                    "INT",
+                    "UINT",
+                    "LONG",
+                    "ULONG",
+                    "VOID",
+                    "LPVOID",
+                    "HMODULE",
+                ]:
                     return_type = potential_type
 
         return return_type, return_desc

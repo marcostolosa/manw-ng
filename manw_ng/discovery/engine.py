@@ -17,53 +17,104 @@ class Win32DiscoveryEngine:
     """
     Intelligent discovery engine for Win32 API documentation
     """
-    
+
     def __init__(self, base_url: str, session: requests.Session, quiet: bool = False):
         self.base_url = base_url
         self.session = session
         self.quiet = quiet
         self.console = Console()
-        
+
         # Complete list of Win32 headers for intelligent fuzzing
         self.all_headers = [
             # Core System APIs
-            "winbase", "winuser", "winreg", "winnt", "winnls", "wincon", "winerror",
+            "winbase",
+            "winuser",
+            "winreg",
+            "winnt",
+            "winnls",
+            "wincon",
+            "winerror",
             # Process/Thread
-            "processthreadsapi", "synchapi", "handleapi", "namedpipeapi",
+            "processthreadsapi",
+            "synchapi",
+            "handleapi",
+            "namedpipeapi",
             # Memory
-            "memoryapi", "heapapi", "virtualalloc",
-            # File System  
-            "fileapi", "winioctl", "ioapiset", "wow64apiset",
+            "memoryapi",
+            "heapapi",
+            "virtualalloc",
+            # File System
+            "fileapi",
+            "winioctl",
+            "ioapiset",
+            "wow64apiset",
             # Debugging
-            "debugapi", "minidumpapiset", "imagehlp", "dbghelp",
+            "debugapi",
+            "minidumpapiset",
+            "imagehlp",
+            "dbghelp",
             # Security
-            "securitybaseapi", "authz", "sddl", "wincrypt", "ncrypt", "bcrypt", 
+            "securitybaseapi",
+            "authz",
+            "sddl",
+            "wincrypt",
+            "ncrypt",
+            "bcrypt",
             # Services
-            "winsvc", "securityappcontainer",
+            "winsvc",
+            "securityappcontainer",
             # Registry (extended)
-            "winreg", "winperf",
+            "winreg",
+            "winperf",
             # Threading (extended)
-            "threadpoollegacyapiset", "threadpoolapiset",
+            "threadpoollegacyapiset",
+            "threadpoolapiset",
             # Libraries
-            "libloaderapi", "errhandlingapi",
+            "libloaderapi",
+            "errhandlingapi",
             # System Info
-            "sysinfoapi", "systemtopologyapi", "processtopologyapi",
+            "sysinfoapi",
+            "systemtopologyapi",
+            "processtopologyapi",
             # UI Extended
-            "commctrl", "commdlg", "richedit", "shellapi", "shlobj_core", "shlwapi",
+            "commctrl",
+            "commdlg",
+            "richedit",
+            "shellapi",
+            "shlobj_core",
+            "shlwapi",
             # GDI
             "wingdi",
             # Network
-            "winsock", "winsock2", "ws2tcpip", "wininet", "winhttp", "iphlpapi",
+            "winsock",
+            "winsock2",
+            "ws2tcpip",
+            "wininet",
+            "winhttp",
+            "iphlpapi",
             # COM
-            "objbase", "oleauto", "ole2", "olectl",
+            "objbase",
+            "oleauto",
+            "ole2",
+            "olectl",
             # DirectX/Graphics
-            "d3d11", "d3d12", "dxgi", "d2d1",
+            "d3d11",
+            "d3d12",
+            "dxgi",
+            "d2d1",
             # Crypto Extended
-            "wintrust", "softpub", "mssip",
-            # Tools/Debug Extended  
-            "tlhelp32", "psapi", "toolhelp",
+            "wintrust",
+            "softpub",
+            "mssip",
+            # Tools/Debug Extended
+            "tlhelp32",
+            "psapi",
+            "toolhelp",
             # Advanced
-            "ntddscsi", "ntdddisk", "ntddser", "winternl",
+            "ntddscsi",
+            "ntdddisk",
+            "ntddser",
+            "winternl",
         ]
 
     def discover_function_urls(self, function_name: str) -> List[str]:
@@ -73,7 +124,7 @@ class Win32DiscoveryEngine:
         discovered_urls = []
 
         # Pipeline de descoberta em ordem de eficiência
-        
+
         # Estratégia 1: Fuzzing inteligente de patterns conhecidos (mais rápido)
         discovered_urls.extend(self._intelligent_fuzzing(function_name))
 
@@ -82,7 +133,7 @@ class Win32DiscoveryEngine:
 
         # Estratégia 3: Header-based discovery (cobertura ampla)
         discovered_urls.extend(self._header_based_discovery(function_name))
-        
+
         # Estratégia 4: Pattern mining avançado (fallback)
         discovered_urls.extend(self._advanced_pattern_mining(function_name))
 
@@ -95,17 +146,19 @@ class Win32DiscoveryEngine:
         """
         func_lower = function_name.lower()
         urls = []
-        
+
         # Gera URLs para cada header usando o padrão oficial Microsoft
         for header in self.all_headers:
-            base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+            base_url = (
+                f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+            )
             urls.append(base_url)
-            
+
             # Variações A/W automáticas
-            if not func_lower.endswith('a') and not func_lower.endswith('w'):
+            if not func_lower.endswith("a") and not func_lower.endswith("w"):
                 urls.append(f"{base_url}a")
                 urls.append(f"{base_url}w")
-                
+
         return urls[:15]
 
     def _header_based_discovery(self, function_name: str) -> List[str]:
@@ -114,7 +167,7 @@ class Win32DiscoveryEngine:
         """
         func_lower = function_name.lower()
         candidate_urls = []
-        
+
         # Mapeamento semântico inteligente função -> headers prováveis
         semantic_mapping = {
             "process": ["processthreadsapi", "psapi", "toolhelp", "tlhelp32"],
@@ -135,25 +188,27 @@ class Win32DiscoveryEngine:
             "library": ["libloaderapi"],
             "module": ["libloaderapi", "psapi"],
         }
-        
+
         # Encontra headers relevantes
         relevant_headers = set()
         for pattern, headers in semantic_mapping.items():
             if pattern in func_lower:
                 relevant_headers.update(headers)
-                
+
         if not relevant_headers:
             relevant_headers = ["winbase", "winuser", "fileapi", "processthreadsapi"]
-            
+
         # Gera URLs candidatas
         for header in relevant_headers:
-            base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+            base_url = (
+                f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
+            )
             candidate_urls.append(base_url)
-            
-            if not func_lower.endswith('a') and not func_lower.endswith('w'):
+
+            if not func_lower.endswith("a") and not func_lower.endswith("w"):
                 candidate_urls.append(f"{base_url}a")
                 candidate_urls.append(f"{base_url}w")
-                
+
         return candidate_urls[:10]
 
     def _advanced_pattern_mining(self, function_name: str) -> List[str]:
@@ -162,12 +217,12 @@ class Win32DiscoveryEngine:
         """
         func_lower = function_name.lower()
         mined_urls = []
-        
+
         # Análise de prefixos e sufixos
         patterns = {
             "prefixes": {
                 "nt": ["winternl", "ntdll"],
-                "rtl": ["winternl", "ntdll"], 
+                "rtl": ["winternl", "ntdll"],
                 "get": ["winbase", "winuser", "sysinfoapi"],
                 "set": ["winbase", "winuser", "winreg"],
                 "is": ["debugapi", "winbase"],
@@ -177,23 +232,23 @@ class Win32DiscoveryEngine:
                 "32": ["tlhelp32", "kernel32"],
                 "w": ["winuser", "fileapi", "winbase"],
                 "a": ["winuser", "fileapi", "winbase"],
-            }
+            },
         }
-        
+
         # Testa prefixos
         for prefix, headers in patterns["prefixes"].items():
             if func_lower.startswith(prefix):
                 for header in headers:
                     base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
                     mined_urls.append(base_url)
-                    
+
         # Testa sufixos
         for suffix, headers in patterns["suffixes"].items():
             if func_lower.endswith(suffix):
                 for header in headers:
                     base_url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}"
                     mined_urls.append(base_url)
-                    
+
         return mined_urls[:8]
 
     def _search_microsoft_docs(self, function_name: str) -> List[str]:
@@ -201,12 +256,18 @@ class Win32DiscoveryEngine:
         Busca oficial na documentação Microsoft
         """
         results = []
-        search_url_base = self.base_url.replace("/en-us", "/en-us/search/?scope=Windows&terms=")
+        search_url_base = self.base_url.replace(
+            "/en-us", "/en-us/search/?scope=Windows&terms="
+        )
         if "/pt-br" in self.base_url:
-            search_url_base = self.base_url.replace("/pt-br", "/pt-br/search/?scope=Windows&terms=")
+            search_url_base = self.base_url.replace(
+                "/pt-br", "/pt-br/search/?scope=Windows&terms="
+            )
 
         try:
-            search_url = f"{search_url_base}{function_name}+win32&category=Documentation"
+            search_url = (
+                f"{search_url_base}{function_name}+win32&category=Documentation"
+            )
             response = self.session.get(search_url, timeout=10)
             response.raise_for_status()
 
@@ -216,11 +277,16 @@ class Win32DiscoveryEngine:
                 href = link["href"]
                 text = link.get_text().lower()
 
-                if all([
-                    "/windows/win32/api/" in href.lower(),
-                    function_name.lower() in href.lower(),
-                    any(keyword in text for keyword in [function_name.lower(), "function", "api"])
-                ]):
+                if all(
+                    [
+                        "/windows/win32/api/" in href.lower(),
+                        function_name.lower() in href.lower(),
+                        any(
+                            keyword in text
+                            for keyword in [function_name.lower(), "function", "api"]
+                        ),
+                    ]
+                ):
                     if href.startswith("/"):
                         href = "https://learn.microsoft.com" + href
                     results.append(href)

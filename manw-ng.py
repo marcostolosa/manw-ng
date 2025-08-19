@@ -2,7 +2,7 @@
 """
 MANW-NG: Win32 API Documentation Scraper (Next Generation)
 
-A revolutionary modular tool for reverse engineers and Windows developers 
+A revolutionary modular tool for reverse engineers and Windows developers
 to extract detailed information about Win32 API functions from Microsoft documentation.
 
 Supports both English and Portuguese documentation with precise parameter
@@ -37,15 +37,16 @@ Categories supported:
   • Registry Operations       • Network Functions    • Window Management
   • Security & Access Control • Cryptography         • Services
   • DLL/Library Loading      • System Information   • Error Handling
-        """
+        """,
     )
-    
+
     parser.add_argument(
         "function_name",
         help="Nome da função Win32 para fazer scraping (ex: CreateProcessW, VirtualAlloc)",
     )
     parser.add_argument(
-        "-l", "--language",
+        "-l",
+        "--language",
         choices=["br", "us"],
         default="us",
         help="Idioma da documentação: 'br' para português ou 'us' para inglês (padrão: us)",
@@ -56,20 +57,18 @@ Categories supported:
         default="rich",
         help="Formato de saída (padrão: rich)",
     )
-    parser.add_argument(
-        "--version",
-        action="version",
-        version="MANW-NG 2.0.0"
-    )
+    parser.add_argument("--version", action="version", version="MANW-NG 2.0.0")
 
     args = parser.parse_args()
 
     try:
         # Initialize scraper
         scraper = Win32APIScraper(language=args.language, quiet=(args.output == "json"))
-        
+
         if args.output != "json":
-            console.print(f"[yellow]Fazendo scraping da função: {args.function_name} (idioma: {args.language})[/yellow]")
+            console.print(
+                f"[yellow]Fazendo scraping da função: {args.function_name} (idioma: {args.language})[/yellow]"
+            )
 
         # Scrape function information
         function_info = scraper.scrape_function(args.function_name)

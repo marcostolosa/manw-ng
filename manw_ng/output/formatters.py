@@ -14,7 +14,7 @@ from rich.table import Table
 
 class RichFormatter:
     """Rich console formatter for beautiful terminal output"""
-    
+
     def __init__(self):
         self.console = Console()
 
@@ -36,7 +36,9 @@ class RichFormatter:
 
         basic_table.add_row("DLL", function_info["dll"])
         basic_table.add_row("Calling Convention", function_info["calling_convention"])
-        basic_table.add_row("Número de Parâmetros", str(function_info["parameter_count"]))
+        basic_table.add_row(
+            "Número de Parâmetros", str(function_info["parameter_count"])
+        )
         basic_table.add_row("Arquiteturas", ", ".join(function_info["architectures"]))
         basic_table.add_row("Tipo de Retorno", function_info["return_type"])
 
@@ -82,7 +84,7 @@ class RichFormatter:
 
 class JSONFormatter:
     """JSON formatter for machine-readable output"""
-    
+
     @staticmethod
     def format_output(function_info: Dict) -> str:
         """Format function information as JSON"""
@@ -91,7 +93,7 @@ class JSONFormatter:
 
 class MarkdownFormatter:
     """Markdown formatter for documentation"""
-    
+
     @staticmethod
     def format_output(function_info: Dict) -> str:
         """Format function information as Markdown"""
@@ -118,10 +120,12 @@ class MarkdownFormatter:
 ## Parâmetros
 """
 
-        for param in function_info.get('parameters', []):
+        for param in function_info.get("parameters", []):
             md_content += f"\n### {param['name']}\n{param['description']}\n"
 
-        if function_info.get('return_description'):
-            md_content += f"\n## Valor de Retorno\n\n{function_info['return_description']}"
+        if function_info.get("return_description"):
+            md_content += (
+                f"\n## Valor de Retorno\n\n{function_info['return_description']}"
+            )
 
         return md_content

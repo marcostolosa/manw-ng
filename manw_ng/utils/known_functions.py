@@ -26,7 +26,6 @@ KNOWN_FUNCTIONS = {
     "getexitcodeprocess": "processthreadsapi/nf-processthreadsapi-getexitcodeprocess",
     "setthreadcontext": "processthreadsapi/nf-processthreadsapi-setthreadcontext",
     "getthreadcontext": "processthreadsapi/nf-processthreadsapi-getthreadcontext",
-    
     # Memory Management (Essential for exploitation)
     "virtualalloc": "memoryapi/nf-memoryapi-virtualalloc",
     "virtualfree": "memoryapi/nf-memoryapi-virtualfree",
@@ -43,7 +42,6 @@ KNOWN_FUNCTIONS = {
     "globalfree": "winbase/nf-winbase-globalfree",
     "localalloc": "winbase/nf-winbase-localalloc",
     "localfree": "winbase/nf-winbase-localfree",
-    
     # File Operations (Common in malware)
     "createfilea": "fileapi/nf-fileapi-createfilea",
     "createfilew": "fileapi/nf-fileapi-createfilew",
@@ -70,7 +68,6 @@ KNOWN_FUNCTIONS = {
     "setfileattributes": "fileapi/nf-fileapi-setfileattributesa",
     "getfilesize": "fileapi/nf-fileapi-getfilesize",
     "setfilepointer": "fileapi/nf-fileapi-setfilepointer",
-    
     # DLL/Library Loading (Code injection techniques)
     "loadlibrary": "libloaderapi/nf-libloaderapi-loadlibrarya",
     "loadlibrarya": "libloaderapi/nf-libloaderapi-loadlibrarya",
@@ -83,7 +80,6 @@ KNOWN_FUNCTIONS = {
     "getmodulefilename": "libloaderapi/nf-libloaderapi-getmodulefilenamea",
     "getmodulefilenamea": "libloaderapi/nf-libloaderapi-getmodulefilenamea",
     "getmodulefilenamew": "libloaderapi/nf-libloaderapi-getmodulefilenamew",
-    
     # Registry (Persistence mechanisms)
     "regopenkeyex": "winreg/nf-winreg-regopenkeyexa",
     "regcreatekey": "winreg/nf-winreg-regcreatekeya",
@@ -95,7 +91,6 @@ KNOWN_FUNCTIONS = {
     "regclosekey": "winreg/nf-winreg-regclosekey",
     "regenumkey": "winreg/nf-winreg-regenumkeya",
     "regenumvalue": "winreg/nf-winreg-regenumvaluea",
-    
     # Network (C&C communication)
     "wsastartup": "winsock/nf-winsock-wsastartup",
     "wsacleanup": "winsock/nf-winsock-wsacleanup",
@@ -111,7 +106,6 @@ KNOWN_FUNCTIONS = {
     "closesocket": "winsock2/nf-winsock2-closesocket",
     "gethostbyname": "winsock/nf-winsock-gethostbyname",
     "inet_addr": "winsock2/nf-winsock2-inet_addr",
-    
     # Window Management (GUI interaction)
     "findwindow": "winuser/nf-winuser-findwindowa",
     "findwindowa": "winuser/nf-winuser-findwindowa",
@@ -130,7 +124,6 @@ KNOWN_FUNCTIONS = {
     "messagebox": "winuser/nf-winuser-messagebox",
     "messageboxa": "winuser/nf-winuser-messageboxa",
     "messageboxw": "winuser/nf-winuser-messageboxw",
-    
     # System Information
     "getsysteminfo": "sysinfoapi/nf-sysinfoapi-getsysteminfo",
     "getsystemdirectory": "sysinfoapi/nf-sysinfoapi-getsystemdirectorya",
@@ -144,12 +137,10 @@ KNOWN_FUNCTIONS = {
     "getsystemtime": "sysinfoapi/nf-sysinfoapi-getsystemtime",
     "getlocaltime": "sysinfoapi/nf-sysinfoapi-getlocaltime",
     "getsystemmetrics": "winuser/nf-winuser-getsystemmetrics",
-    
     # Error Handling
     "getlasterror": "errhandlingapi/nf-errhandlingapi-getlasterror",
     "setlasterror": "errhandlingapi/nf-errhandlingapi-setlasterror",
     "formatmessage": "winbase/nf-winbase-formatmessagea",
-    
     # Cryptography (Common in malware)
     "cryptacquirecontext": "wincrypt/nf-wincrypt-cryptacquirecontexta",
     "cryptcreatehash": "wincrypt/nf-wincrypt-cryptcreatehash",
@@ -157,7 +148,6 @@ KNOWN_FUNCTIONS = {
     "cryptgethashparam": "wincrypt/nf-wincrypt-cryptgethashparam",
     "cryptreleasecontext": "wincrypt/nf-wincrypt-cryptreleasecontext",
     "cryptdestroyhash": "wincrypt/nf-wincrypt-cryptdestroyhash",
-    
     # Services (Malware persistence)
     "openscmanager": "winsvc/nf-winsvc-openscmanagera",
     "createservice": "winsvc/nf-winsvc-createservicea",
@@ -166,7 +156,6 @@ KNOWN_FUNCTIONS = {
     "controlservice": "winsvc/nf-winsvc-controlservice",
     "deleteservice": "winsvc/nf-winsvc-deleteservice",
     "closeservicehandle": "winsvc/nf-winsvc-closeservicehandle",
-    
     # Shell Operations
     "shgetfolderpath": "shlobj_core/nf-shlobj_core-shgetfolderpatha",
     "shgetfolderpatha": "shlobj_core/nf-shlobj_core-shgetfolderpatha",
@@ -175,14 +164,12 @@ KNOWN_FUNCTIONS = {
     "shellexecutea": "shellapi/nf-shellapi-shellexecutea",
     "shellexecutew": "shellapi/nf-shellapi-shellexecutew",
     "shellexecuteex": "shellapi/nf-shellapi-shellexecuteexa",
-    
     # Security & Access Control
     "openprocesstoken": "processthreadsapi/nf-processthreadsapi-openprocesstoken",
     "adjusttokenprivileges": "securitybaseapi/nf-securitybaseapi-adjusttokenprivileges",
     "lookupprivilegevalue": "winbase/nf-winbase-lookupprivilegevaluea",
     "impersonateloggedonuser": "securitybaseapi/nf-securitybaseapi-impersonateloggedonuser",
     "reverttoself": "securitybaseapi/nf-securitybaseapi-reverttoself",
-    
     # Common functions for testing
     "sleep": "synchapi/nf-synchapi-sleep",
     "createtoolhelp32snapshot": "tlhelp32/nf-tlhelp32-createtoolhelp32snapshot",

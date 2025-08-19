@@ -30,7 +30,9 @@ def main():
         print(f"Erro ao atualizar pip: {output}")
         return 1
 
-    success, output = run_command(f"{sys.executable} -m pip install -r requirements.txt")
+    success, output = run_command(
+        f"{sys.executable} -m pip install -r requirements.txt"
+    )
     if not success:
         print(f"Erro ao instalar dependências: {output}")
         return 1
