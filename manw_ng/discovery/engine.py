@@ -92,6 +92,7 @@ class Win32DiscoveryEngine:
             "wininet",
             "winhttp",
             "iphlpapi",
+            "urlmon",
             # COM
             "objbase",
             "oleauto",

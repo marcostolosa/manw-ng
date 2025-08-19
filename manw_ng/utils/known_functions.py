@@ -106,6 +106,16 @@ KNOWN_FUNCTIONS = {
     "closesocket": "winsock2/nf-winsock2-closesocket",
     "gethostbyname": "winsock/nf-winsock-gethostbyname",
     "inet_addr": "winsock2/nf-winsock2-inet_addr",
+    # WinINet (HTTP/Internet functions)
+    "internetopena": "wininet/nf-wininet-internetopena",
+    "internetopenw": "wininet/nf-wininet-internetopenw",
+    "internetopen": "wininet/nf-wininet-internetopena",
+    "internetconnecta": "wininet/nf-wininet-internetconnecta",
+    "internetconnectw": "wininet/nf-wininet-internetconnectw",
+    "internetconnect": "wininet/nf-wininet-internetconnecta",
+    "internetreadfile": "wininet/nf-wininet-internetreadfile",
+    "internetwritefile": "wininet/nf-wininet-internetwritefile",
+    "internetclosehandle": "wininet/nf-wininet-internetclosehandle",
     # Window Management (GUI interaction)
     "findwindow": "winuser/nf-winuser-findwindowa",
     "findwindowa": "winuser/nf-winuser-findwindowa",

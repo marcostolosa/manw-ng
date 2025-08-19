@@ -157,11 +157,16 @@ class Win32PageParser:
                                 "description": "",
                             }
                     elif current_param.get("name") and next_elem.get_text().strip():
-                        # This paragraph contains the description
-                        desc_text = next_elem.get_text().strip()
-                        # Skip short texts or ones that look like parameter declarations
-                        if len(desc_text) > 20 and not re.match(r"^\[.*?\]", desc_text):
-                            current_param["description"] = desc_text
+                        # This paragraph contains the description - only take first valid one
+                        if not current_param[
+                            "description"
+                        ]:  # Only if we don't have description yet
+                            desc_text = next_elem.get_text().strip()
+                            # Skip short texts or ones that look like parameter declarations
+                            if len(desc_text) > 20 and not re.match(
+                                r"^\[.*?\]", desc_text
+                            ):
+                                current_param["description"] = desc_text
 
                 # Legacy format: <dt><dd>
                 elif next_elem.name == "dt":
