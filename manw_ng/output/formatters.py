@@ -21,21 +21,24 @@ class RichFormatter:
     def format_output(self, function_info: Dict) -> None:
         """Format and display function information using Rich"""
         # Extract function name and header from the full name
-        full_name = function_info['name']
-        
+        full_name = function_info["name"]
+
         # Check if name contains header info like "Função VirtualAllocEx (memoryapi.h)"
         import re
-        header_match = re.search(r'\(([^)]+\.h)\)', full_name)
+
+        header_match = re.search(r"\(([^)]+\.h)\)", full_name)
         if header_match:
             header = header_match.group(1)
             # Extract just the function name (remove "Função " prefix and header)
-            func_name = re.sub(r'^(Função\s+|Function\s+)?(.+?)\s*\([^)]+\).*$', r'\2', full_name)
+            func_name = re.sub(
+                r"^(Função\s+|Function\s+)?(.+?)\s*\([^)]+\).*$", r"\2", full_name
+            )
             title_text = f"{func_name} ({header})"
         else:
             # Fallback if no header found
-            func_name = re.sub(r'^(Função\s+|Function\s+)', '', full_name)
+            func_name = re.sub(r"^(Função\s+|Function\s+)", "", full_name)
             title_text = func_name
-        
+
         # Título principal
         self.console.print(
             Panel(
