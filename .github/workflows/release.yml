@@ -203,7 +203,8 @@ jobs:
                 --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
                 --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
                 --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
-                --distpath=dist --workpath=build/x86 win32_scraper.py
+                --distpath=dist --workpath=build/x86 win32_scraper.py && \
+              chmod 755 dist/${{ matrix.artifact-name }}
             "
         else
           # Para x64, compila PyInstaller do zero no Alpine 64-bit
@@ -220,7 +221,8 @@ jobs:
                 --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
                 --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
                 --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
-                --distpath=dist --workpath=build/x64 win32_scraper.py
+                --distpath=dist --workpath=build/x64 win32_scraper.py && \
+              chmod 755 dist/${{ matrix.artifact-name }}
             "
         fi
 
@@ -235,7 +237,6 @@ jobs:
     - name: ✅ Test executable
       run: |
         cd dist
-        chmod +x ${{ matrix.artifact-name }}
         ./${{ matrix.artifact-name }} --help
 
     - name: 📤 Upload Linux ${{ matrix.arch }} Binary  
