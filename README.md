@@ -231,8 +231,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If this tool helped you with your reverse engineering or development work, please consider giving it a star!
 
-## 🔗 Related Projects
+## 🔗 Related Projects and Inspirations
 
+- [manw](https://github.com/leandrofroes/manw)
 - [API Monitor](https://github.com/rohitab/API-Monitor) - API monitoring and hooking
 - [Process Hacker](https://github.com/processhacker/processhacker) - System information tool
 - [x64dbg](https://github.com/x64dbg/x64dbg) - Windows debugger
