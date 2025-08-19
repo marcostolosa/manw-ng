@@ -59,10 +59,12 @@ class RichFormatter:
 
         # Parâmetros
         if function_info["parameters"]:
-            param_table = Table(title="Parâmetros", expand=True)
-            param_table.add_column("Nome", style="cyan", width=20)
-            param_table.add_column("Tipo", style="yellow", width=15)
-            param_table.add_column("Descrição", style="green", no_wrap=False)
+            param_table = Table(title="Parâmetros", expand=True, show_lines=True)
+            param_table.add_column("Nome", style="cyan", min_width=15, max_width=25)
+            param_table.add_column("Tipo", style="yellow", min_width=8, max_width=25)
+            param_table.add_column(
+                "Descrição", style="green", no_wrap=False, overflow="fold"
+            )
 
             for param in function_info["parameters"]:
                 param_table.add_row(
