@@ -110,20 +110,20 @@ python win32_scraper.py CreateProcessW -l us
 └──────────────────────┘
 
         Basic Information        
-┌────────────────────────────────┐
-│ Property           │ Value     │
-├────────────────────┼───────────┤
-│ DLL               │ Kernel32.dll │
+┌───────────────────────────────────┐
+│ Property           │ Value        │
+├────────────────────┼──────────────┤
+│ DLL                │ Kernel32.dll │
 │ Calling Convention │ __stdcall    │
-│ Parameters        │ 10           │
-│ Architectures     │ x86, x64     │
-│ Return Type       │ BOOL         │
-└────────────────────────────────┘
+│ Parameters         │ 10           │
+│ Architectures      │ x86, x64     │
+│ Return Type        │ BOOL         │
+└───────────────────────────────────┘
 
-┌────────── Function Signature ──────────┐
+┌────────── Function Signature ───────────┐
 │ BOOL CreateProcessW(                    │
-│   [in, optional]      LPCWSTR lpAppName│
-│   [in, out, optional] LPWSTR lpCmdLine │
+│   [in, optional]      LPCWSTR lpAppName │
+│   [in, out, optional] LPWSTR lpCmdLine  │
 │   ...                                   │
 │ );                                      │
 └─────────────────────────────────────────┘
@@ -156,10 +156,10 @@ python win32_scraper.py CreateProcessW -l us
 ## 🛠️ Dependencies
 
 ```
-requests>=2.28.0      # HTTP client for web scraping
-beautifulsoup4>=4.11.0 # HTML parsing
-rich>=12.0.0          # Terminal formatting and colors
-lxml>=4.9.0           # Fast XML/HTML parser
+requests>=2.28.0          # HTTP client for web scraping
+beautifulsoup4>=4.11.0    # HTML parsing
+rich>=12.0.0              # Terminal formatting and colors
+lxml>=4.9.0               # Fast XML/HTML parser
 ```
 
 ## 📝 Output Formats
