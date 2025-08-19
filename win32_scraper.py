@@ -61,7 +61,9 @@ class Win32APIScraper:
         direct_url = self._try_direct_url(function_name)
         if direct_url:
             if not self.quiet:
-                console.print(f"[green]Usando URL direto: {direct_url}[/green]")
+                console.print(
+                    f"[green]Documentação encontrada: {self._format_url_display(direct_url)}[/green]"
+                )
             return self._parse_function_page(direct_url)
 
         # Se não encontrou URL direto, usar busca dinâmica
@@ -70,14 +72,25 @@ class Win32APIScraper:
         # Tenta cada URL encontrada até conseguir fazer o parse com sucesso
         all_urls = search_results if search_results else []
 
-        for url in all_urls:
+        for i, url in enumerate(all_urls, 1):
             try:
                 if not self.quiet:
-                    console.print(f"[green]Tentando URL: {url}[/green]")
-                return self._parse_function_page(url)
-            except Exception as e:
+                    # Mostra progresso em tempo real
+                    console.print(
+                        f"[blue]\\[{i}/{len(all_urls)}] Testando: {self._format_url_display(url)}[/blue]"
+                    )
+
+                result = self._parse_function_page(url)
+
                 if not self.quiet:
-                    console.print(f"[yellow]Falha em {url}: {e}[/yellow]")
+                    console.print(
+                        f"[green]Documentação encontrada: {self._format_url_display(url)}[/green]"
+                    )
+
+                return result
+
+            except Exception as e:
+                # Não mostra falhas individuais, apenas continua
                 continue
 
         raise Exception(
@@ -160,10 +173,7 @@ class Win32APIScraper:
                 seen.add(url)
                 unique_urls.append(url)
 
-        if not self.quiet and unique_urls:
-            console.print(
-                f"[cyan]Descobrindo URLs: encontradas {len(unique_urls)} possibilidades[/cyan]"
-            )
+        # Não mostra mais as URLs descobertas, apenas o processo de teste
 
         return unique_urls[:15]  # Retorna até 15 URLs para tentar
 
@@ -463,12 +473,30 @@ class Win32APIScraper:
 
         return fallback_urls[:10]  # Limita a 10 tentativas
 
+    def _format_url_display(self, url: str) -> str:
+        """
+        Formata URL para exibição mais limpa
+        """
+        # Remove prefixo comum para deixar mais legível
+        if "learn.microsoft.com/en-us/windows/win32/api/" in url:
+            # Extrai apenas a parte relevante: api/categoria/função
+            parts = url.split("/api/", 1)
+            if len(parts) > 1:
+                return f"api/{parts[1]}"
+        elif "learn.microsoft.com/pt-br/windows/win32/api/" in url:
+            # Extrai apenas a parte relevante: api/categoria/função
+            parts = url.split("/api/", 1)
+            if len(parts) > 1:
+                return f"api/{parts[1]}"
+
+        # Se não conseguir simplificar, mostra URL completa mas mais curta
+        return url.replace("https://learn.microsoft.com/", "")
+
     def _parse_function_page(self, url: str) -> Dict:
         """
         Parseia a página de documentação de uma função específica usando extração dinâmica
         """
-        if not self.quiet:
-            console.print(f"[blue]Analisando página: {url}[/blue]")
+        # Remove mensagem redundante - o progresso já é mostrado na função chamadora
 
         try:
             response = self.session.get(url, timeout=15)

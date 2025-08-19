@@ -1,0 +1,232 @@
+name: 🚀 Release Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'release-*'
+
+env:
+  PYTHON_VERSION: '3.11'
+
+jobs:
+  create-release:
+    name: 🏷️ Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create_release.outputs.id }}
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      tag_name: ${{ steps.get_tag.outputs.tag }}
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🏷️ Get tag name
+      id: get_tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+    - name: 📝 Generate release notes
+      id: release_notes
+      run: |
+        # Gera notas de release automaticamente
+        if git show-ref --verify --quiet refs/heads/main; then
+          DEFAULT_BRANCH="main"
+        else
+          DEFAULT_BRANCH="master"
+        fi
+        
+        echo "## 🆕 Changes in ${{ steps.get_tag.outputs.tag }}" > release_notes.md
+        echo "" >> release_notes.md
+        
+        # Pega commits desde a última tag
+        LAST_TAG=$(git describe --tags --abbrev=0 ${{ steps.get_tag.outputs.tag }}^ 2>/dev/null || echo "")
+        if [ -n "$LAST_TAG" ]; then
+          echo "### 📋 Commits since $LAST_TAG:" >> release_notes.md
+          git log --pretty=format:"- %s (%h)" $LAST_TAG..${{ steps.get_tag.outputs.tag }} >> release_notes.md
+        else
+          echo "### 📋 All commits in this release:" >> release_notes.md  
+          git log --pretty=format:"- %s (%h)" >> release_notes.md
+        fi
+        
+        echo "" >> release_notes.md
+        echo "## 📦 Available Downloads" >> release_notes.md
+        echo "- **Windows x64**: win32-scraper-windows-x64.exe" >> release_notes.md
+        echo "- **Windows x86**: win32-scraper-windows-x86.exe" >> release_notes.md
+        echo "- **Linux x64**: win32-scraper-linux-x64" >> release_notes.md
+        echo "- **Linux x86**: win32-scraper-linux-x86" >> release_notes.md
+        echo "" >> release_notes.md
+        echo "## 🚀 Usage" >> release_notes.md
+        echo "\`\`\`bash" >> release_notes.md
+        echo "./win32-scraper-linux-x64 CreateProcessW" >> release_notes.md
+        echo "win32-scraper-windows-x64.exe HeapAlloc --output json" >> release_notes.md
+        echo "\`\`\`" >> release_notes.md
+
+    - name: 📦 Create Release
+      id: create_release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.get_tag.outputs.tag }}
+        name: Win32 API Scraper ${{ steps.get_tag.outputs.tag }}
+        body_path: release_notes.md
+        draft: false
+        prerelease: false
+
+  build-windows:
+    name: 🪟 Build Windows Binaries
+    runs-on: windows-latest
+    needs: create-release
+    strategy:
+      matrix:
+        arch: [x64, x86]
+        include:
+          - arch: x64
+            python-arch: x64
+            artifact-name: win32-scraper-windows-x64.exe
+          - arch: x86
+            python-arch: x86
+            artifact-name: win32-scraper-windows-x86.exe
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }} (${{ matrix.python-arch }})
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+        architecture: ${{ matrix.python-arch }}
+
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: 🧪 Run tests
+      run: |
+        pip install -r requirements-dev.txt
+        python -m pytest tests/ -v --tb=short
+
+    - name: 🔨 Build Windows ${{ matrix.arch }} executable
+      run: |
+        pyinstaller --onefile --name ${{ matrix.artifact-name }} --icon=assets/icon.ico --version-file=version_info.txt win32_scraper.py
+      shell: cmd
+
+    - name: ✅ Test executable
+      run: |
+        cd dist
+        ./${{ matrix.artifact-name }} --help
+      shell: bash
+
+    - name: 📊 Get file info
+      run: |
+        cd dist
+        ls -la ${{ matrix.artifact-name }}
+        file ${{ matrix.artifact-name }} || echo "file command not available"
+      shell: bash
+
+    - name: 📤 Upload Windows ${{ matrix.arch }} Binary
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.create-release.outputs.tag_name }}
+        files: ./dist/${{ matrix.artifact-name }}
+
+  build-linux:
+    name: 🐧 Build Linux Binaries
+    runs-on: ubuntu-latest
+    needs: create-release
+    strategy:
+      matrix:
+        arch: [x64, x86]
+        include:
+          - arch: x64
+            python-arch: x64
+            artifact-name: win32-scraper-linux-x64
+            docker-platform: linux/amd64
+          - arch: x86
+            python-arch: x86
+            artifact-name: win32-scraper-linux-x86
+            docker-platform: linux/386
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🐧 Set up QEMU for cross-compilation
+      if: matrix.arch == 'x86'
+      uses: docker/setup-qemu-action@v3
+
+    - name: 🔨 Build Linux ${{ matrix.arch }} executable
+      run: |
+        if [ "${{ matrix.arch }}" == "x86" ]; then
+          # Para x86, usa Docker com imagem 32-bit
+          docker run --rm --platform=${{ matrix.docker-platform }} \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            i386/python:${{ env.PYTHON_VERSION }}-slim \
+            bash -c "
+              apt-get update && apt-get install -y gcc g++ && \
+              pip install --no-cache-dir -r requirements.txt && \
+              pip install --no-cache-dir pyinstaller && \
+              pyinstaller --onefile --name ${{ matrix.artifact-name }} win32_scraper.py
+            "
+        else
+          # Para x64, usa runner nativo
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller
+          pyinstaller --onefile --name ${{ matrix.artifact-name }} win32_scraper.py
+        fi
+
+    - name: ✅ Test executable
+      run: |
+        cd dist
+        ./${{ matrix.artifact-name }} --help
+
+    - name: 📊 Get file info
+      run: |
+        cd dist
+        ls -la ${{ matrix.artifact-name }}
+        file ${{ matrix.artifact-name }}
+        ldd ${{ matrix.artifact-name }} || echo "Statically linked or ldd not available"
+
+    - name: 📤 Upload Linux ${{ matrix.arch }} Binary  
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.create-release.outputs.tag_name }}
+        files: ./dist/${{ matrix.artifact-name }}
+
+  notify-completion:
+    name: 📢 Release Notification
+    runs-on: ubuntu-latest
+    needs: [create-release, build-windows, build-linux]
+    if: always()
+
+    steps:
+    - name: 📢 Success notification
+      if: needs.build-windows.result == 'success' && needs.build-linux.result == 'success'
+      run: |
+        echo "🎉 Release ${{ needs.create-release.outputs.tag_name }} completed successfully!"
+        echo "✅ Windows x64 binary created"
+        echo "✅ Windows x86 binary created" 
+        echo "✅ Linux x64 binary created"
+        echo "✅ Linux x86 binary created"
+        echo ""
+        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-release.outputs.tag_name }}"
+
+    - name: 📢 Failure notification
+      if: needs.build-windows.result == 'failure' || needs.build-linux.result == 'failure'
+      run: |
+        echo "❌ Release build failed!"
+        echo "Windows build: ${{ needs.build-windows.result }}"
+        echo "Linux build: ${{ needs.build-linux.result }}"
+        exit 1
