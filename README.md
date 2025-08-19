@@ -20,8 +20,8 @@ A **revolutionary tool** for reverse engineers and Windows developers to extract
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/win32-api-scraper.git
-cd win32-api-scraper
+git clone https://github.com/marcostolosa/manw-ng.git
+cd manw-ng
 
 # Install dependencies
 pip install -r requirements.txt
@@ -206,8 +206,8 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ### Development Setup
 ```bash
-git clone https://github.com/your-username/win32-api-scraper.git
-cd win32-api-scraper
+git clone https://github.com/marcostolosa/manw-ng.git
+cd manw-ng
 pip install -r requirements-dev.txt
 ```
 
