@@ -233,25 +233,66 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller
-        pyinstaller --onefile --strip --name ${{ matrix.artifact-name }} \
-          --hidden-import=requests --hidden-import=bs4 --hidden-import=rich \
+        pip install pyinstaller staticx patchelf
+        
+        # Build with PyInstaller
+        pyinstaller --onefile --strip --name ${{ matrix.artifact-name }}-temp \
+          --add-data "manw_ng:manw_ng" \
+          --hidden-import=requests --hidden-import=requests.adapters \
+          --hidden-import=requests.packages --hidden-import=requests.packages.urllib3 \
+          --hidden-import=bs4 --hidden-import=bs4.builder --hidden-import=lxml \
+          --hidden-import=rich --hidden-import=rich.console --hidden-import=rich.markdown \
           --hidden-import=urllib3 --hidden-import=certifi --hidden-import=charset_normalizer \
+          --collect-all=certifi --collect-all=charset_normalizer \
           --exclude-module=tkinter --exclude-module=matplotlib --exclude-module=numpy \
+          --exclude-module=pandas --exclude-module=PIL --exclude-module=PyQt5 \
           --distpath=dist --workpath=build/${{ matrix.arch }} manw-ng.py
+        
+        # Make it truly static with staticx (bundles all dependencies)
+        cd dist
+        staticx ${{ matrix.artifact-name }}-temp ${{ matrix.artifact-name }}
+        rm ${{ matrix.artifact-name }}-temp
+        chmod +x ${{ matrix.artifact-name }}
 
-    - name: 📊 Get file info
+    - name: 📊 Get file info and verify static build
       run: |
         cd dist
+        echo "=== File Information ==="
         ls -la ${{ matrix.artifact-name }}
         file ${{ matrix.artifact-name }}
+        
+        echo ""
+        echo "=== Checking static linking ==="
         readelf -h ${{ matrix.artifact-name }} 2>/dev/null || echo "readelf not available"
-        ldd ${{ matrix.artifact-name }} 2>/dev/null || echo "Statically linked or ldd not available"
+        
+        echo ""
+        echo "=== Dynamic dependencies check ==="
+        if ldd ${{ matrix.artifact-name }} 2>/dev/null; then
+          echo "⚠️  Has dynamic dependencies (may not be portable)"
+        else
+          echo "✅ No dynamic dependencies found (truly static)"
+        fi
+        
+        echo ""
+        echo "=== Size Information ==="
+        du -h ${{ matrix.artifact-name }}
 
     - name: ✅ Test executable
       run: |
         cd dist
+        echo "Testing ${{ matrix.artifact-name }} executable..."
+        ./${{ matrix.artifact-name }} --version
         ./${{ matrix.artifact-name }} --help
+        echo "Testing actual function lookup..."
+        ./${{ matrix.artifact-name }} CreateProcessW --output json > test_output.json
+        echo "Checking output contains expected JSON structure..."
+        if grep -q "signature" test_output.json; then
+          echo "✅ Function lookup working correctly"
+        else
+          echo "❌ Function lookup failed"
+          cat test_output.json
+          exit 1
+        fi
 
     - name: 📤 Upload Linux ${{ matrix.arch }} Binary  
       uses: softprops/action-gh-release@v1
