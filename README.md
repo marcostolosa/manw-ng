@@ -15,8 +15,6 @@ A **revolutionary modular tool** for reverse engineers and Windows developers to
 - 📋 **Detailed parameters**: Complete parameter descriptions with types and directions
 - 🎯 **Return values**: Comprehensive return value documentation
 - 🎨 **Rich Status**: Dynamic progress display with animated spinner
-- ⚡ **100+ Known Functions**: Pre-mapped functions for reverse engineering and malware analysis
-- 🚀 **Expert Techniques**: Based on reverse engineering best practices
 
 ## 🚀 Installation
 
