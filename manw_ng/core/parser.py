@@ -292,6 +292,9 @@ class Win32PageParser:
                     "VOID",
                     "LPVOID",
                     "HMODULE",
+                    "NTSTATUS",  # Added for NT functions
+                    "HINTERNET",  # Added for WinINet functions
+                    "HRESULT",  # Added for COM functions
                 ]:
                     return_type = potential_type
 

@@ -148,6 +148,18 @@ class Win32DiscoveryEngine:
         func_lower = function_name.lower()
         urls = []
 
+        # Special handling for NT functions - try multiple documentation locations
+        if func_lower.startswith("nt") or func_lower.startswith("zw"):
+            # NT functions can be in different documentation sections
+            nt_patterns = [
+                f"{self.base_url}/windows/win32/api/winternl/nf-winternl-{func_lower}",
+                f"{self.base_url}/windows-hardware/drivers/ddi/ntddk/nf-ntddk-{func_lower}",
+                f"{self.base_url}/windows-hardware/drivers/ddi/ntifs/nf-ntifs-{func_lower}",
+                f"{self.base_url}/windows-hardware/drivers/ddi/wdm/nf-wdm-{func_lower}",
+                f"{self.base_url}/windows-hardware/drivers/ddi/ntddk/nf-ntddk-zw{func_lower[2:]}",  # Nt->Zw mapping
+            ]
+            urls.extend(nt_patterns)
+
         # Gera URLs para cada header usando o padrão oficial Microsoft
         for header in self.all_headers:
             base_url = (
@@ -160,7 +172,7 @@ class Win32DiscoveryEngine:
                 urls.append(f"{base_url}a")
                 urls.append(f"{base_url}w")
 
-        return urls[:15]
+        return urls[:20]
 
     def _header_based_discovery(self, function_name: str) -> List[str]:
         """
