@@ -233,7 +233,7 @@ If this tool helped you with your reverse engineering or development work, pleas
 
 ## 🔗 Related Projects and Inspirations
 
-- [manw](https://github.com/leandrofroes/manw)
+- [manw](https://github.com/leandrofroes/manw) - Original manw tool from @leandrofroes
 - [API Monitor](https://github.com/rohitab/API-Monitor) - API monitoring and hooking
 - [Process Hacker](https://github.com/processhacker/processhacker) - System information tool
 - [x64dbg](https://github.com/x64dbg/x64dbg) - Windows debugger
