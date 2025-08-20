@@ -332,7 +332,7 @@ class Win32PageParser:
         """Extract value/meaning tables for parameters"""
         value_tables = []
 
-        # Look for tables within this element and its siblings
+        # Look for tables within this element and its siblings, but stop at next parameter
         current = element
         while current:
             if current.name == "table":
@@ -342,6 +342,14 @@ class Win32PageParser:
             elif current.name in ["h1", "h2", "h3", "h4"]:
                 # Stop at next major section
                 break
+            elif current.name == "p":
+                # Check if this is the start of a new parameter
+                code_elem = current.find("code")
+                if code_elem:
+                    param_text = code_elem.get_text().strip()
+                    # If this looks like a parameter declaration, stop here
+                    if re.search(r'\[.*?\]\s*\w+$', param_text):
+                        break
 
             # Also check for tables in child elements
             tables = current.find_all("table") if hasattr(current, "find_all") else []
