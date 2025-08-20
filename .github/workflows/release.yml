@@ -53,7 +53,7 @@ jobs:
           echo "## 📦 Standalone Binaries (no Python required)" >> release_notes.md
           echo "- **Windows x64**: manw-ng-windows-x64.exe *(onefile/standalone; UPX)*" >> release_notes.md
           echo "- **Windows x86**: manw-ng-windows-x86.exe *(onefile/standalone; UPX)*" >> release_notes.md
-          echo "- **Linux x64**: manw-ng-linux-x64 *(onefile/standalone; manylinux_2_28; UPX)*" >> release_notes.md
+          echo "- **Linux x64**: manw-ng-linux-x64 *(onefile/standalone; ubuntu-latest; UPX)*" >> release_notes.md
           echo "" >> release_notes.md
           echo "## 🚀 Usage Examples" >> release_notes.md
           echo '```bash' >> release_notes.md
@@ -157,7 +157,7 @@ jobs:
           files: dist/${{ matrix.artifact-name }}.exe
 
   build-linux:
-    name: 🐧 Build Linux x86_64 (manylinux_2_28 + UPX)
+    name: 🐧 Build Linux x86_64 (static + UPX)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -168,50 +168,47 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: 🐳 Build in manylinux_2_28_x86_64 with Python 3.11
-        uses: addnab/docker-run-action@v3
-        env:
-          ENTRYPOINT: ${{ env.ENTRYPOINT }}
-          USE_UPX: ${{ env.USE_UPX }}
+      - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
         with:
-          image: quay.io/pypa/manylinux_2_28_x86_64
-          options: -v ${{ github.workspace }}:/work -w /work
-          run: |
-            # Use Python 3.11 from manylinux
-            export PATH="/opt/python/cp311-cp311/bin:$PATH"
-            python --version
-            
-            # Upgrade pip and install dependencies
-            python -m pip install --upgrade pip
-            if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
-            python -m pip install pyinstaller==6.*
+          python-version: ${{ env.PYTHON_VERSION }}
 
-            # Verify PyInstaller installation
-            python -c "import PyInstaller; print('PyInstaller installed successfully')"
-            
-            # UPX (opcional)
-            if [ "${USE_UPX:-0}" = "1" ]; then 
-              curl -LO https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
-              tar -xJf upx-4.2.4-amd64_linux.tar.xz
-              export PATH=$PWD/upx-4.2.4-amd64_linux:$PATH
-              UPX_FLAG=( --upx-dir "$PWD/upx-4.2.4-amd64_linux" )
-            else
-              UPX_FLAG=()
-            fi
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pyinstaller==6.*
 
-            # ENTRYPOINT com default seguro
-            ENTRY="${ENTRYPOINT:-manw-ng.py}"
+      - name: ⬇️ Install UPX (Linux)
+        if: env.USE_UPX == '1'
+        run: |
+          curl -LO https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
+          tar -xJf upx-4.2.4-amd64_linux.tar.xz
+          sudo mv upx-4.2.4-amd64_linux/upx /usr/local/bin/
+          upx --version
 
-            echo "Building with Python 3.11..."
-            python --version
-            
-            # Use PyInstaller as a module directly
-            python -m PyInstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
-            ls -la dist/
+      - name: 🔨 Build (PyInstaller static)
+        run: |
+          ENTRY="${{ env.ENTRYPOINT }}"
+          
+          if [ "${{ env.USE_UPX }}" = "1" ]; then
+            UPX_FLAGS="--upx-dir /usr/local/bin"
+          else
+            UPX_FLAGS=""
+          fi
+          
+          echo "Building static executable with PyInstaller..."
+          python --version
+          pyinstaller --version
+          
+          pyinstaller --onefile --console --clean $UPX_FLAGS --name manw-ng-linux-x64 "$ENTRY"
+          
+          # Ensure executable permissions
+          chmod +x dist/manw-ng-linux-x64
+          ls -la dist/
 
       - name: ✅ Smoke test (Linux)
         run: |
-          chmod +x dist/manw-ng-linux-x64
           ./dist/manw-ng-linux-x64 --version
           ./dist/manw-ng-linux-x64 --help
           ./dist/manw-ng-linux-x64 CreateProcessW --output json > dist/test_output.json
@@ -233,4 +230,4 @@ jobs:
         run: |
           echo "Release ${{ needs.create-release.outputs.tag_name }} finalizada."
           echo "Windows x64/x86: onefile + UPX"
-          echo "Linux x64: manylinux_2_28 onefile + UPX"
+          echo "Linux x64: ubuntu-latest static + UPX"
