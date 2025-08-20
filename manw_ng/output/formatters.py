@@ -91,13 +91,18 @@ class RichFormatter:
                 # Build description with value tables if available
                 description = param["description"] or "Sem descrição disponível"
 
-                # Add value tables if present
+                # Add value tables if present using Rich markup (not markdown)
                 if "values" in param and param["values"]:
                     description += "\n\n"
                     for value_table in param["values"]:
-                        description += f"**{value_table.get('title', 'Values')}:**\n"
+                        description += (
+                            f"[bold]{value_table.get('title', 'Values')}:[/bold]\n"
+                        )
                         for entry in value_table.get("entries", []):
-                            description += f"• `{entry['value']}`: {entry['meaning']}\n"
+                            # Use Rich markup instead of markdown
+                            description += (
+                                f"• [cyan]{entry['value']}[/cyan]: {entry['meaning']}\n"
+                            )
                         description += "\n"
 
                 param_table.add_row(

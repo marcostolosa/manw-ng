@@ -172,7 +172,7 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y python3-dev build-essential
 
 
-      - name: 🐳 Build in manylinux2014_x86_64
+      - name: 🐳 Build in manylinux2014_x86_64 with shared Python
         uses: addnab/docker-run-action@v3
         env:
           ENTRYPOINT: ${{ env.ENTRYPOINT }}
@@ -181,9 +181,13 @@ jobs:
           image: quay.io/pypa/manylinux2014_x86_64
           options: -v ${{ github.workspace }}:/work -w /work
           run: |
-            /opt/python/cp311-cp311/bin/pip install --upgrade pip
-            if [ -f requirements.txt ]; then /opt/python/cp311-cp311/bin/pip install -r requirements.txt; fi
-            /opt/python/cp311-cp311/bin/pip install pyinstaller==6.*
+            # Install Python with shared libraries
+            yum install -y python3-devel python3-libs
+            
+            # Use system Python that has shared libraries
+            python3 -m pip install --upgrade pip
+            if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
+            python3 -m pip install pyinstaller==6.*
 
             # UPX (opcional)
             if [ "${USE_UPX:-0}" = "1" ]; then 
@@ -198,7 +202,11 @@ jobs:
             # ENTRYPOINT com default seguro
             ENTRY="${ENTRYPOINT:-manw-ng.py}"
 
-            /opt/python/cp311-cp311/bin/pyinstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
+            echo "Building with system Python..."
+            python3 --version
+            python3 -m pyinstaller --version
+            
+            python3 -m pyinstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
             ls -la dist/
 
       - name: ✅ Smoke test (Linux)
