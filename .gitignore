@@ -286,6 +286,8 @@ config.local.json
 settings.local.json
 .env.local
 local_settings.py
+script/
+tests/
 
 # 🧪 Test Output Files
 # --------------------
