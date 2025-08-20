@@ -38,8 +38,8 @@ test-integration: ## Executa testes de integração
 
 test-cli: ## Testa interface CLI
 	@echo "$(GREEN)💻 Testando interface CLI...$(NC)"
-	python manw-ng.py CreateProcessW --output json > /dev/null
-	python manw-ng.py MessageBox --output json > /dev/null
+	python manw-ng.py CreateProcessW --output json > NUL 2>&1 || python manw-ng.py CreateProcessW --output json > /dev/null 2>&1
+	python manw-ng.py MessageBox --output json > NUL 2>&1 || python manw-ng.py MessageBox --output json > /dev/null 2>&1
 	@echo "$(GREEN)✅ CLI funcionando corretamente!$(NC)"
 
 coverage: ## Gera relatório de cobertura
@@ -77,14 +77,19 @@ benchmark: ## Executa benchmarks de performance
 
 clean: ## Limpa arquivos temporários
 	@echo "$(GREEN)🧹 Limpando arquivos temporários...$(NC)"
-	find . -type f -name "*.pyc" -delete
-	find . -type d -name "__pycache__" -delete
-	rm -rf .pytest_cache/
-	rm -rf htmlcov/
-	rm -rf .coverage
-	rm -rf *.egg-info/
-	rm -rf build/
-	rm -rf dist/
+	@if command -v find >/dev/null 2>&1; then \
+		find . -type f -name "*.pyc" -delete 2>/dev/null || true; \
+		find . -type d -name "__pycache__" -delete 2>/dev/null || true; \
+	else \
+		for /d /r . %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d" 2>NUL; \
+		del /s /q *.pyc 2>NUL || true; \
+	fi
+	@rm -rf .pytest_cache/ 2>/dev/null || rmdir /s /q .pytest_cache 2>NUL || true
+	@rm -rf htmlcov/ 2>/dev/null || rmdir /s /q htmlcov 2>NUL || true
+	@rm -rf .coverage 2>/dev/null || del .coverage 2>NUL || true
+	@rm -rf *.egg-info/ 2>/dev/null || for /d %%d in (*.egg-info) do rmdir /s /q "%%d" 2>NUL || true
+	@rm -rf build/ 2>/dev/null || rmdir /s /q build 2>NUL || true
+	@rm -rf dist/ 2>/dev/null || rmdir /s /q dist 2>NUL || true
 	@echo "$(GREEN)✅ Limpeza concluída!$(NC)"
 
 docs: ## Gera documentação

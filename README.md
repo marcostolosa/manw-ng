@@ -1,8 +1,10 @@
 # MANW-NG: Win32 API Documentation Scraper (Next Generation) 🚀
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey)](https://github.com/marcostolosa/manw-ng)
+[![Release](https://img.shields.io/github/v/release/marcostolosa/manw-ng)](https://github.com/marcostolosa/manw-ng/releases)
+[![Downloads](https://img.shields.io/github/downloads/marcostolosa/manw-ng/total)](https://github.com/marcostolosa/manw-ng/releases)
 
 A **revolutionary modular tool** for reverse engineers and Windows developers to extract detailed information about Win32 API functions directly from Microsoft's official documentation.
 
@@ -17,6 +19,16 @@ A **revolutionary modular tool** for reverse engineers and Windows developers to
 - 🎨 **Rich Status**: Dynamic progress display with animated spinner
 
 ## 🚀 Installation
+
+### Download Pre-built Binaries (Recommended)
+
+Get the latest release from the [Releases page](https://github.com/marcostolosa/manw-ng/releases):
+
+- **Windows x64**: `manw-ng-windows-x64.exe` (standalone, no Python required)
+- **Windows x86**: `manw-ng-windows-x86.exe` (standalone, no Python required)  
+- **Linux x64**: `manw-ng-linux-x64` (standalone, no Python required)
+
+### From Source
 
 ```bash
 # Clone the repository
@@ -169,9 +181,9 @@ python manw-ng.py CreateProcessW -l us
 ## 🛠️ Dependencies
 
 ```
-requests>=2.28.0          # HTTP client for web scraping
-beautifulsoup4>=4.11.0    # HTML parsing
-rich>=12.0.0              # Terminal formatting and colors
+requests>=2.31.0          # HTTP client for web scraping
+beautifulsoup4>=4.12.0    # HTML parsing
+rich>=13.7.0              # Terminal formatting and colors
 lxml>=4.9.0               # Fast XML/HTML parser
 ```
 

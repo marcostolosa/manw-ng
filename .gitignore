@@ -239,6 +239,13 @@ helm/
 *.pyd
 *.whl
 
+# 🔧 PyInstaller specific
+# -----------------------
+*.spec
+build/
+dist/
+__pycache__/
+
 # 🔄 Version Control
 # ------------------
 .git/
