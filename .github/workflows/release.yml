@@ -186,6 +186,9 @@ jobs:
             if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
             python -m pip install pyinstaller==6.*
 
+            # Verify PyInstaller installation
+            python -c "import PyInstaller; print('PyInstaller installed successfully')"
+            
             # UPX (opcional)
             if [ "${USE_UPX:-0}" = "1" ]; then 
               curl -LO https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
@@ -201,9 +204,9 @@ jobs:
 
             echo "Building with Python 3.11..."
             python --version
-            python -m pyinstaller --version
             
-            python -m pyinstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
+            # Use PyInstaller as a module directly
+            python -m PyInstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
             ls -la dist/
 
       - name: ✅ Smoke test (Linux)
