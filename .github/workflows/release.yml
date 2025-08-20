@@ -53,7 +53,7 @@ jobs:
           echo "## 📦 Standalone Binaries (no Python required)" >> release_notes.md
           echo "- **Windows x64**: manw-ng-windows-x64.exe *(onefile/standalone; UPX)*" >> release_notes.md
           echo "- **Windows x86**: manw-ng-windows-x86.exe *(onefile/standalone; UPX)*" >> release_notes.md
-          echo "- **Linux x64**: manw-ng-linux-x64 *(onefile/standalone; glibc-linked; UPX)*" >> release_notes.md
+          echo "- **Linux x64**: manw-ng-linux-x64 *(onefile/standalone; manylinux_2_28; UPX)*" >> release_notes.md
           echo "" >> release_notes.md
           echo "## 🚀 Usage Examples" >> release_notes.md
           echo '```bash' >> release_notes.md
@@ -157,7 +157,7 @@ jobs:
           files: dist/${{ matrix.artifact-name }}.exe
 
   build-linux:
-    name: 🐧 Build Linux x86_64 (manylinux2014 + UPX)
+    name: 🐧 Build Linux x86_64 (manylinux_2_28 + UPX)
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -168,26 +168,23 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Python dev libs
-        run: sudo apt-get update && sudo apt-get install -y python3-dev build-essential
-
-
-      - name: 🐳 Build in manylinux2014_x86_64 with shared Python
+      - name: 🐳 Build in manylinux_2_28_x86_64 with Python 3.11
         uses: addnab/docker-run-action@v3
         env:
           ENTRYPOINT: ${{ env.ENTRYPOINT }}
           USE_UPX: ${{ env.USE_UPX }}
         with:
-          image: quay.io/pypa/manylinux2014_x86_64
+          image: quay.io/pypa/manylinux_2_28_x86_64
           options: -v ${{ github.workspace }}:/work -w /work
           run: |
-            # Install Python with shared libraries
-            yum install -y python3-devel python3-libs
+            # Use Python 3.11 from manylinux
+            export PATH="/opt/python/cp311-cp311/bin:$PATH"
+            python --version
             
-            # Use system Python that has shared libraries
-            python3 -m pip install --upgrade pip
-            if [ -f requirements.txt ]; then python3 -m pip install -r requirements.txt; fi
-            python3 -m pip install pyinstaller==6.*
+            # Upgrade pip and install dependencies
+            python -m pip install --upgrade pip
+            if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+            python -m pip install pyinstaller==6.*
 
             # UPX (opcional)
             if [ "${USE_UPX:-0}" = "1" ]; then 
@@ -202,11 +199,11 @@ jobs:
             # ENTRYPOINT com default seguro
             ENTRY="${ENTRYPOINT:-manw-ng.py}"
 
-            echo "Building with system Python..."
-            python3 --version
-            python3 -m pyinstaller --version
+            echo "Building with Python 3.11..."
+            python --version
+            python -m pyinstaller --version
             
-            python3 -m pyinstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
+            python -m pyinstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
             ls -la dist/
 
       - name: ✅ Smoke test (Linux)
@@ -233,4 +230,4 @@ jobs:
         run: |
           echo "Release ${{ needs.create-release.outputs.tag_name }} finalizada."
           echo "Windows x64/x86: onefile + UPX"
-          echo "Linux x64: manylinux2014 onefile + UPX"
+          echo "Linux x64: manylinux_2_28 onefile + UPX"
