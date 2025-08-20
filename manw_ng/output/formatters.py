@@ -10,13 +10,14 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
+from rich.syntax import Syntax
 
 
 class RichFormatter:
     """Rich console formatter for beautiful terminal output"""
 
     def __init__(self):
-        self.console = Console()
+        self.console = Console(force_terminal=True, color_system="truecolor")
 
     def format_output(self, function_info: Dict) -> None:
         """Format and display function information using Rich"""
@@ -72,9 +73,17 @@ class RichFormatter:
         if function_info["signature"]:
             # Use detected language or fallback to 'c'
             lang = function_info.get("signature_language", "c")
+            # Use Syntax class directly for better highlighting
+            syntax = Syntax(
+                function_info["signature"], 
+                lang, 
+                theme="monokai", 
+                line_numbers=False,
+                background_color="#272822"
+            )
             self.console.print(
                 Panel(
-                    Markdown(f"```{lang}\n{function_info['signature']}\n```"),
+                    syntax,
                     title="[bold #A6E22E]» Assinatura da Função[/bold #A6E22E]",
                     border_style="#75715E",
                     padding=(1, 2),
