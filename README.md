@@ -18,6 +18,8 @@ A **revolutionary modular tool** for reverse engineers and Windows developers to
 - 🎯 **Return values**: Comprehensive return value documentation
 - 🎨 **Rich Status**: Dynamic progress display with animated spinner
 
+![](/assets/demo.png)
+
 ## 🚀 Installation
 
 ### Download Pre-built Binaries (Recommended)
