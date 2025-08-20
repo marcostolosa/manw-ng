@@ -519,7 +519,7 @@ class Win32PageParser:
                     text = next_elem.get_text().strip()
                     if text and len(text) > 10:  # Removido limite de 500 caracteres
                         content_parts.append(text)
-                
+
                 # Também capturar listas e outros elementos com texto
                 elif next_elem.name in ["ul", "ol", "div"]:
                     text = next_elem.get_text().strip()
@@ -530,7 +530,9 @@ class Win32PageParser:
 
             if content_parts:
                 # Formatar cada parágrafo como item de lista markdown
-                formatted_parts = [f"- {part.strip()}" for part in content_parts if part.strip()]
+                formatted_parts = [
+                    f"- {part.strip()}" for part in content_parts if part.strip()
+                ]
                 return_desc = "\n".join(formatted_parts)
                 break
 

@@ -46,12 +46,15 @@ class RichFormatter:
                 title="[bold #66D9EF]» Win32 API Function[/bold #66D9EF]",
                 border_style="#AE81FF",
                 expand=False,
-                padding=(1, 2)
+                padding=(1, 2),
             )
         )
 
         # Informações básicas estilo Monokai
-        basic_table = Table(title="[bold #66D9EF]» Informações Básicas[/bold #66D9EF]", border_style="#75715E")
+        basic_table = Table(
+            title="[bold #66D9EF]» Informações Básicas[/bold #66D9EF]",
+            border_style="#75715E",
+        )
         basic_table.add_column("Propriedade", style="#F8F8F2", no_wrap=True)
         basic_table.add_column("Valor", style="#E6DB74")
 
@@ -74,7 +77,7 @@ class RichFormatter:
                     Markdown(f"```{lang}\n{function_info['signature']}\n```"),
                     title="[bold #A6E22E]» Assinatura da Função[/bold #A6E22E]",
                     border_style="#75715E",
-                    padding=(1, 2)
+                    padding=(1, 2),
                 )
             )
 
@@ -82,20 +85,20 @@ class RichFormatter:
         if function_info["description"]:
             self.console.print(
                 Panel(
-                    f"[#F8F8F2]{function_info['description']}[/#F8F8F2]", 
+                    f"[#F8F8F2]{function_info['description']}[/#F8F8F2]",
                     title="[bold #FD971F]» Descrição[/bold #FD971F]",
                     border_style="#75715E",
-                    padding=(1, 2)
+                    padding=(1, 2),
                 )
             )
 
         # Parâmetros estilo Monokai
         if function_info["parameters"]:
             param_table = Table(
-                title="[bold #AE81FF]» Parâmetros[/bold #AE81FF]", 
-                expand=True, 
+                title="[bold #AE81FF]» Parâmetros[/bold #AE81FF]",
+                expand=True,
                 show_lines=True,
-                border_style="#75715E"
+                border_style="#75715E",
             )
             param_table.add_column("Nome", style="#66D9EF", min_width=15, max_width=25)
             param_table.add_column("Tipo", style="#E6DB74", min_width=8, max_width=25)
@@ -111,14 +114,10 @@ class RichFormatter:
                 if "values" in param and param["values"]:
                     description += "\n\n"
                     for value_table in param["values"]:
-                        description += (
-                            f"[bold #A6E22E]{value_table.get('title', 'Values')}:[/bold #A6E22E]\n"
-                        )
+                        description += f"[bold #A6E22E]{value_table.get('title', 'Values')}:[/bold #A6E22E]\n"
                         for entry in value_table.get("entries", []):
                             # Use Monokai colors
-                            description += (
-                                f"• [#66D9EF]{entry['value']}[/#66D9EF]: [#F8F8F2]{entry['meaning']}[/#F8F8F2]\n"
-                            )
+                            description += f"• [#66D9EF]{entry['value']}[/#66D9EF]: [#F8F8F2]{entry['meaning']}[/#F8F8F2]\n"
                         description += "\n"
 
                 param_table.add_row(
@@ -135,20 +134,20 @@ class RichFormatter:
             if function_info["return_description"].strip().startswith("- "):
                 self.console.print(
                     Panel(
-                        Markdown(function_info["return_description"]), 
+                        Markdown(function_info["return_description"]),
                         title="[bold #F92672]» Valor de Retorno[/bold #F92672]",
                         border_style="#75715E",
-                        padding=(1, 2)
+                        padding=(1, 2),
                     )
                 )
             else:
                 # Fallback para texto simples se não for markdown
                 self.console.print(
                     Panel(
-                        f"[#F8F8F2]{function_info['return_description']}[/#F8F8F2]", 
+                        f"[#F8F8F2]{function_info['return_description']}[/#F8F8F2]",
                         title="[bold #F92672]» Valor de Retorno[/bold #F92672]",
                         border_style="#75715E",
-                        padding=(1, 2)
+                        padding=(1, 2),
                     )
                 )
 
