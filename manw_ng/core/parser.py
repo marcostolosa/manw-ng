@@ -529,7 +529,9 @@ class Win32PageParser:
                 next_elem = next_elem.find_next_sibling()
 
             if content_parts:
-                return_desc = " ".join(content_parts)
+                # Formatar cada parágrafo como item de lista markdown
+                formatted_parts = [f"- {part.strip()}" for part in content_parts if part.strip()]
+                return_desc = "\n".join(formatted_parts)
                 break
 
         # Extract return type from signature
