@@ -168,6 +168,10 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
+      - name: Install Python dev libs
+        run: sudo apt-get update && sudo apt-get install -y python3-dev python3.11-dev build-essential
+
+
       - name: 🐳 Build in manylinux2014_x86_64
         uses: addnab/docker-run-action@v3
         env:
