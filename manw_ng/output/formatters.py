@@ -39,21 +39,21 @@ class RichFormatter:
             func_name = re.sub(r"^(Função\s+|Function\s+)", "", full_name)
             title_text = func_name
 
-        # Título principal com estilo moderno
+        # Título principal estilo Monokai
         self.console.print(
             Panel(
-                f"[bold bright_blue]» {title_text}[/bold bright_blue]",
-                title="[bold bright_cyan]» Win32 API Function[/bold bright_cyan]",
-                border_style="bright_blue",
+                f"[bold #F92672]» {title_text}[/bold #F92672]",
+                title="[bold #66D9EF]» Win32 API Function[/bold #66D9EF]",
+                border_style="#AE81FF",
                 expand=False,
                 padding=(1, 2)
             )
         )
 
-        # Informações básicas com estilo moderno
-        basic_table = Table(title="[bold bright_cyan]» Informações Básicas[/bold bright_cyan]", border_style="cyan")
-        basic_table.add_column("Propriedade", style="bright_cyan", no_wrap=True)
-        basic_table.add_column("Valor", style="bright_magenta")
+        # Informações básicas estilo Monokai
+        basic_table = Table(title="[bold #66D9EF]» Informações Básicas[/bold #66D9EF]", border_style="#75715E")
+        basic_table.add_column("Propriedade", style="#F8F8F2", no_wrap=True)
+        basic_table.add_column("Valor", style="#E6DB74")
 
         basic_table.add_row("DLL", function_info["dll"])
         basic_table.add_row("Calling Convention", function_info["calling_convention"])
@@ -65,59 +65,59 @@ class RichFormatter:
 
         self.console.print(basic_table)
 
-        # Assinatura da função com estilo moderno
+        # Assinatura da função estilo Monokai
         if function_info["signature"]:
             # Use detected language or fallback to 'c'
             lang = function_info.get("signature_language", "c")
             self.console.print(
                 Panel(
                     Markdown(f"```{lang}\n{function_info['signature']}\n```"),
-                    title="[bold bright_yellow]» Assinatura da Função[/bold bright_yellow]",
-                    border_style="yellow",
+                    title="[bold #A6E22E]» Assinatura da Função[/bold #A6E22E]",
+                    border_style="#75715E",
                     padding=(1, 2)
                 )
             )
 
-        # Descrição com estilo moderno
+        # Descrição estilo Monokai
         if function_info["description"]:
             self.console.print(
                 Panel(
-                    function_info["description"], 
-                    title="[bold bright_white]» Descrição[/bold bright_white]",
-                    border_style="white",
+                    f"[#F8F8F2]{function_info['description']}[/#F8F8F2]", 
+                    title="[bold #FD971F]» Descrição[/bold #FD971F]",
+                    border_style="#75715E",
                     padding=(1, 2)
                 )
             )
 
-        # Parâmetros com estilo moderno
+        # Parâmetros estilo Monokai
         if function_info["parameters"]:
             param_table = Table(
-                title="[bold bright_red]» Parâmetros[/bold bright_red]", 
+                title="[bold #AE81FF]» Parâmetros[/bold #AE81FF]", 
                 expand=True, 
                 show_lines=True,
-                border_style="red"
+                border_style="#75715E"
             )
-            param_table.add_column("Nome", style="bright_cyan", min_width=15, max_width=25)
-            param_table.add_column("Tipo", style="bright_yellow", min_width=8, max_width=25)
+            param_table.add_column("Nome", style="#66D9EF", min_width=15, max_width=25)
+            param_table.add_column("Tipo", style="#E6DB74", min_width=8, max_width=25)
             param_table.add_column(
-                "Descrição", style="bright_green", no_wrap=False, overflow="fold"
+                "Descrição", style="#F8F8F2", no_wrap=False, overflow="fold"
             )
 
             for param in function_info["parameters"]:
                 # Build description with value tables if available
                 description = param["description"] or "Sem descrição disponível"
 
-                # Add value tables if present using Rich markup (not markdown)
+                # Add value tables with Monokai colors
                 if "values" in param and param["values"]:
                     description += "\n\n"
                     for value_table in param["values"]:
                         description += (
-                            f"[bold]{value_table.get('title', 'Values')}:[/bold]\n"
+                            f"[bold #A6E22E]{value_table.get('title', 'Values')}:[/bold #A6E22E]\n"
                         )
                         for entry in value_table.get("entries", []):
-                            # Use Rich markup instead of markdown
+                            # Use Monokai colors
                             description += (
-                                f"• [cyan]{entry['value']}[/cyan]: {entry['meaning']}\n"
+                                f"• [#66D9EF]{entry['value']}[/#66D9EF]: [#F8F8F2]{entry['meaning']}[/#F8F8F2]\n"
                             )
                         description += "\n"
 
@@ -129,15 +129,15 @@ class RichFormatter:
 
             self.console.print(param_table)
 
-        # Valor de retorno - renderizar markdown com estilo moderno
+        # Valor de retorno estilo Monokai
         if function_info["return_description"]:
             # Se contém markdown bullets (linhas começando com "- "), renderizar como markdown
             if function_info["return_description"].strip().startswith("- "):
                 self.console.print(
                     Panel(
                         Markdown(function_info["return_description"]), 
-                        title="[bold green]» Valor de Retorno[/bold green]",
-                        border_style="green",
+                        title="[bold #F92672]» Valor de Retorno[/bold #F92672]",
+                        border_style="#75715E",
                         padding=(1, 2)
                     )
                 )
@@ -145,9 +145,9 @@ class RichFormatter:
                 # Fallback para texto simples se não for markdown
                 self.console.print(
                     Panel(
-                        function_info["return_description"], 
-                        title="[bold green]» Valor de Retorno[/bold green]",
-                        border_style="green",
+                        f"[#F8F8F2]{function_info['return_description']}[/#F8F8F2]", 
+                        title="[bold #F92672]» Valor de Retorno[/bold #F92672]",
+                        border_style="#75715E",
                         padding=(1, 2)
                     )
                 )
