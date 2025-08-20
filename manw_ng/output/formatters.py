@@ -39,19 +39,21 @@ class RichFormatter:
             func_name = re.sub(r"^(Função\s+|Function\s+)", "", full_name)
             title_text = func_name
 
-        # Título principal
+        # Título principal com estilo moderno
         self.console.print(
             Panel(
-                f"[bold blue]{title_text}[/bold blue]",
-                title="Win32 API Function",
+                f"[bold bright_blue]» {title_text}[/bold bright_blue]",
+                title="[bold bright_cyan]» Win32 API Function[/bold bright_cyan]",
+                border_style="bright_blue",
                 expand=False,
+                padding=(1, 2)
             )
         )
 
-        # Informações básicas
-        basic_table = Table(title="Informações Básicas")
-        basic_table.add_column("Propriedade", style="cyan")
-        basic_table.add_column("Valor", style="magenta")
+        # Informações básicas com estilo moderno
+        basic_table = Table(title="[bold bright_cyan]» Informações Básicas[/bold bright_cyan]", border_style="cyan")
+        basic_table.add_column("Propriedade", style="bright_cyan", no_wrap=True)
+        basic_table.add_column("Valor", style="bright_magenta")
 
         basic_table.add_row("DLL", function_info["dll"])
         basic_table.add_row("Calling Convention", function_info["calling_convention"])
@@ -63,28 +65,42 @@ class RichFormatter:
 
         self.console.print(basic_table)
 
-        # Assinatura da função
+        # Assinatura da função com estilo moderno
         if function_info["signature"]:
             # Use detected language or fallback to 'c'
             lang = function_info.get("signature_language", "c")
             self.console.print(
                 Panel(
                     Markdown(f"```{lang}\n{function_info['signature']}\n```"),
-                    title="Assinatura da Função",
+                    title="[bold bright_yellow]» Assinatura da Função[/bold bright_yellow]",
+                    border_style="yellow",
+                    padding=(1, 2)
                 )
             )
 
-        # Descrição
+        # Descrição com estilo moderno
         if function_info["description"]:
-            self.console.print(Panel(function_info["description"], title="Descrição"))
+            self.console.print(
+                Panel(
+                    function_info["description"], 
+                    title="[bold bright_white]» Descrição[/bold bright_white]",
+                    border_style="white",
+                    padding=(1, 2)
+                )
+            )
 
-        # Parâmetros
+        # Parâmetros com estilo moderno
         if function_info["parameters"]:
-            param_table = Table(title="Parâmetros", expand=True, show_lines=True)
-            param_table.add_column("Nome", style="cyan", min_width=15, max_width=25)
-            param_table.add_column("Tipo", style="yellow", min_width=8, max_width=25)
+            param_table = Table(
+                title="[bold bright_red]» Parâmetros[/bold bright_red]", 
+                expand=True, 
+                show_lines=True,
+                border_style="red"
+            )
+            param_table.add_column("Nome", style="bright_cyan", min_width=15, max_width=25)
+            param_table.add_column("Tipo", style="bright_yellow", min_width=8, max_width=25)
             param_table.add_column(
-                "Descrição", style="green", no_wrap=False, overflow="fold"
+                "Descrição", style="bright_green", no_wrap=False, overflow="fold"
             )
 
             for param in function_info["parameters"]:
@@ -113,11 +129,28 @@ class RichFormatter:
 
             self.console.print(param_table)
 
-        # Valor de retorno
+        # Valor de retorno - renderizar markdown com estilo moderno
         if function_info["return_description"]:
-            self.console.print(
-                Panel(function_info["return_description"], title="Valor de Retorno")
-            )
+            # Se contém markdown bullets (linhas começando com "- "), renderizar como markdown
+            if function_info["return_description"].strip().startswith("- "):
+                self.console.print(
+                    Panel(
+                        Markdown(function_info["return_description"]), 
+                        title="[bold green]» Valor de Retorno[/bold green]",
+                        border_style="green",
+                        padding=(1, 2)
+                    )
+                )
+            else:
+                # Fallback para texto simples se não for markdown
+                self.console.print(
+                    Panel(
+                        function_info["return_description"], 
+                        title="[bold green]» Valor de Retorno[/bold green]",
+                        border_style="green",
+                        padding=(1, 2)
+                    )
+                )
 
 
 class JSONFormatter:
