@@ -25,7 +25,7 @@ class Win32DiscoveryEngine:
         self.session = session
         self.quiet = quiet
         self.console = Console()
-        
+
         # Initialize new smart discovery system
         self.url_verifier = URLVerifier()
         self.smart_discovery = SmartURLDiscovery(self.url_verifier)
@@ -142,11 +142,15 @@ class Win32DiscoveryEngine:
             if not self.quiet:
                 self.console.print(f"[green]OK[/green] Found via {method}: {url}")
             discovered_urls.append(url)
-            return discovered_urls  # Se encontrou, não precisa tentar outras estratégias
+            return (
+                discovered_urls  # Se encontrou, não precisa tentar outras estratégias
+            )
 
         # Fallback para sistema antigo se o novo não funcionar
         if not self.quiet:
-            self.console.print(f"[yellow]INFO[/yellow] Smart discovery failed, trying legacy methods...")
+            self.console.print(
+                f"[yellow]INFO[/yellow] Smart discovery failed, trying legacy methods..."
+            )
 
         # Special handling for RTL functions
         if function_name.lower().startswith("rtl"):
@@ -458,39 +462,52 @@ class Win32DiscoveryEngine:
         Retorna estatísticas completas do sistema de descoberta
         """
         stats = self.smart_discovery.get_discovery_stats()
-        stats.update({
-            'legacy_headers_count': len(self.all_headers),
-            'pattern_based_functions': len(self.patterns.FUNCTION_TO_MODULE),
-            'supported_locales': ['en-us', 'pt-br'],
-        })
+        stats.update(
+            {
+                "legacy_headers_count": len(self.all_headers),
+                "pattern_based_functions": len(self.patterns.FUNCTION_TO_MODULE),
+                "supported_locales": ["en-us", "pt-br"],
+            }
+        )
         return stats
 
-    def test_discovery_system(self, test_functions: List[str] = None) -> Dict[str, bool]:
+    def test_discovery_system(
+        self, test_functions: List[str] = None
+    ) -> Dict[str, bool]:
         """
         Testa o sistema de descoberta com funções conhecidas
         """
         if test_functions is None:
             test_functions = [
-                'CreateProcessW', 'OpenProcess', 'VirtualAlloc', 'HeapAlloc',
-                'MessageBoxA', 'RegOpenKeyExA', 'socket', 'LoadLibraryA',
-                'RtlAllocateHeap', 'CreateFileW', 'ReadFile', 'WriteFile'
+                "CreateProcessW",
+                "OpenProcess",
+                "VirtualAlloc",
+                "HeapAlloc",
+                "MessageBoxA",
+                "RegOpenKeyExA",
+                "socket",
+                "LoadLibraryA",
+                "RtlAllocateHeap",
+                "CreateFileW",
+                "ReadFile",
+                "WriteFile",
             ]
-        
+
         results = {}
-        
+
         if not self.quiet:
             self.console.print("[bold blue]Testing discovery system...[/bold blue]")
-        
+
         for func in test_functions:
             urls = self.discover_function_urls(func)
             results[func] = len(urls) > 0
-            
+
             if not self.quiet:
                 status = "[green]OK[/green]" if results[func] else "[red]FAIL[/red]"
                 self.console.print(f"{status} {func}: {len(urls)} URLs found")
-        
+
         success_rate = (sum(results.values()) / len(results)) * 100
         if not self.quiet:
             self.console.print(f"\n[bold]Success rate: {success_rate:.1f}%[/bold]")
-        
+
         return results
