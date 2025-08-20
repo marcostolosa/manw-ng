@@ -510,17 +510,21 @@ class Win32PageParser:
         for header in return_headers:
             content_parts = []
             next_elem = header.find_next_sibling()
-            paragraph_count = 0
 
-            while next_elem and paragraph_count < 2:
+            while next_elem:
                 if next_elem.name in ["h1", "h2", "h3", "h4"]:
                     break
 
                 if next_elem.name in ["p"]:
                     text = next_elem.get_text().strip()
-                    if text and 10 < len(text) < 500:
+                    if text and len(text) > 10:  # Removido limite de 500 caracteres
                         content_parts.append(text)
-                        paragraph_count += 1
+                
+                # Também capturar listas e outros elementos com texto
+                elif next_elem.name in ["ul", "ol", "div"]:
+                    text = next_elem.get_text().strip()
+                    if text and len(text) > 10:
+                        content_parts.append(text)
 
                 next_elem = next_elem.find_next_sibling()
 
