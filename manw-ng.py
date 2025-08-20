@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 MANW-NG: Win32 API Documentation Scraper (Next Generation)
 
@@ -14,11 +15,23 @@ License: MIT
 
 import argparse
 import sys
+import os
+
+# Fix Windows encoding issues
+if sys.platform.startswith("win"):
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    # Force UTF-8 mode
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8")
+
 from manw_ng.core.scraper import Win32APIScraper
 from manw_ng.output.formatters import RichFormatter, JSONFormatter, MarkdownFormatter
 from rich.console import Console
 
-console = Console()
+# Configure console for Windows compatibility
+console = Console(force_terminal=True, legacy_windows=True, width=100)
 
 
 def main():
@@ -61,7 +74,7 @@ Examples:
 
         if args.output != "json":
             console.print(
-                f"[yellow]Fazendo scraping da função: {args.function_name} (idioma: {args.language})[/yellow]"
+                f"[yellow]Fazendo scraping da funcao: {args.function_name} (idioma: {args.language})[/yellow]"
             )
 
         # Scrape function information

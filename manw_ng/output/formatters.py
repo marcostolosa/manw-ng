@@ -17,7 +17,12 @@ class RichFormatter:
     """Rich console formatter for beautiful terminal output"""
 
     def __init__(self):
-        self.console = Console(force_terminal=True, color_system="truecolor")
+        self.console = Console(
+            force_terminal=True,
+            legacy_windows=True,  # Enable Windows compatibility
+            # Remove width fixo para se adaptar ao terminal
+            color_system="truecolor",  # Force true color support
+        )
 
     def format_output(self, function_info: Dict) -> None:
         """Format and display function information using Rich"""
@@ -51,9 +56,9 @@ class RichFormatter:
             )
         )
 
-        # Informações básicas estilo Monokai
+        # Informacoes basicas estilo Monokai
         basic_table = Table(
-            title="[bold #66D9EF]» Informações Básicas[/bold #66D9EF]",
+            title="[bold #66D9EF]» Informacoes Basicas[/bold #66D9EF]",
             border_style="#75715E",
         )
         basic_table.add_column("Propriedade", style="#F8F8F2", no_wrap=True)
@@ -71,20 +76,23 @@ class RichFormatter:
 
         # Assinatura da função estilo Monokai
         if function_info["signature"]:
-            # Use detected language or fallback to 'c'
-            lang = function_info.get("signature_language", "c")
-            # Use Syntax class directly for better highlighting
-            syntax = Syntax(
-                function_info["signature"],
-                lang,
-                theme="monokai",
-                line_numbers=False,
-                background_color="#272822",
-            )
+            # Use markdown com código C para melhor compatibilidade
+            from rich.markdown import Markdown
+            signature_markdown = f"```c\n{function_info['signature']}\n```"
+            
+            try:
+                # Tentar usar Markdown com syntax highlighting
+                syntax = Markdown(signature_markdown, code_theme="monokai")
+            except Exception:
+                # Fallback: Usar manual highlighting
+                from rich.text import Text
+                highlighted_text = self._manual_syntax_highlight(function_info["signature"])
+                syntax = Text.from_markup(highlighted_text)
+            
             self.console.print(
                 Panel(
                     syntax,
-                    title="[bold #A6E22E]» Assinatura da Função[/bold #A6E22E]",
+                    title="[bold #A6E22E]» Assinatura da Funcao[/bold #A6E22E]",
                     border_style="#75715E",
                     padding=(1, 2),
                 )
@@ -159,6 +167,70 @@ class RichFormatter:
                         padding=(1, 2),
                     )
                 )
+
+    def _manual_syntax_highlight(self, code: str) -> str:
+        """Manual C++ syntax highlighting fallback for Windows"""
+        import re
+        
+        # C++ keywords
+        keywords = [
+            'int', 'char', 'void', 'const', 'unsigned', 'signed', 'long', 'short',
+            'BOOL', 'DWORD', 'LPCSTR', 'LPCWSTR', 'LPSTR', 'LPWSTR', 'HANDLE',
+            'HWND', 'HDC', 'HINSTANCE', 'LPVOID', 'PVOID', 'SIZE_T', 'UINT',
+            'WORD', 'BYTE', 'LONG', 'ULONG', 'LPARAM', 'WPARAM', 'LRESULT',
+            'FARPROC', 'PROC', 'CALLBACK', 'WINAPI', 'STDCALL', 'CDECL'
+        ]
+        
+        # Apply highlighting
+        highlighted = code
+        
+        # Highlight keywords
+        for keyword in keywords:
+            pattern = r'\b' + re.escape(keyword) + r'\b'
+            highlighted = re.sub(
+                pattern, 
+                f'[#F92672]{keyword}[/#F92672]', 
+                highlighted, 
+                flags=re.IGNORECASE
+            )
+        
+        # Highlight function names (word followed by parentheses)
+        highlighted = re.sub(
+            r'\b([A-Za-z_]\w*)\s*\(',
+            r'[#A6E22E]\1[/#A6E22E](',
+            highlighted
+        )
+        
+        # Highlight string literals
+        highlighted = re.sub(
+            r'"([^"]*)"',
+            r'[#E6DB74]"\1"[/#E6DB74]',
+            highlighted
+        )
+        
+        # Highlight numbers
+        highlighted = re.sub(
+            r'\b(\d+)\b',
+            r'[#AE81FF]\1[/#AE81FF]',
+            highlighted
+        )
+        
+        # Highlight comments
+        highlighted = re.sub(
+            r'//(.*)$',
+            r'[#75715E]//\1[/#75715E]',
+            highlighted,
+            flags=re.MULTILINE
+        )
+        
+        highlighted = re.sub(
+            r'/\*(.*?)\*/',
+            r'[#75715E]/*\1*/[/#75715E]',
+            highlighted,
+            flags=re.DOTALL
+        )
+        
+        return highlighted
 
 
 class JSONFormatter:

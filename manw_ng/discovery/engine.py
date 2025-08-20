@@ -6,11 +6,13 @@ Multi-stage discovery pipeline to find any Win32 function.
 """
 
 import re
-from typing import List, Dict, Set, Optional
+from typing import List, Dict, Set, Optional, Tuple
 import requests
 from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
+from ..utils.url_verifier import SmartURLDiscovery, URLVerifier
+from ..utils.win32_url_patterns import Win32URLPatterns
 
 
 class Win32DiscoveryEngine:
@@ -23,6 +25,11 @@ class Win32DiscoveryEngine:
         self.session = session
         self.quiet = quiet
         self.console = Console()
+        
+        # Initialize new smart discovery system
+        self.url_verifier = URLVerifier()
+        self.smart_discovery = SmartURLDiscovery(self.url_verifier)
+        self.patterns = Win32URLPatterns()
 
         # Complete list of Win32 headers for intelligent fuzzing
         self.all_headers = [
@@ -43,6 +50,11 @@ class Win32DiscoveryEngine:
             "memoryapi",
             "heapapi",
             "virtualalloc",
+            # RTL/Native API locations
+            "winternl",
+            "wdm",
+            "ntddk",
+            "ntifs",
             # File System
             "fileapi",
             "winioctl",
@@ -120,9 +132,25 @@ class Win32DiscoveryEngine:
 
     def discover_function_urls(self, function_name: str) -> List[str]:
         """
-        Multi-stage discovery pipeline to find any Win32 function
+        Multi-stage discovery pipeline to find any Win32 function using new smart system
         """
         discovered_urls = []
+
+        # Nova estratégia principal: Sistema inteligente baseado em padrões
+        url, method = self.smart_discovery.discover_function_url(function_name)
+        if url:
+            if not self.quiet:
+                self.console.print(f"[green]OK[/green] Found via {method}: {url}")
+            discovered_urls.append(url)
+            return discovered_urls  # Se encontrou, não precisa tentar outras estratégias
+
+        # Fallback para sistema antigo se o novo não funcionar
+        if not self.quiet:
+            self.console.print(f"[yellow]INFO[/yellow] Smart discovery failed, trying legacy methods...")
+
+        # Special handling for RTL functions
+        if function_name.lower().startswith("rtl"):
+            discovered_urls.extend(self._rtl_function_discovery(function_name))
 
         # Pipeline de descoberta em ordem de eficiência
 
@@ -396,3 +424,73 @@ class Win32DiscoveryEngine:
                 seen.add(url)
                 unique_urls.append(url)
         return unique_urls
+
+    def _rtl_function_discovery(self, function_name: str) -> List[str]:
+        """Special discovery for RTL functions"""
+        func_lower = function_name.lower()
+        urls = []
+
+        # RTL functions can be in multiple locations
+        rtl_locations = [
+            # Windows Driver Kit locations
+            ("winternl", "winternl"),
+            ("wdm", "wdm"),
+            ("ntddk", "ntddk"),
+            ("ntifs", "ntifs"),
+            # Some RTL functions are documented as regular Win32
+            ("winbase", "winbase"),
+            ("kernel32", "kernel32"),
+        ]
+
+        for header, module in rtl_locations:
+            # Try different URL patterns for RTL functions
+            patterns = [
+                f"{self.base_url}/windows-hardware/drivers/ddi/{header}/nf-{header}-{func_lower}",
+                f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{func_lower}",
+                f"{self.base_url}/windows-hardware/drivers/ddi/{module}/nf-{module}-{func_lower}",
+            ]
+            urls.extend(patterns)
+
+        return urls
+
+    def get_discovery_stats(self) -> Dict:
+        """
+        Retorna estatísticas completas do sistema de descoberta
+        """
+        stats = self.smart_discovery.get_discovery_stats()
+        stats.update({
+            'legacy_headers_count': len(self.all_headers),
+            'pattern_based_functions': len(self.patterns.FUNCTION_TO_MODULE),
+            'supported_locales': ['en-us', 'pt-br'],
+        })
+        return stats
+
+    def test_discovery_system(self, test_functions: List[str] = None) -> Dict[str, bool]:
+        """
+        Testa o sistema de descoberta com funções conhecidas
+        """
+        if test_functions is None:
+            test_functions = [
+                'CreateProcessW', 'OpenProcess', 'VirtualAlloc', 'HeapAlloc',
+                'MessageBoxA', 'RegOpenKeyExA', 'socket', 'LoadLibraryA',
+                'RtlAllocateHeap', 'CreateFileW', 'ReadFile', 'WriteFile'
+            ]
+        
+        results = {}
+        
+        if not self.quiet:
+            self.console.print("[bold blue]Testing discovery system...[/bold blue]")
+        
+        for func in test_functions:
+            urls = self.discover_function_urls(func)
+            results[func] = len(urls) > 0
+            
+            if not self.quiet:
+                status = "[green]OK[/green]" if results[func] else "[red]FAIL[/red]"
+                self.console.print(f"{status} {func}: {len(urls)} URLs found")
+        
+        success_rate = (sum(results.values()) / len(results)) * 100
+        if not self.quiet:
+            self.console.print(f"\n[bold]Success rate: {success_rate:.1f}%[/bold]")
+        
+        return results

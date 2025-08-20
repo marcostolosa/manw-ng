@@ -12,7 +12,7 @@ from rich.status import Status
 
 from ..discovery.engine import Win32DiscoveryEngine
 from ..core.parser import Win32PageParser
-from ..utils.known_functions import KNOWN_FUNCTIONS
+from ..utils.complete_win32_api_mapping import get_function_url
 
 
 class Win32APIScraper:
@@ -99,14 +99,10 @@ class Win32APIScraper:
         """
         Try direct URL mapping for known functions (fastest path)
         """
-        func_lower = function_name.lower()
-        if func_lower in KNOWN_FUNCTIONS:
-            url_path = KNOWN_FUNCTIONS[func_lower]
-            # Check if this is a driver/kernel function (wdm, ntddk, ntifs)
-            if any(header in url_path for header in ["wdm/", "ntddk/", "ntifs/"]):
-                return f"{self.base_url}/windows-hardware/drivers/ddi/{url_path}"
-            else:
-                return f"{self.base_url}/windows/win32/api/{url_path}"
+        # Try complete Win32 API mapping
+        direct_url = get_function_url(function_name, self.base_url)
+        if direct_url:
+            return direct_url
         return None
 
     def _parse_function_page(self, url: str, status: Optional[Status] = None) -> Dict:

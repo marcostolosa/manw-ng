@@ -236,12 +236,39 @@ class Win32PageParser:
         return any(re.search(pattern, content) for pattern in js_patterns)
 
     def _clean_signature(self, signature: str) -> str:
-        """Clean and format function signature"""
-        # Remove extra whitespace and normalize line breaks
-        lines = [line.strip() for line in signature.split("\n") if line.strip()]
+        """Clean and format function signature while preserving indentation"""
+        # Split into lines and remove empty lines, but preserve original indentation
+        lines = [line for line in signature.split("\n") if line.strip()]
 
-        # Rejoin with proper formatting
-        return "\n".join(lines)
+        if not lines:
+            return signature
+
+        # Find the minimum indentation (ignoring the first line which might be function name)
+        indentations = []
+        for i, line in enumerate(lines):
+            stripped = line.lstrip()
+            if stripped and i > 0:  # Skip first line for indentation calculation
+                indent = len(line) - len(stripped)
+                indentations.append(indent)
+
+        # Calculate minimum indentation to preserve relative structure
+        min_indent = min(indentations) if indentations else 0
+
+        # Clean lines while preserving relative indentation
+        cleaned_lines = []
+        for i, line in enumerate(lines):
+            if i == 0:
+                # First line: just strip trailing whitespace
+                cleaned_lines.append(line.rstrip())
+            else:
+                # Other lines: preserve indentation relative to minimum
+                stripped = line.lstrip()
+                if stripped:
+                    current_indent = len(line) - len(stripped)
+                    relative_indent = max(0, current_indent - min_indent)
+                    cleaned_lines.append(" " * relative_indent + stripped)
+
+        return "\n".join(cleaned_lines)
 
     def _extract_parameters(self, soup: BeautifulSoup) -> List[Dict]:
         """Extract detailed parameter information"""
