@@ -348,7 +348,7 @@ class Win32PageParser:
                 if code_elem:
                     param_text = code_elem.get_text().strip()
                     # If this looks like a parameter declaration, stop here
-                    if re.search(r'\[.*?\]\s*\w+$', param_text):
+                    if re.search(r"\[.*?\]\s*\w+$", param_text):
                         break
 
             # Also check for tables in child elements

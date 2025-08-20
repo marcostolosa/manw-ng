@@ -75,11 +75,11 @@ class RichFormatter:
             lang = function_info.get("signature_language", "c")
             # Use Syntax class directly for better highlighting
             syntax = Syntax(
-                function_info["signature"], 
-                lang, 
-                theme="monokai", 
+                function_info["signature"],
+                lang,
+                theme="monokai",
                 line_numbers=False,
-                background_color="#272822"
+                background_color="#272822",
             )
             self.console.print(
                 Panel(
