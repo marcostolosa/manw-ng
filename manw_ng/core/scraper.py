@@ -101,7 +101,12 @@ class Win32APIScraper:
         """
         func_lower = function_name.lower()
         if func_lower in KNOWN_FUNCTIONS:
-            return f"{self.base_url}/windows/win32/api/{KNOWN_FUNCTIONS[func_lower]}"
+            url_path = KNOWN_FUNCTIONS[func_lower]
+            # Check if this is a driver/kernel function (wdm, ntddk, ntifs)
+            if any(header in url_path for header in ['wdm/', 'ntddk/', 'ntifs/']):
+                return f"{self.base_url}/windows-hardware/drivers/ddi/{url_path}"
+            else:
+                return f"{self.base_url}/windows/win32/api/{url_path}"
         return None
 
     def _parse_function_page(self, url: str, status: Optional[Status] = None) -> Dict:

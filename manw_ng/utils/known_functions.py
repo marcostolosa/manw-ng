@@ -203,7 +203,10 @@ KNOWN_FUNCTIONS = {
     "rtlunicodetoansii": "winternl/nf-winternl-rtlunicodetoansii",
     "rtlansiitounicode": "winternl/nf-winternl-rtlansiitounicode",
     # RTL Memory Functions (Driver/Kernel level) - Note: these are in windows-hardware section
-    # Discovery engine will handle the alternative paths automatically
+    "rtlzeromemory": "wdm/nf-wdm-rtlzeromemory",
+    "rtlsecurezeromemory": "wdm/nf-wdm-rtlsecurezeromemory",
+    "rtlcopymemory": "wdm/nf-wdm-rtlcopymemory",
+    "rtlmovememory": "wdm/nf-wdm-rtlmovememory",
     # GDI Functions (GUI manipulation)
     "bitblt": "wingdi/nf-wingdi-bitblt",
     "stretchblt": "wingdi/nf-wingdi-stretchblt",
