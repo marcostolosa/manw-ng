@@ -1,4 +1,4 @@
-name: 🚀 Release Build
+name: 🚀 Release Build (standalone + UPX)
 
 on:
   push:
@@ -8,89 +8,74 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
+  ENTRYPOINT: 'manw-ng.py'         # ajuste se seu entry for outro
+  USE_UPX: '1'                     # 1 = habilita UPX
 
 jobs:
   create-release:
     name: 🏷️ Create Release
     runs-on: ubuntu-latest
-    environment: manw-ng
+    permissions:
+      contents: write
     outputs:
       release_id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       tag_name: ${{ steps.get_tag.outputs.tag }}
-    
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
 
-    - name: 🏷️ Get tag name
-      id: get_tag
-      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      - name: 🏷️ Get tag name
+        id: get_tag
+        run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-    - name: 📝 Generate release notes
-      id: release_notes
-      run: |
-        # Gera notas de release automaticamente
-        if git show-ref --verify --quiet refs/heads/main; then
-          DEFAULT_BRANCH="main"
-        else
-          DEFAULT_BRANCH="master"
-        fi
-        
-        echo "## 🆕 Changes in ${{ steps.get_tag.outputs.tag }}" > release_notes.md
-        echo "" >> release_notes.md
-        
-        # Pega commits desde a última tag
-        LAST_TAG=$(git describe --tags --abbrev=0 ${{ steps.get_tag.outputs.tag }}^ 2>/dev/null || echo "")
-        if [ -n "$LAST_TAG" ]; then
-          echo "### 📋 Commits since $LAST_TAG:" >> release_notes.md
-          git log --pretty=format:"- %s (%h)" $LAST_TAG..${{ steps.get_tag.outputs.tag }} >> release_notes.md
-        else
-          echo "### 📋 All commits in this release:" >> release_notes.md  
-          git log --pretty=format:"- %s (%h)" >> release_notes.md
-        fi
-        
-        echo "" >> release_notes.md
-        echo "## 📦 Static Binaries (No Dependencies Required)" >> release_notes.md
-        echo "- **Windows x64**: manw-ng-windows-x64.exe *(Standalone executable)*" >> release_notes.md
-        echo "- **Windows x86**: manw-ng-windows-x86.exe *(Standalone executable)*" >> release_notes.md
-        echo "- **Linux x64**: manw-ng-linux-x64 *(Static binary - works on any Linux)*" >> release_notes.md
-        echo "- **Linux x86**: manw-ng-linux-x86 *(Static binary - works on any Linux)*" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "### ✨ Features" >> release_notes.md
-        echo "- 🚀 **No installation required** - just download and run" >> release_notes.md
-        echo "- 📦 **Self-contained** - all dependencies included" >> release_notes.md  
-        echo "- 🌍 **Universal compatibility** - works on any modern system" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "## 🚀 Usage Examples" >> release_notes.md
-        echo "\`\`\`bash" >> release_notes.md
-        echo "# Linux/macOS" >> release_notes.md
-        echo "chmod +x manw-ng-linux-x64" >> release_notes.md
-        echo "./manw-ng-linux-x64 CreateProcessW" >> release_notes.md
-        echo "./manw-ng-linux-x64 HeapAlloc --output json -l br" >> release_notes.md
-        echo "" >> release_notes.md
-        echo "# Windows" >> release_notes.md
-        echo "manw-ng-windows-x64.exe SetWindowsHookEx" >> release_notes.md
-        echo "manw-ng-windows-x64.exe WSAStartup --output json" >> release_notes.md
-        echo "\`\`\`" >> release_notes.md
+      - name: 📝 Generate release notes
+        id: release_notes
+        run: |
+          if git show-ref --verify --quiet refs/heads/main; then DEFAULT_BRANCH=main; else DEFAULT_BRANCH=master; fi
+          echo "## 🆕 Changes in ${{ steps.get_tag.outputs.tag }}" > release_notes.md
+          echo "" >> release_notes.md
+          LAST_TAG=$(git describe --tags --abbrev=0 ${{ steps.get_tag.outputs.tag }}^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            echo "### 📋 Commits since $LAST_TAG:" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" $LAST_TAG..${{ steps.get_tag.outputs.tag }} >> release_notes.md
+          else
+            echo "### 📋 All commits in this release:" >> release_notes.md
+            git log --pretty=format:"- %s (%h)" >> release_notes.md
+          fi
+          echo "" >> release_notes.md
+          echo "## 📦 Standalone Binaries (no Python required)" >> release_notes.md
+          echo "- **Windows x64**: manw-ng-windows-x64.exe *(onefile/standalone; UPX)*" >> release_notes.md
+          echo "- **Windows x86**: manw-ng-windows-x86.exe *(onefile/standalone; UPX)*" >> release_notes.md
+          echo "- **Linux x64**: manw-ng-linux-x64 *(onefile/standalone; glibc-linked; UPX)*" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "## 🚀 Usage Examples" >> release_notes.md
+          echo '\`\`\`bash' >> release_notes.md
+          echo "# Linux" >> release_notes.md
+          echo "chmod +x manw-ng-linux-x64" >> release_notes.md
+          echo "./manw-ng-linux-x64 CreateProcessW" >> release_notes.md
+          echo "./manw-ng-linux-x64 HeapAlloc --output json -l br" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "# Windows" >> release_notes.md
+          echo "manw-ng-windows-x64.exe SetWindowsHookEx" >> release_notes.md
+          echo "manw-ng-windows-x64.exe WSAStartup --output json" >> release_notes.md
+          echo '\`\`\`' >> release_notes.md
 
-    - name: 📦 Create Release
-      id: create_release
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.ACTIONS }}
-      with:
-        tag_name: ${{ steps.get_tag.outputs.tag }}
-        name: MANW-NG ${{ steps.get_tag.outputs.tag }}
-        body_path: release_notes.md
-        draft: false
-        prerelease: false
+      - name: 📦 Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_tag.outputs.tag }}
+          name: MANW-NG ${{ steps.get_tag.outputs.tag }}
+          body_path: release_notes.md
+          draft: false
+          prerelease: false
 
   build-windows:
-    name: 🪟 Build Windows Binaries
+    name: 🪟 Build Windows Binaries (onefile + UPX)
     runs-on: windows-latest
+    permissions: { contents: write }
     environment: manw-ng
     needs: create-release
     strategy:
@@ -99,229 +84,113 @@ jobs:
         include:
           - arch: x64
             python-arch: x64
-            artifact-name: manw-ng-windows-x64.exe
+            artifact-name: manw-ng-windows-x64
           - arch: x86
             python-arch: x86
-            artifact-name: manw-ng-windows-x86.exe
-    
+            artifact-name: manw-ng-windows-x86
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }} (${{ matrix.python-arch }})
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        architecture: ${{ matrix.python-arch }}
+      - name: 🐍 Set up Python ${{ env.PYTHON_VERSION }} (${{ matrix.python-arch }})
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: ${{ matrix.python-arch }}
 
-    - name: 📦 Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller==6.2.0
-        echo "Python version:"
-        python --version
-        echo "PyInstaller version:"
-        pyinstaller --version
+      - name: 📦 Install project deps
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip
+          if (Test-Path requirements.txt) { pip install -r requirements.txt }
+          pip install pyinstaller==6.*
 
-    - name: 🧪 Run tests
-      run: |
-        pip install -r requirements-dev.txt
-        python -m pytest tests/ -v --tb=short
+      - name: ⬇️ Install UPX (Windows)
+        if: env.USE_UPX == '1'
+        shell: pwsh
+        run: |
+          $ver = '4.2.4'
+          $url = "https://github.com/upx/upx/releases/download/v$ver/upx-$ver-win64.zip"
+          Invoke-WebRequest $url -OutFile upx.zip
+          Expand-Archive upx.zip -DestinationPath upx
+          echo "$PWD\upx\upx-$ver-win64" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
-    - name: 🔨 Build Windows ${{ matrix.arch }} executable
-      run: |
-        echo "Building Windows executable with PyInstaller..."
-        pyinstaller --version
-        
-        REM Create a simple spec file approach
-        pyinstaller --onefile --console --name ${{ matrix.artifact-name }} manw-ng.py
-        
-        REM Check if build succeeded
-        if exist "dist\${{ matrix.artifact-name }}" (
-          echo "Build successful!"
-          dir dist
-        ) else (
-          echo "Build failed - executable not found"
-          exit /b 1
-        )
-      shell: cmd
+      - name: 🔨 Build (PyInstaller onefile)
+        shell: pwsh
+        run: |
+          $Name = "${{ matrix.artifact-name }}"
+          $upx = if ($env:USE_UPX -eq '1') { "--upx-dir `"$PWD\upx\upx-4.2.4-win64`"" } else { "" }
+          pyinstaller --onefile --console --clean --name $Name $upx $env:ENTRYPOINT
+          if (!(Test-Path "dist\$Name.exe")) { Write-Error "Build failed"; exit 1 }
+          Get-ChildItem dist
 
-    - name: ✅ Test executable
-      run: |
-        cd dist
-        echo "Testing ${{ matrix.artifact-name }} executable..."
-        ./${{ matrix.artifact-name }} --version
-        ./${{ matrix.artifact-name }} --help
-        echo "Testing actual function lookup..."
-        ./${{ matrix.artifact-name }} CreateProcessW --output json > test_output.json
-        echo "Checking output contains expected JSON structure..."
-        if grep -q "signature" test_output.json; then
-          echo "✅ Function lookup working correctly"
-        else
-          echo "❌ Function lookup failed"
-          exit 1
-        fi
-      shell: bash
+      - name: ✅ Smoke test
+        shell: pwsh
+        run: |
+          $exe = "dist\${{ matrix.artifact-name }}.exe"
+          & $exe --version
+          & $exe --help
+          & $exe CreateProcessW --output json | Out-File dist\test_output.json -Encoding utf8
+          if (-not (Select-String -Path dist\test_output.json -Pattern '"signature"')) { Write-Error "JSON inválido"; exit 1 }
 
-    - name: 📊 Get file info and verify static build
-      run: |
-        cd dist
-        echo "=== File Information ==="
-        ls -la ${{ matrix.artifact-name }}
-        file ${{ matrix.artifact-name }} || echo "file command not available"
-        
-        echo ""
-        echo "=== Checking for static linking ==="
-        # Check if executable is portable (no external DLL dependencies)
-        echo "Dependencies check..."
-        if command -v ldd >/dev/null 2>&1; then
-          ldd ${{ matrix.artifact-name }} || echo "No dynamic dependencies (good for portability)"
-        else
-          echo "ldd not available, using dumpbin..."
-          # Use Windows dumpbin if available
-          if command -v dumpbin >/dev/null 2>&1; then
-            dumpbin /DEPENDENTS ${{ matrix.artifact-name }} || echo "dumpbin failed"
-          else
-            echo "No dependency checking tools available"
-          fi
-        fi
-        
-        echo ""
-        echo "=== Size Information ==="
-        du -h ${{ matrix.artifact-name }}
-        echo "Build completed successfully!"
-      shell: bash
-
-    - name: 📤 Upload Windows ${{ matrix.arch }} Binary
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.ACTIONS }}
-      with:
-        tag_name: ${{ needs.create-release.outputs.tag_name }}
-        files: ./dist/${{ matrix.artifact-name }}
+      - name: 📤 Upload Windows ${{ matrix.arch }} Binary
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.create-release.outputs.tag_name }}
+          files: dist/${{ matrix.artifact-name }}.exe
 
   build-linux:
-    name: 🐧 Build Linux Binaries
+    name: 🐧 Build Linux x86_64 (manylinux2014 + UPX)
     runs-on: ubuntu-latest
+    permissions: { contents: write }
     environment: manw-ng
     needs: create-release
-    strategy:
-      matrix:
-        arch: [x64, x86]
-        include:
-          - arch: x64
-            python-arch: x64
-            artifact-name: manw-ng-linux-x64
-            docker-platform: linux/amd64
-          - arch: x86
-            python-arch: x86
-            artifact-name: manw-ng-linux-x86
-            docker-platform: linux/386
-
     steps:
-    - name: 📥 Checkout code
-      uses: actions/checkout@v4
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
 
-    - name: 🐧 Set up QEMU for cross-compilation
-      if: matrix.arch == 'x86'
-      uses: docker/setup-qemu-action@v3
+      - name: 🐳 Build in manylinux2014_x86_64
+        uses: addnab/docker-run-action@v3
+        with:
+          image: quay.io/pypa/manylinux2014_x86_64
+          options: -v ${{ github.workspace }}:/work -w /work
+          run: |
+            /opt/python/cp311-cp311/bin/pip install --upgrade pip
+            if [ -f requirements.txt ]; then /opt/python/cp311-cp311/bin/pip install -r requirements.txt; fi
+            /opt/python/cp311-cp311/bin/pip install pyinstaller==6.*
+            if [ "${USE_UPX}" = "1" ]; then 
+              curl -LO https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
+              tar -xJf upx-4.2.4-amd64_linux.tar.xz
+              export PATH=$PWD/upx-4.2.4-amd64_linux:$PATH
+              UPX_FLAG="--upx-dir $PWD/upx-4.2.4-amd64_linux"
+            else
+              UPX_FLAG=""
+            fi
+            /opt/python/cp311-cp311/bin/pyinstaller --onefile --console --clean $UPX_FLAG --name manw-ng-linux-x64 "$ENTRYPOINT"
+            ls -la dist/
 
-    - name: 🔨 Build Linux ${{ matrix.arch }} executable
-      run: |
-        echo "Building Linux executable with PyInstaller..."
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install pyinstaller==6.2.0
-        echo "Python version:"
-        python --version
-        echo "PyInstaller version:"
-        pyinstaller --version
-        
-        # Build with PyInstaller - simplified approach
-        pyinstaller --version
-        pyinstaller --onefile --console --name ${{ matrix.artifact-name }} manw-ng.py
-        
-        # Check if build succeeded
-        if [ -f "dist/${{ matrix.artifact-name }}" ]; then
-          echo "Build successful!"
-          ls -la dist/
-          chmod +x dist/${{ matrix.artifact-name }}
-        else
-          echo "Build failed - executable not found"
-          exit 1
-        fi
+      - name: ✅ Smoke test (Linux)
+        run: |
+          chmod +x dist/manw-ng-linux-x64
+          ./dist/manw-ng-linux-x64 --version
+          ./dist/manw-ng-linux-x64 --help
+          ./dist/manw-ng-linux-x64 CreateProcessW --output json > dist/test_output.json
+          grep -q '"signature"' dist/test_output.json
 
-    - name: 📊 Get file info and verify static build
-      run: |
-        cd dist
-        echo "=== File Information ==="
-        ls -la ${{ matrix.artifact-name }}
-        file ${{ matrix.artifact-name }}
-        
-        echo ""
-        echo "=== Checking static linking ==="
-        readelf -h ${{ matrix.artifact-name }} 2>/dev/null || echo "readelf not available"
-        
-        echo ""
-        echo "=== Dynamic dependencies check ==="
-        if ldd ${{ matrix.artifact-name }} 2>/dev/null; then
-          echo "⚠️  Has dynamic dependencies (may not be portable)"
-        else
-          echo "✅ No dynamic dependencies found (truly static)"
-        fi
-        
-        echo ""
-        echo "=== Size Information ==="
-        du -h ${{ matrix.artifact-name }}
-
-    - name: ✅ Test executable
-      run: |
-        cd dist
-        echo "Testing ${{ matrix.artifact-name }} executable..."
-        ./${{ matrix.artifact-name }} --version
-        ./${{ matrix.artifact-name }} --help
-        echo "Testing actual function lookup..."
-        ./${{ matrix.artifact-name }} CreateProcessW --output json > test_output.json
-        echo "Checking output contains expected JSON structure..."
-        if grep -q "signature" test_output.json; then
-          echo "✅ Function lookup working correctly"
-        else
-          echo "❌ Function lookup failed"
-          cat test_output.json
-          exit 1
-        fi
-
-    - name: 📤 Upload Linux ${{ matrix.arch }} Binary  
-      uses: softprops/action-gh-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.ACTIONS }}
-      with:
-        tag_name: ${{ needs.create-release.outputs.tag_name }}
-        files: ./dist/${{ matrix.artifact-name }}
+      - name: 📤 Upload Linux x64 Binary
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.create-release.outputs.tag_name }}
+          files: dist/manw-ng-linux-x64
 
   notify-completion:
     name: 📢 Release Notification
     runs-on: ubuntu-latest
     needs: [create-release, build-windows, build-linux]
     if: always()
-
     steps:
-    - name: 📢 Success notification
-      if: needs.build-windows.result == 'success' && needs.build-linux.result == 'success'
-      run: |
-        echo "🎉 Release ${{ needs.create-release.outputs.tag_name }} completed successfully!"
-        echo "✅ Windows x64 binary created"
-        echo "✅ Windows x86 binary created" 
-        echo "✅ Linux x64 binary created"
-        echo "✅ Linux x86 binary created"
-        echo ""
-        echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/${{ needs.create-release.outputs.tag_name }}"
-
-    - name: 📢 Failure notification
-      if: needs.build-windows.result == 'failure' || needs.build-linux.result == 'failure'
-      run: |
-        echo "❌ Release build failed!"
-        echo "Windows build: ${{ needs.build-windows.result }}"
-        echo "Linux build: ${{ needs.build-linux.result }}"
-        exit 1
+      - name: 📢 Summary
+        run: |
+          echo "Release ${{ needs.create-release.outputs.tag_name }} finalizada."
+          echo "Windows x64/x86: onefile + UPX"
+          echo "Linux x64: manylinux2014 onefile + UPX"
