@@ -266,7 +266,72 @@ class Win32DiscoveryEngine:
 
     def _search_microsoft_docs(self, function_name: str) -> List[str]:
         """
-        Busca oficial na documentação Microsoft
+        Busca oficial na documentação Microsoft usando múltiplas estratégias
+        """
+        results = []
+        
+        # Estratégia 1: API oficial de pesquisa do Microsoft Learn
+        results.extend(self._search_microsoft_api(function_name))
+        
+        # Estratégia 2: Pesquisa por página HTML (fallback)
+        results.extend(self._search_microsoft_html(function_name))
+        
+        return results[:10]  # Retorna top 10 resultados
+    
+    def _search_microsoft_api(self, function_name: str) -> List[str]:
+        """
+        Pesquisa usando a API oficial do Microsoft Learn
+        """
+        results = []
+        
+        try:
+            # Detectar idioma baseado na base_url
+            locale = "en-us" if "/en-us" in self.base_url else "pt-br"
+            
+            # API oficial do Microsoft Learn
+            api_url = f"https://learn.microsoft.com/api/search"
+            params = {
+                "search": f"{function_name} win32 api",
+                "locale": locale,
+                "facet": "category",
+                "$filter": "category eq 'Documentation'",
+                "$top": 15,
+                "expandScope": "true"
+            }
+            
+            response = self.session.get(api_url, params=params, timeout=15)
+            response.raise_for_status()
+            
+            search_data = response.json()
+            
+            if "results" in search_data:
+                for result in search_data["results"]:
+                    url = result.get("url", "")
+                    title = result.get("title", "").lower()
+                    description = result.get("description", "").lower()
+                    
+                    # Verificar se é relevante para a função
+                    if (function_name.lower() in url.lower() or 
+                        function_name.lower() in title or
+                        function_name.lower() in description):
+                        
+                        # Priorizar URLs de API do Windows
+                        if any(pattern in url.lower() for pattern in [
+                            "/windows/win32/api/",
+                            "/windows-hardware/drivers/ddi/",
+                            "/windows/desktop/api/"
+                        ]):
+                            results.append(url)
+                            
+        except Exception as e:
+            if not self.quiet:
+                self.console.print(f"[yellow]API search failed: {e}[/yellow]")
+        
+        return results
+    
+    def _search_microsoft_html(self, function_name: str) -> List[str]:
+        """
+        Pesquisa por página HTML (método tradicional como fallback)
         """
         results = []
         search_url_base = self.base_url.replace(
@@ -292,7 +357,11 @@ class Win32DiscoveryEngine:
 
                 if all(
                     [
-                        "/windows/win32/api/" in href.lower(),
+                        any(pattern in href.lower() for pattern in [
+                            "/windows/win32/api/",
+                            "/windows-hardware/drivers/ddi/",
+                            "/windows/desktop/api/"
+                        ]),
                         function_name.lower() in href.lower(),
                         any(
                             keyword in text
@@ -308,7 +377,7 @@ class Win32DiscoveryEngine:
             if not self.quiet:
                 self.console.print(f"[yellow]Busca Microsoft Docs falhou: {e}[/yellow]")
 
-        return results[:5]
+        return results
 
     def _deduplicate_urls(self, urls: List[str]) -> List[str]:
         """Remove duplicatas mantendo ordem"""
