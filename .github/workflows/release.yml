@@ -8,8 +8,8 @@ on:
 
 env:
   PYTHON_VERSION: '3.11'
-  ENTRYPOINT: 'manw-ng.py'         # ajuste se seu entry for outro
-  USE_UPX: '1'                     # 1 = habilita UPX
+  ENTRYPOINT: 'manw-ng.py'   # ajuste se seu entry for outro
+  USE_UPX: '1'               # 1 = habilita UPX
 
 jobs:
   create-release:
@@ -21,10 +21,12 @@ jobs:
       release_id: ${{ steps.create_release.outputs.id }}
       upload_url: ${{ steps.create_release.outputs.upload_url }}
       tag_name: ${{ steps.get_tag.outputs.tag }}
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
-        with: { fetch-depth: 0 }
+        with:
+          fetch-depth: 0
 
       - name: 🏷️ Get tag name
         id: get_tag
@@ -34,8 +36,10 @@ jobs:
         id: release_notes
         run: |
           if git show-ref --verify --quiet refs/heads/main; then DEFAULT_BRANCH=main; else DEFAULT_BRANCH=master; fi
+
           echo "## 🆕 Changes in ${{ steps.get_tag.outputs.tag }}" > release_notes.md
           echo "" >> release_notes.md
+
           LAST_TAG=$(git describe --tags --abbrev=0 ${{ steps.get_tag.outputs.tag }}^ 2>/dev/null || echo "")
           if [ -n "$LAST_TAG" ]; then
             echo "### 📋 Commits since $LAST_TAG:" >> release_notes.md
@@ -44,6 +48,7 @@ jobs:
             echo "### 📋 All commits in this release:" >> release_notes.md
             git log --pretty=format:"- %s (%h)" >> release_notes.md
           fi
+
           echo "" >> release_notes.md
           echo "## 📦 Standalone Binaries (no Python required)" >> release_notes.md
           echo "- **Windows x64**: manw-ng-windows-x64.exe *(onefile/standalone; UPX)*" >> release_notes.md
@@ -51,7 +56,7 @@ jobs:
           echo "- **Linux x64**: manw-ng-linux-x64 *(onefile/standalone; glibc-linked; UPX)*" >> release_notes.md
           echo "" >> release_notes.md
           echo "## 🚀 Usage Examples" >> release_notes.md
-          echo '\`\`\`bash' >> release_notes.md
+          echo '```bash' >> release_notes.md
           echo "# Linux" >> release_notes.md
           echo "chmod +x manw-ng-linux-x64" >> release_notes.md
           echo "./manw-ng-linux-x64 CreateProcessW" >> release_notes.md
@@ -60,7 +65,7 @@ jobs:
           echo "# Windows" >> release_notes.md
           echo "manw-ng-windows-x64.exe SetWindowsHookEx" >> release_notes.md
           echo "manw-ng-windows-x64.exe WSAStartup --output json" >> release_notes.md
-          echo '\`\`\`' >> release_notes.md
+          echo '```' >> release_notes.md
 
       - name: 📦 Create Release
         id: create_release
@@ -75,7 +80,8 @@ jobs:
   build-windows:
     name: 🪟 Build Windows Binaries (onefile + UPX)
     runs-on: windows-latest
-    permissions: { contents: write }
+    permissions:
+      contents: write
     environment: manw-ng
     needs: create-release
     strategy:
@@ -88,6 +94,7 @@ jobs:
           - arch: x86
             python-arch: x86
             artifact-name: manw-ng-windows-x86
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
@@ -119,9 +126,14 @@ jobs:
         shell: pwsh
         run: |
           $Name = "${{ matrix.artifact-name }}"
-          $upx = if ($env:USE_UPX -eq '1') { "--upx-dir `"$PWD\upx\upx-4.2.4-win64`"" } else { "" }
-          pyinstaller --onefile --console --clean --name $Name $upx $env:ENTRYPOINT
-          if (!(Test-Path "dist\$Name.exe")) { Write-Error "Build failed"; exit 1 }
+          $args = @('--onefile','--console','--clean','--name', $Name)
+          if ($env:USE_UPX -eq '1') {
+            $upxPath = Join-Path $PWD 'upx\upx-4.2.4-win64'
+            $args += @('--upx-dir', $upxPath)
+          }
+          $args += $env:ENTRYPOINT
+          pyinstaller @args
+          if (!(Test-Path "dist\$Name.exe")) { Write-Error 'Build failed'; exit 1 }
           Get-ChildItem dist
 
       - name: ✅ Smoke test
@@ -131,7 +143,12 @@ jobs:
           & $exe --version
           & $exe --help
           & $exe CreateProcessW --output json | Out-File dist\test_output.json -Encoding utf8
-          if (-not (Select-String -Path dist\test_output.json -Pattern '"signature"')) { Write-Error "JSON inválido"; exit 1 }
+          if (-not (Select-String -Path dist\test_output.json -Pattern '"signature"')) { Write-Error 'JSON inválido'; exit 1 }
+
+      - name: 🔎 Inspect bundle (PyInstaller archive)
+        shell: pwsh
+        run: |
+          python -m PyInstaller.utils.cliutils.archive_viewer dist\${{ matrix.artifact-name }}.exe -l | Select-Object -First 150
 
       - name: 📤 Upload Windows ${{ matrix.arch }} Binary
         uses: softprops/action-gh-release@v2
@@ -142,15 +159,20 @@ jobs:
   build-linux:
     name: 🐧 Build Linux x86_64 (manylinux2014 + UPX)
     runs-on: ubuntu-latest
-    permissions: { contents: write }
+    permissions:
+      contents: write
     environment: manw-ng
     needs: create-release
+
     steps:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
 
       - name: 🐳 Build in manylinux2014_x86_64
         uses: addnab/docker-run-action@v3
+        env:
+          ENTRYPOINT: ${{ env.ENTRYPOINT }}
+          USE_UPX: ${{ env.USE_UPX }}
         with:
           image: quay.io/pypa/manylinux2014_x86_64
           options: -v ${{ github.workspace }}:/work -w /work
@@ -158,15 +180,21 @@ jobs:
             /opt/python/cp311-cp311/bin/pip install --upgrade pip
             if [ -f requirements.txt ]; then /opt/python/cp311-cp311/bin/pip install -r requirements.txt; fi
             /opt/python/cp311-cp311/bin/pip install pyinstaller==6.*
-            if [ "${USE_UPX}" = "1" ]; then 
+
+            # UPX (opcional)
+            if [ "${USE_UPX:-0}" = "1" ]; then 
               curl -LO https://github.com/upx/upx/releases/download/v4.2.4/upx-4.2.4-amd64_linux.tar.xz
               tar -xJf upx-4.2.4-amd64_linux.tar.xz
               export PATH=$PWD/upx-4.2.4-amd64_linux:$PATH
-              UPX_FLAG="--upx-dir $PWD/upx-4.2.4-amd64_linux"
+              UPX_FLAG=( --upx-dir "$PWD/upx-4.2.4-amd64_linux" )
             else
-              UPX_FLAG=""
+              UPX_FLAG=()
             fi
-            /opt/python/cp311-cp311/bin/pyinstaller --onefile --console --clean $UPX_FLAG --name manw-ng-linux-x64 "$ENTRYPOINT"
+
+            # ENTRYPOINT com default seguro
+            ENTRY="${ENTRYPOINT:-manw-ng.py}"
+
+            /opt/python/cp311-cp311/bin/pyinstaller --onefile --console --clean "${UPX_FLAG[@]}" --name manw-ng-linux-x64 "$ENTRY"
             ls -la dist/
 
       - name: ✅ Smoke test (Linux)
