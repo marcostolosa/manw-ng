@@ -19,6 +19,7 @@ A **revolutionary modular tool** for reverse engineers and Windows developers to
 - 🎨 **Rich Status**: Dynamic progress display with animated spinner
 
 ---
+### >> tmux with r2
 
 ![](/assets/demo.png)
 
