@@ -24,12 +24,12 @@ class RichFormatter:
             color_system="truecolor",  # Force true color support
         )
         self.language = language
-        
+
         # Localized strings
         self.strings = {
             "us": {
                 "win32_function": "Win32 API Function",
-                "basic_info": "Basic Information", 
+                "basic_info": "Basic Information",
                 "function_signature": "Function Signature",
                 "description": "Description",
                 "parameters": "Parameters",
@@ -39,15 +39,15 @@ class RichFormatter:
                 "dll": "DLL",
                 "calling_convention": "Calling Convention",
                 "parameter_count": "Parameter Count",
-                "architectures": "Architectures", 
+                "architectures": "Architectures",
                 "return_type": "Return Type",
                 "name": "Name",
-                "type": "Type"
+                "type": "Type",
             },
             "br": {
                 "win32_function": "Função Win32 API",
                 "basic_info": "Informações Básicas",
-                "function_signature": "Assinatura da Função", 
+                "function_signature": "Assinatura da Função",
                 "description": "Descrição",
                 "parameters": "Parâmetros",
                 "return_value": "Valor de Retorno",
@@ -55,12 +55,12 @@ class RichFormatter:
                 "value": "Valor",
                 "dll": "DLL",
                 "calling_convention": "Convenção de Chamada",
-                "parameter_count": "Número de Parâmetros", 
+                "parameter_count": "Número de Parâmetros",
                 "architectures": "Arquiteturas",
                 "return_type": "Tipo de Retorno",
                 "name": "Nome",
-                "type": "Tipo"
-            }
+                "type": "Tipo",
+            },
         }
 
     def get_string(self, key: str) -> str:
@@ -104,16 +104,24 @@ class RichFormatter:
             title=f"[bold #66D9EF]» {self.get_string('basic_info')}[/bold #66D9EF]",
             border_style="#75715E",
         )
-        basic_table.add_column(self.get_string("property"), style="#F8F8F2", no_wrap=True)
+        basic_table.add_column(
+            self.get_string("property"), style="#F8F8F2", no_wrap=True
+        )
         basic_table.add_column(self.get_string("value"), style="#E6DB74")
 
         basic_table.add_row(self.get_string("dll"), function_info["dll"])
-        basic_table.add_row(self.get_string("calling_convention"), function_info["calling_convention"])
+        basic_table.add_row(
+            self.get_string("calling_convention"), function_info["calling_convention"]
+        )
         basic_table.add_row(
             self.get_string("parameter_count"), str(function_info["parameter_count"])
         )
-        basic_table.add_row(self.get_string("architectures"), ", ".join(function_info["architectures"]))
-        basic_table.add_row(self.get_string("return_type"), function_info["return_type"])
+        basic_table.add_row(
+            self.get_string("architectures"), ", ".join(function_info["architectures"])
+        )
+        basic_table.add_row(
+            self.get_string("return_type"), function_info["return_type"]
+        )
 
         self.console.print(basic_table)
 
@@ -164,15 +172,26 @@ class RichFormatter:
                 show_lines=True,
                 border_style="#75715E",
             )
-            param_table.add_column(self.get_string("name"), style="#66D9EF", min_width=15, max_width=25)
-            param_table.add_column(self.get_string("type"), style="#E6DB74", min_width=8, max_width=25)
             param_table.add_column(
-                self.get_string("description"), style="#F8F8F2", no_wrap=False, overflow="fold"
+                self.get_string("name"), style="#66D9EF", min_width=15, max_width=25
+            )
+            param_table.add_column(
+                self.get_string("type"), style="#E6DB74", min_width=8, max_width=25
+            )
+            param_table.add_column(
+                self.get_string("description"),
+                style="#F8F8F2",
+                no_wrap=False,
+                overflow="fold",
             )
 
             for param in function_info["parameters"]:
                 # Build description with value tables if available
-                no_description = "No description available" if self.language == "us" else "Sem descrição disponível"
+                no_description = (
+                    "No description available"
+                    if self.language == "us"
+                    else "Sem descrição disponível"
+                )
                 description = param["description"] or no_description
 
                 # Add value tables with Monokai colors

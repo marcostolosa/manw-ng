@@ -143,7 +143,9 @@ class Win32DiscoveryEngine:
         discovered_urls = []
 
         # Nova estratégia principal: Sistema inteligente baseado em padrões
-        url, method = self.smart_discovery.discover_function_url(function_name, self.locale)
+        url, method = self.smart_discovery.discover_function_url(
+            function_name, self.locale
+        )
         if url:
             if not self.quiet:
                 self.console.print(f"[green]OK[/green] Found via {method}: {url}")
