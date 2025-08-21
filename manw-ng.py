@@ -73,9 +73,13 @@ Examples:
         scraper = Win32APIScraper(language=args.language, quiet=(args.output == "json"))
 
         if args.output != "json":
-            console.print(
-                f"[yellow]Fazendo scraping da funcao: {args.function_name} (idioma: {args.language})[/yellow]"
-            )
+            # Localized loading messages
+            loading_messages = {
+                "us": f"Scraping function: {args.function_name} (language: {args.language})",
+                "br": f"Fazendo scraping da função: {args.function_name} (idioma: {args.language})",
+            }
+            message = loading_messages.get(args.language, loading_messages["us"])
+            console.print(f"[yellow]{message}[/yellow]")
 
         # Scrape function information
         function_info = scraper.scrape_function(args.function_name)

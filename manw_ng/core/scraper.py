@@ -41,22 +41,63 @@ class Win32APIScraper:
         self.parser = Win32PageParser()
         self.console = Console()
 
+        # Localized strings
+        self.strings = {
+            "us": {
+                "documentation_found": "Documentation found:",
+                "testing": "Testing:",
+                "fallback_to_english": "pt-br not found, trying en-us:",
+                "searching": "Searching for function documentation...",
+                "trying_direct": "Checking direct URL mapping...",
+                "discovery_search": "Using intelligent discovery system...",
+                "function_not_found": "Function {function_name} not found in Microsoft documentation",
+            },
+            "br": {
+                "documentation_found": "Documentação encontrada:",
+                "testing": "Testando:",
+                "fallback_to_english": "pt-br não encontrada, tentando en-us:",
+                "searching": "Procurando documentação da função...",
+                "trying_direct": "Verificando mapeamento direto de URL...",
+                "discovery_search": "Usando sistema de descoberta inteligente...",
+                "function_not_found": "Função {function_name} não encontrada na documentação Microsoft",
+            },
+        }
+
+    def get_string(self, key: str) -> str:
+        """Get localized string"""
+        return self.strings.get(self.language, self.strings["us"]).get(key, key)
+
     def scrape_function(self, function_name: str) -> Dict:
         """
         Main function to scrape Win32 API documentation
         """
 
-        # Try direct URL first (fastest)
-        direct_url = self._try_direct_url(function_name)
-        if direct_url:
-            if not self.quiet:
-                self.console.print(
-                    f"[green]Documentação encontrada:[/green] {self._format_url_display(direct_url)}"
-                )
-            return self._parse_function_page(direct_url)
+        if not self.quiet:
+            with Status(
+                f"[dim]{self.get_string('searching')}[/dim]", console=self.console
+            ) as status:
+                # Try direct URL first (fastest)
+                status.update(f"[blue]{self.get_string('trying_direct')}[/blue]")
+                direct_url = self._try_direct_url(function_name)
+                if direct_url:
+                    status.stop()
+                    self.console.print(
+                        f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
+                    )
+                    return self._parse_function_page(direct_url)
 
-        # Use intelligent discovery system
-        search_results = self.discovery_engine.discover_function_urls(function_name)
+                # Use intelligent discovery system
+                status.update(f"[blue]{self.get_string('discovery_search')}[/blue]")
+                search_results = self.discovery_engine.discover_function_urls(
+                    function_name
+                )
+                status.stop()
+        else:
+            # Silent mode - no status indicators
+            direct_url = self._try_direct_url(function_name)
+            if direct_url:
+                return self._parse_function_page(direct_url)
+            search_results = self.discovery_engine.discover_function_urls(function_name)
 
         # Try each discovered URL with Rich Status
         if not self.quiet and search_results:
@@ -64,13 +105,13 @@ class Win32APIScraper:
                 for i, url in enumerate(search_results, 1):
                     try:
                         status.update(
-                            f"[bold blue]\\[{i}/{len(search_results)}] Testando:[/bold blue] {self._format_url_display(url)}"
+                            f"[bold blue]\\[{i}/{len(search_results)}] {self.get_string('testing')}:[/bold blue] {self._format_url_display(url)}"
                         )
                         result = self._parse_function_page(url, status)
 
                         status.stop()
                         self.console.print(
-                            f"[green]Documentação encontrada:[/green] {self._format_url_display(url)}"
+                            f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
                         )
                         return result
 
@@ -85,14 +126,14 @@ class Win32APIScraper:
                     result = self._parse_function_page(url)
                     if not self.quiet:
                         self.console.print(
-                            f"[green]Documentação encontrada:[/green] {self._format_url_display(url)}"
+                            f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
                         )
                     return result
                 except Exception as e:
                     continue
 
         raise Exception(
-            f"Função {function_name} não encontrada na documentação Microsoft"
+            self.get_string("function_not_found").format(function_name=function_name)
         )
 
     def _try_direct_url(self, function_name: str) -> Optional[str]:
@@ -121,7 +162,7 @@ class Win32APIScraper:
                 )
                 if not self.quiet and status:
                     status.update(
-                        f"[yellow]pt-br não encontrada, tentando en-us:[/yellow] {self._format_url_display(fallback_url)}"
+                        f"[yellow]{self.get_string('fallback_to_english')}:[/yellow] {self._format_url_display(fallback_url)}"
                     )
                 try:
                     response = self.session.get(fallback_url, timeout=15)
