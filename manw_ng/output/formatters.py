@@ -43,6 +43,7 @@ class RichFormatter:
                 "return_type": "Return Type",
                 "name": "Name",
                 "type": "Type",
+                "documentation_url": "Documentation URL",
             },
             "br": {
                 "win32_function": "Função Win32 API",
@@ -60,6 +61,7 @@ class RichFormatter:
                 "return_type": "Tipo de Retorno",
                 "name": "Nome",
                 "type": "Tipo",
+                "documentation_url": "URL da Documentação",
             },
         }
 
@@ -98,6 +100,12 @@ class RichFormatter:
                 padding=(1, 2),
             )
         )
+
+        # URL da documentação clicável logo embaixo do título
+        doc_url = function_info.get('url', '')
+        if doc_url:
+            self.console.print(f"[dim]📖 {doc_url}[/dim]", style="link " + doc_url)
+            self.console.print()  # Linha em branco para separação
 
         # Informacoes basicas estilo Monokai
         basic_table = Table(

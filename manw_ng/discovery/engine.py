@@ -147,18 +147,14 @@ class Win32DiscoveryEngine:
             function_name, self.locale
         )
         if url:
-            if not self.quiet:
-                self.console.print(f"[green]OK[/green] Found via {method}: {url}")
+            # Não printar aqui - deixar o scraper gerenciar o status
             discovered_urls.append(url)
             return (
                 discovered_urls  # Se encontrou, não precisa tentar outras estratégias
             )
 
         # Fallback para sistema antigo se o novo não funcionar
-        if not self.quiet:
-            self.console.print(
-                f"[yellow]INFO[/yellow] Smart discovery failed, trying legacy methods..."
-            )
+        # Não printar aqui - deixar o scraper gerenciar o status
 
         # Special handling for RTL functions
         if function_name.lower().startswith("rtl"):
@@ -369,8 +365,8 @@ class Win32DiscoveryEngine:
                             results.append(url)
 
         except Exception as e:
-            if not self.quiet:
-                self.console.print(f"[yellow]API search failed: {e}[/yellow]")
+            # Silenciar erros de busca - deixar o scraper gerenciar
+            pass
 
         return results
 
@@ -422,8 +418,8 @@ class Win32DiscoveryEngine:
                     results.append(href)
 
         except Exception as e:
-            if not self.quiet:
-                self.console.print(f"[yellow]Busca Microsoft Docs falhou: {e}[/yellow]")
+            # Silenciar erros de busca - deixar o scraper gerenciar
+            pass
 
         return results
 
