@@ -180,5 +180,5 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## Related Projects
 
 - [manw](https://github.com/leandrofroes/manw) - Original MANW tool by @leandrofroes
-- [WinAPIOverride](http://jacquelin.potier.free.fr/winapioverride/) - Win32 API monitoring
+- [WinAPIOverride](http://jacquelin.potier.free.fr/winapioverride32/) - Win32 API monitoring
 - [API Monitor](http://www.rohitab.com/apimonitor) - API monitoring and hooking tool
