@@ -16,13 +16,56 @@ from rich.syntax import Syntax
 class RichFormatter:
     """Rich console formatter for beautiful terminal output"""
 
-    def __init__(self):
+    def __init__(self, language="us"):
         self.console = Console(
             force_terminal=True,
             legacy_windows=True,  # Enable Windows compatibility
             # Remove width fixo para se adaptar ao terminal
             color_system="truecolor",  # Force true color support
         )
+        self.language = language
+        
+        # Localized strings
+        self.strings = {
+            "us": {
+                "win32_function": "Win32 API Function",
+                "basic_info": "Basic Information", 
+                "function_signature": "Function Signature",
+                "description": "Description",
+                "parameters": "Parameters",
+                "return_value": "Return Value",
+                "property": "Property",
+                "value": "Value",
+                "dll": "DLL",
+                "calling_convention": "Calling Convention",
+                "parameter_count": "Parameter Count",
+                "architectures": "Architectures", 
+                "return_type": "Return Type",
+                "name": "Name",
+                "type": "Type"
+            },
+            "br": {
+                "win32_function": "Função Win32 API",
+                "basic_info": "Informações Básicas",
+                "function_signature": "Assinatura da Função", 
+                "description": "Descrição",
+                "parameters": "Parâmetros",
+                "return_value": "Valor de Retorno",
+                "property": "Propriedade",
+                "value": "Valor",
+                "dll": "DLL",
+                "calling_convention": "Convenção de Chamada",
+                "parameter_count": "Número de Parâmetros", 
+                "architectures": "Arquiteturas",
+                "return_type": "Tipo de Retorno",
+                "name": "Nome",
+                "type": "Tipo"
+            }
+        }
+
+    def get_string(self, key: str) -> str:
+        """Get localized string"""
+        return self.strings.get(self.language, self.strings["us"]).get(key, key)
 
     def format_output(self, function_info: Dict) -> None:
         """Format and display function information using Rich"""
@@ -49,7 +92,7 @@ class RichFormatter:
         self.console.print(
             Panel(
                 f"[bold #F92672]» {title_text}[/bold #F92672]",
-                title="[bold #66D9EF]» Win32 API Function[/bold #66D9EF]",
+                title=f"[bold #66D9EF]» {self.get_string('win32_function')}[/bold #66D9EF]",
                 border_style="#AE81FF",
                 expand=False,
                 padding=(1, 2),
@@ -58,19 +101,19 @@ class RichFormatter:
 
         # Informacoes basicas estilo Monokai
         basic_table = Table(
-            title="[bold #66D9EF]» Informacoes Basicas[/bold #66D9EF]",
+            title=f"[bold #66D9EF]» {self.get_string('basic_info')}[/bold #66D9EF]",
             border_style="#75715E",
         )
-        basic_table.add_column("Propriedade", style="#F8F8F2", no_wrap=True)
-        basic_table.add_column("Valor", style="#E6DB74")
+        basic_table.add_column(self.get_string("property"), style="#F8F8F2", no_wrap=True)
+        basic_table.add_column(self.get_string("value"), style="#E6DB74")
 
-        basic_table.add_row("DLL", function_info["dll"])
-        basic_table.add_row("Calling Convention", function_info["calling_convention"])
+        basic_table.add_row(self.get_string("dll"), function_info["dll"])
+        basic_table.add_row(self.get_string("calling_convention"), function_info["calling_convention"])
         basic_table.add_row(
-            "Número de Parâmetros", str(function_info["parameter_count"])
+            self.get_string("parameter_count"), str(function_info["parameter_count"])
         )
-        basic_table.add_row("Arquiteturas", ", ".join(function_info["architectures"]))
-        basic_table.add_row("Tipo de Retorno", function_info["return_type"])
+        basic_table.add_row(self.get_string("architectures"), ", ".join(function_info["architectures"]))
+        basic_table.add_row(self.get_string("return_type"), function_info["return_type"])
 
         self.console.print(basic_table)
 
@@ -96,7 +139,7 @@ class RichFormatter:
             self.console.print(
                 Panel(
                     syntax,
-                    title="[bold #A6E22E]» Assinatura da Funcao[/bold #A6E22E]",
+                    title=f"[bold #A6E22E]» {self.get_string('function_signature')}[/bold #A6E22E]",
                     border_style="#75715E",
                     padding=(1, 2),
                 )
@@ -107,7 +150,7 @@ class RichFormatter:
             self.console.print(
                 Panel(
                     f"[#F8F8F2]{function_info['description']}[/#F8F8F2]",
-                    title="[bold #FD971F]» Descrição[/bold #FD971F]",
+                    title=f"[bold #FD971F]» {self.get_string('description')}[/bold #FD971F]",
                     border_style="#75715E",
                     padding=(1, 2),
                 )
@@ -116,20 +159,21 @@ class RichFormatter:
         # Parâmetros estilo Monokai
         if function_info["parameters"]:
             param_table = Table(
-                title="[bold #AE81FF]» Parâmetros[/bold #AE81FF]",
+                title=f"[bold #AE81FF]» {self.get_string('parameters')}[/bold #AE81FF]",
                 expand=True,
                 show_lines=True,
                 border_style="#75715E",
             )
-            param_table.add_column("Nome", style="#66D9EF", min_width=15, max_width=25)
-            param_table.add_column("Tipo", style="#E6DB74", min_width=8, max_width=25)
+            param_table.add_column(self.get_string("name"), style="#66D9EF", min_width=15, max_width=25)
+            param_table.add_column(self.get_string("type"), style="#E6DB74", min_width=8, max_width=25)
             param_table.add_column(
-                "Descrição", style="#F8F8F2", no_wrap=False, overflow="fold"
+                self.get_string("description"), style="#F8F8F2", no_wrap=False, overflow="fold"
             )
 
             for param in function_info["parameters"]:
                 # Build description with value tables if available
-                description = param["description"] or "Sem descrição disponível"
+                no_description = "No description available" if self.language == "us" else "Sem descrição disponível"
+                description = param["description"] or no_description
 
                 # Add value tables with Monokai colors
                 if "values" in param and param["values"]:
@@ -156,7 +200,7 @@ class RichFormatter:
                 self.console.print(
                     Panel(
                         Markdown(function_info["return_description"]),
-                        title="[bold #F92672]» Valor de Retorno[/bold #F92672]",
+                        title=f"[bold #F92672]» {self.get_string('return_value')}[/bold #F92672]",
                         border_style="#75715E",
                         padding=(1, 2),
                     )
@@ -166,7 +210,7 @@ class RichFormatter:
                 self.console.print(
                     Panel(
                         f"[#F8F8F2]{function_info['return_description']}[/#F8F8F2]",
-                        title="[bold #F92672]» Valor de Retorno[/bold #F92672]",
+                        title=f"[bold #F92672]» {self.get_string('return_value')}[/bold #F92672]",
                         border_style="#75715E",
                         padding=(1, 2),
                     )

@@ -45,33 +45,9 @@ python manw-ng.py --help
 
 ## Example Output
 
-```
-┌─ Win32 API Function ─┐
-│                      │
-│  CreateProcessW      │
-│                      │
-└──────────────────────┘
+![Demo Screenshot](assets/demo.png)
 
-    Basic Information    
-┌──────────────────┬────────────┐
-│ Property         │ Value      │
-├──────────────────┼────────────┤
-│ DLL              │ Kernel32   │
-│ Calling Conv     │ __stdcall  │
-│ Parameters       │ 10         │
-│ Return Type      │ BOOL       │
-└──────────────────┴────────────┘
-
-┌──────── Function Signature ────────┐
-│                                    │
-│   BOOL CreateProcessW(             │
-│     [in, optional] LPCWSTR lpApp,  │
-│     [in, out, opt] LPWSTR lpCmd,   │
-│     ...                            │
-│   );                               │
-│                                    │
-└────────────────────────────────────┘
-```
+*MANW-NG running in terminal showing Win32 API documentation with rich formatting*
 
 ## Supported Functions
 

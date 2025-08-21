@@ -82,7 +82,7 @@ Examples:
 
         # Format output
         if args.output == "rich":
-            formatter = RichFormatter()
+            formatter = RichFormatter(language=args.language)
             formatter.format_output(function_info)
         elif args.output == "json":
             formatter = JSONFormatter()

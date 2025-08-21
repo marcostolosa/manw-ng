@@ -491,11 +491,35 @@ class Win32PageParser:
         """Extract parameter type from function signature"""
         signature = self._extract_signature(soup)
         if signature and param_name:
-            # Look for pattern: TYPE paramName
-            pattern = rf"\s+(\w+)\s+{re.escape(param_name)}\b"
-            match = re.search(pattern, signature)
+            # Match patterns like:
+            # [in] const MSG *lpMsg
+            # [out] LPCSTR lpszString
+            # HANDLE hProcess
+            # const RECT *lpRect
+            # struct POINT *lpPoint
+            pattern = rf"\[(?:in|out|in,\s*out|optional)\]\s+((?:const\s+)?(?:struct\s+)?(?:\w+\s+)*\w+)\s*\*?\s*{re.escape(param_name)}\b"
+            
+            match = re.search(pattern, signature, re.IGNORECASE | re.MULTILINE)
             if match:
-                return match.group(1)
+                param_type = match.group(1).strip()
+                # Check if there's a pointer indicator after the type
+                # Look for * between the type and parameter name
+                full_match = match.group(0)
+                if '*' in full_match:
+                    param_type += '*'
+                return param_type
+            
+            # Fallback: Try pattern without [in/out] directives
+            pattern = rf"((?:const\s+)?(?:struct\s+)?(?:\w+\s+)*\w+)\s*\*?\s*{re.escape(param_name)}\b"
+            match = re.search(pattern, signature, re.IGNORECASE | re.MULTILINE)
+            if match:
+                param_type = match.group(1).strip()
+                # Check if there's a pointer indicator
+                full_match = match.group(0)
+                if '*' in full_match:
+                    param_type += '*'
+                return param_type
+                
         return self._extract_type_from_text(param_name)
 
     def _extract_type_from_text(self, text: str) -> str:

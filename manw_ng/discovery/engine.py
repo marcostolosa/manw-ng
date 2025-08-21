@@ -26,6 +26,12 @@ class Win32DiscoveryEngine:
         self.quiet = quiet
         self.console = Console()
 
+        # Extract locale from base_url
+        if "pt-br" in base_url:
+            self.locale = "pt-br"
+        else:
+            self.locale = "en-us"
+
         # Initialize new smart discovery system
         self.url_verifier = URLVerifier()
         self.smart_discovery = SmartURLDiscovery(self.url_verifier)
@@ -137,7 +143,7 @@ class Win32DiscoveryEngine:
         discovered_urls = []
 
         # Nova estratégia principal: Sistema inteligente baseado em padrões
-        url, method = self.smart_discovery.discover_function_url(function_name)
+        url, method = self.smart_discovery.discover_function_url(function_name, self.locale)
         if url:
             if not self.quiet:
                 self.console.print(f"[green]OK[/green] Found via {method}: {url}")
