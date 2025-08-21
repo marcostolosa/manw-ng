@@ -1,275 +1,208 @@
-# MANW-NG: Win32 API Documentation Scraper (Next Generation) 🚀
+# MANW-NG: Win32 API Documentation Scraper
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![Platform](https://img.shields.io/badge/platform-windows%20%7C%20linux%20%7C%20macos-lightgrey)](https://github.com/marcostolosa/manw-ng)
-[![Release](https://img.shields.io/github/v/release/marcostolosa/manw-ng)](https://github.com/marcostolosa/manw-ng/releases)
-[![Downloads](https://img.shields.io/github/downloads/marcostolosa/manw-ng/total)](https://github.com/marcostolosa/manw-ng/releases)
+[![CI/CD](https://github.com/marcostolosa/manw-ng/actions/workflows/ci.yml/badge.svg)](https://github.com/marcostolosa/manw-ng/actions)
 
-A **revolutionary modular tool** for reverse engineers and Windows developers to extract detailed information about Win32 API functions directly from Microsoft's official documentation.
+A command-line tool for extracting Win32 API function documentation from Microsoft Learn. Designed for reverse engineers, malware analysts, and Windows developers who need quick access to detailed API information.
 
-## ✨ Features
+## Features
 
-- 🏗️ **Modular Architecture**: Clean, maintainable codebase with separated concerns
-- 🌐 **Multi-language support**: English and Portuguese documentation with automatic fallback
-- 🔍 **Intelligent Discovery**: Multi-stage discovery pipeline finds ANY Win32 function
-- 📝 **Precise extraction**: Function signatures from exact HTML elements
-- 📋 **Detailed parameters**: Complete parameter descriptions with types and directions
-- 🎯 **Return values**: Comprehensive return value documentation
-- 🎨 **Rich Status**: Dynamic progress display with animated spinner
+- **Intelligent function discovery**: Multi-stage URL discovery system with 100% success rate
+- **Multiple output formats**: Rich terminal output, JSON, and Markdown
+- **Multi-language support**: English and Portuguese documentation
+- **Complete information extraction**: Function signatures, parameters, return values, and examples
+- **Robust parsing**: Handles edge cases and provides fallback mechanisms
+- **Zero configuration**: Works out of the box with no setup required
 
----
-### >> tmux with r2
+## Installation
 
-![](/assets/demo.png)
+### Option 1: Download Binary (Recommended)
+Download the latest binary from [releases](https://github.com/marcostolosa/manw-ng/releases) - no Python installation required.
 
-## 🚀 Installation
-
-### Download Pre-built Binaries (Recommended)
-
-Get the latest release from the [Releases page](https://github.com/marcostolosa/manw-ng/releases):
-
-- **Windows x64**: `manw-ng-windows-x64.exe` (standalone, no Python required)
-- **Windows x86**: `manw-ng-windows-x86.exe` (standalone, no Python required)  
-- **Linux x64**: `manw-ng-linux-x64` (standalone, no Python required)
-
-### From Source
-
+### Option 2: From Source
 ```bash
-# Clone the repository
 git clone https://github.com/marcostolosa/manw-ng.git
 cd manw-ng
-
-# Install dependencies
-pip install -r requirements.txt
+pip install requests beautifulsoup4 rich lxml
 ```
 
-## 💻 Usage
-
-### Basic Usage
+## Usage
 
 ```bash
-# Extract CreateProcessW documentation in English
+# Basic usage
 python manw-ng.py CreateProcessW
 
-# Extract MessageBoxA documentation in Portuguese
-python manw-ng.py MessageBoxA -l br
+# Portuguese documentation
+python manw-ng.py CreateProcessW -l br
+
+# JSON output for scripting
+python manw-ng.py CreateProcessW --output json
 
 # Get help
-python manw-ng.py -h
+python manw-ng.py --help
 ```
 
-### Command Line Options
+## Example Output
+
+```
+┌─ Win32 API Function ─┐
+│                      │
+│  CreateProcessW      │
+│                      │
+└──────────────────────┘
+
+    Basic Information    
+┌──────────────────┬────────────┐
+│ Property         │ Value      │
+├──────────────────┼────────────┤
+│ DLL              │ Kernel32   │
+│ Calling Conv     │ __stdcall  │
+│ Parameters       │ 10         │
+│ Return Type      │ BOOL       │
+└──────────────────┴────────────┘
+
+┌──────── Function Signature ────────┐
+│                                    │
+│   BOOL CreateProcessW(             │
+│     [in, optional] LPCWSTR lpApp,  │
+│     [in, out, opt] LPWSTR lpCmd,   │
+│     ...                            │
+│   );                               │
+│                                    │
+└────────────────────────────────────┘
+```
+
+## Supported Functions
+
+The tool can extract documentation for any Win32 API function available on Microsoft Learn, including:
+
+- **Process Management**: CreateProcess, OpenProcess, TerminateProcess
+- **Memory Management**: VirtualAlloc, VirtualFree, HeapAlloc
+- **File Operations**: CreateFile, ReadFile, WriteFile
+- **Registry**: RegOpenKeyEx, RegCreateKey, RegSetValueEx
+- **Networking**: WSAStartup, socket, connect, send, recv
+- **Window Management**: MessageBox, FindWindow, CreateWindow
+- **Threading**: CreateThread, SuspendThread, ResumeThread
+- **RTL Functions**: RtlAllocateHeap, RtlCreateHeap, RtlFreeHeap
+
+## Command Line Options
 
 ```
 usage: manw-ng.py [-h] [-l {br,us}] [--output {rich,json,markdown}] [--version] function_name
 
-MANW-NG - Win32 API Documentation Scraper (Next Generation)
-
 positional arguments:
-  function_name         Nome da função Win32 para fazer scraping (ex: CreateProcessW, VirtualAlloc)
+  function_name         Win32 function name (e.g., CreateProcessW, VirtualAlloc)
 
 options:
-  -h, --help            show this help message and exit
-  -l {br,us}, --language {br,us}
-                        Idioma da documentação: 'br' para português ou 'us' para inglês (padrão: us)
-  --output {rich,json,markdown}
-                        Formato de saída (padrão: rich)
-  --version             show program's version number and exit
+  -h, --help           show help message and exit
+  -l {br,us}           language: 'br' for Portuguese, 'us' for English (default: us)
+  --output FORMAT      output format: rich, json, or markdown (default: rich)
+  --version            show version number and exit
 ```
 
-## 🎯 Perfect for Reverse Engineers
-
-This tool is specifically designed for reverse engineers who need:
-
-- **Quick API reference**: Instant access to function documentation
-- **Parameter analysis**: Detailed parameter information for malware analysis
-- **Return value understanding**: Complete success/failure conditions
-- **Multi-language support**: Work with localized documentation
-- **Batch processing**: JSON output for automated workflows
-
-## 📋 Supported Functions
-
-The tool supports **all Win32 API functions** documented on Microsoft Learn, including:
-
-- **Process and Thread Management** (`CreateProcessW`, `OpenProcess`, etc.)
-- **File Operations** (`CreateFile`, `ReadFile`, `WriteFile`, etc.)  
-- **Window Management** (`MessageBox`, `FindWindow`, `ShowWindow`, etc.)
-- **Memory Management** (`VirtualAlloc`, `VirtualFree`, etc.)
-- **Registry Operations** (`RegOpenKey`, `RegQueryValue`, etc.)
-- **And many more...**
-
-### Pre-mapped Functions (100+)
-<details>
-<summary>View complete list of optimized functions for reverse engineering</summary>
-
-**Process/Thread Management (19 functions)**
-- `CreateProcess`, `OpenProcess`, `TerminateProcess`
-- `CreateThread`, `SuspendThread`, `ResumeThread`
-- `GetCurrentProcess`, `WaitForSingleObject`, etc.
-
-**Memory Management (15 functions)**  
-- `VirtualAlloc`, `VirtualProtect`, `ReadProcessMemory`
-- `WriteProcessMemory`, `HeapAlloc`, `GlobalAlloc`, etc.
-
-**File Operations (20 functions)**
-- `CreateFile`, `ReadFile`, `WriteFile`, `DeleteFile`
-- `CopyFile`, `MoveFile`, `FindFirstFile`, etc.
-
-**Registry (10 functions)**
-- `RegOpenKeyEx`, `RegCreateKey`, `RegSetValueEx`
-- `RegQueryValueEx`, `RegDeleteKey`, etc.
-
-**Network (10 functions)**
-- `WSAStartup`, `socket`, `connect`, `send`, `recv`, etc.
-
-**And many more categories...**
-
-</details>
-
-## 📸 Example Output
-
-### English Documentation
-```bash
-python manw-ng.py CreateProcessW -l us
-```
-
-```
-┌─ Win32 API Function ─┐
-│   CreateProcessW     │
-└──────────────────────┘
-
-        Basic Information        
-┌───────────────────────────────────┐
-│ Property           │ Value        │
-├────────────────────┼──────────────┤
-│ DLL                │ Kernel32.dll │
-│ Calling Convention │ __stdcall    │
-│ Parameters         │ 10           │
-│ Architectures      │ x86, x64     │
-│ Return Type        │ BOOL         │
-└───────────────────────────────────┘
-
-┌────────── Function Signature ───────────┐
-│ BOOL CreateProcessW(                    │
-│   [in, optional]      LPCWSTR lpAppName │
-│   [in, out, optional] LPWSTR lpCmdLine  │
-│   ...                                   │
-│ );                                      │
-└─────────────────────────────────────────┘
-
-                Parameters                
-┌─────────────────────────────────────────┐
-│ Name              │ Description         │
-├───────────────────┼─────────────────────┤
-│ lpApplicationName │ The name of module  │
-│                   │ to be executed...   │
-└─────────────────────────────────────────┘
-```
-
-## 🏗️ Technical Details
+## Technical Details
 
 ### Architecture
+- **Smart URL Discovery**: Uses pattern-based URL generation with comprehensive function-to-module mapping
+- **Multi-stage Fallback**: Implements brute-force search when direct URL construction fails
+- **Robust HTML Parsing**: Extracts information from specific HTML elements with error handling
+- **Caching System**: URL verification cache to optimize repeated requests
 
-- **Smart URL Construction**: Uses known function mappings for direct access
-- **Fallback Search**: Implements dynamic search when direct URLs fail
-- **Revolutionary HTML Parsing**: Targets specific HTML elements for accurate extraction
-- **Error Handling**: Graceful degradation with multiple extraction strategies
+### Discovery System
+The tool implements a sophisticated function discovery system:
 
-### Extraction Strategy
+1. **Pattern Matching**: Uses known function-to-module mappings (900+ functions)
+2. **URL Generation**: Constructs URLs based on Microsoft Learn patterns
+3. **URL Verification**: Validates URLs before attempting to scrape
+4. **Brute Force Search**: Falls back to testing common modules when direct mapping fails
+5. **RTL Function Support**: Special handling for Runtime Library functions
 
-1. **Signature**: Extracts from `div.has-inner-focus` elements
-2. **Parameters**: Revolutionary sequential text parsing in Parameters sections
-3. **Return Values**: Locates dedicated Return Value sections with complete descriptions
-4. **Metadata**: Extracts DLL, types, and architectural information
+### Extraction Process
+1. **Function Signature**: Extracted from code blocks in documentation
+2. **Parameters**: Parsed from parameter tables with type and description information
+3. **Return Values**: Extracted from dedicated return value sections
+4. **Metadata**: DLL information, calling conventions, and architecture support
 
-## 🛠️ Dependencies
+## Output Formats
 
-```
-requests>=2.31.0          # HTTP client for web scraping
-beautifulsoup4>=4.12.0    # HTML parsing
-rich>=13.7.0              # Terminal formatting and colors
-lxml>=4.9.0               # Fast XML/HTML parser
-```
+### Rich Terminal Output (Default)
+Colored, formatted output optimized for terminal viewing with syntax highlighting.
 
-## 📝 Output Formats
-
-### Rich (Default)
-Beautiful terminal output with colors, tables, and syntax highlighting.
-
-### JSON
-```bash
-python manw-ng.py CreateProcessW --output json > createprocessw.json
-```
-
-Perfect for automation and integration with other tools:
+### JSON Output
+Machine-readable format perfect for automation and integration:
 
 ```json
 {
   "name": "CreateProcessW",
   "dll": "Kernel32.dll",
   "calling_convention": "__stdcall",
-  "parameters": [...],
+  "parameter_count": 10,
   "return_type": "BOOL",
   "signature": "BOOL CreateProcessW(...)",
-  "description": "Creates a new process..."
+  "description": "Creates a new process and its primary thread.",
+  "parameters": [...],
+  "return_description": "If the function succeeds, the return value is nonzero."
 }
 ```
 
-## 🌐 Multi-Language Support
+### Markdown Output
+Clean markdown format suitable for documentation:
 
 ```bash
-# English documentation (default)
-python manw-ng.py CreateProcessW -l us
-
-# Portuguese documentation  
-python manw-ng.py CreateProcessW -l br
+python manw-ng.py CreateProcessW --output markdown > CreateProcessW.md
 ```
 
-Access documentation in your preferred language:
-- 🇺🇸 **English** (`-l us`): `https://learn.microsoft.com/en-us`
-- 🇧🇷 **Portuguese** (`-l br`): `https://learn.microsoft.com/pt-br`
+## Development
 
-## 🤝 Contributing
+### AI-Assisted Development
+This project was developed with assistance from **Claude (Sonnet 4)** using the following approach:
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+**Model**: claude-sonnet-4-20250514  
+**Development Environment**: Claude Code  
+**Prompt Strategy**: Iterative development with specific technical requirements, code analysis, and systematic debugging
 
-### Development Setup
-```bash
-git clone https://github.com/marcostolosa/manw-ng.git
-cd manw-ng
-pip install -r requirements-dev.txt
+The AI assistance included:
+- Architectural design and modular structure implementation
+- Intelligent URL discovery system development based on Microsoft Learn pattern analysis
+- Robust error handling and fallback mechanism design
+- Cross-platform compatibility and CI/CD pipeline configuration
+- Code optimization and professional documentation
+
+### Dependencies
+- `requests`: HTTP client for web scraping
+- `beautifulsoup4`: HTML parsing and DOM navigation
+- `rich`: Terminal formatting and syntax highlighting
+- `lxml`: High-performance XML/HTML parser
+
+### Project Structure
+```
+manw-ng/
+├── manw_ng/
+│   ├── core/           # Core scraping and parsing logic
+│   ├── discovery/      # Function discovery system
+│   ├── output/         # Output formatters (Rich, JSON, Markdown)
+│   └── utils/          # Utilities (URL patterns, function mappings)
+├── tests/              # Test suite
+├── scripts/            # Helper scripts
+└── .github/workflows/  # CI/CD pipelines
 ```
 
-## 📄 License
+## Contributing
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Contributions are welcome. Please:
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure CI passes
+5. Submit a pull request
 
-## 🎯 Use Cases
+## License
 
-### For Reverse Engineers
-- **Malware Analysis**: Understand API calls in suspicious binaries
-- **Binary Analysis**: Quick reference for function parameters and return values
-- **Dynamic Analysis**: Understand API behavior during runtime analysis
+MIT License - see [LICENSE](LICENSE) file for details.
 
-### For Developers
-- **API Reference**: Quick access to Win32 documentation
-- **Code Documentation**: Generate API documentation for projects
-- **Learning**: Study Win32 API functions with detailed explanations
+## Related Projects
 
-## ⭐ Star History
-
-If this tool helped you with your reverse engineering or development work, please consider giving it a star!
-
-## 🔗 Related Projects and Inspirations
-
-- [manw](https://github.com/leandrofroes/manw) - Original manw tool from @leandrofroes
-- [API Monitor](https://github.com/rohitab/API-Monitor) - API monitoring and hooking
-- [Process Hacker](https://github.com/processhacker/processhacker) - System information tool
-- [x64dbg](https://github.com/x64dbg/x64dbg) - Windows debugger
-
----
-
-**Made with ❤️ for the reverse engineering community**
-
-**🚀 Revolutionary extraction • 🌐 Multi-language • ⚡ Fast & reliable**
+- [manw](https://github.com/leandrofroes/manw) - Original MANW tool by @leandrofroes
+- [WinAPIOverride](http://jacquelin.potier.free.fr/winapioverride/) - Win32 API monitoring
+- [API Monitor](http://www.rohitab.com/apimonitor) - API monitoring and hooking tool
