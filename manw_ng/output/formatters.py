@@ -102,7 +102,7 @@ class RichFormatter:
         )
 
         # URL da documentação clicável logo embaixo do título
-        doc_url = function_info.get('url', '')
+        doc_url = function_info.get("url", "")
         if doc_url:
             self.console.print(f"[dim]📖 {doc_url}[/dim]", style="link " + doc_url)
             self.console.print()  # Linha em branco para separação

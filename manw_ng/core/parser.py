@@ -54,18 +54,22 @@ class Win32PageParser:
         title = soup.find("h1")
         if title:
             title_text = title.get_text().strip()
-            
+
             # Try to extract function name and header info from title
             # Example: "HeapAlloc function (heapapi.h)" -> "HeapAlloc (heapapi.h)"
             # Example: "Função CreateProcessW (processthreadsapi.h)" -> "CreateProcessW (processthreadsapi.h)"
-            
+
             # Look for pattern: "FunctionName function (header.h)" or "Função FunctionName (header.h)"
-            header_match = re.search(r"^(?:Função\s+|Function\s+)?(\w+)\s+(?:function\s+)?\(([^)]+\.h)\)", title_text, re.IGNORECASE)
+            header_match = re.search(
+                r"^(?:Função\s+|Function\s+)?(\w+)\s+(?:function\s+)?\(([^)]+\.h)\)",
+                title_text,
+                re.IGNORECASE,
+            )
             if header_match:
                 func_name = header_match.group(1)
                 header = header_match.group(2)
                 return f"{func_name} ({header})"
-            
+
             # Fallback: just remove "function" suffix
             title_text = re.sub(
                 r"\s+(function|api|Function|API).*$",
@@ -260,10 +264,21 @@ class Win32PageParser:
         # If first line contains only modifier keywords, merge with next line
         if len(lines) > 1:
             first_line = lines[0].strip()
-            modifiers = ["DECLSPEC_ALLOCATOR", "WINAPI", "CALLBACK", "STDCALL", "CDECL", "__stdcall", "__cdecl"]
-            
+            modifiers = [
+                "DECLSPEC_ALLOCATOR",
+                "WINAPI",
+                "CALLBACK",
+                "STDCALL",
+                "CDECL",
+                "__stdcall",
+                "__cdecl",
+            ]
+
             # Check if first line is just a modifier
-            if any(modifier in first_line for modifier in modifiers) and first_line.count("(") == 0:
+            if (
+                any(modifier in first_line for modifier in modifiers)
+                and first_line.count("(") == 0
+            ):
                 # Merge first line with second line
                 second_line = lines[1].strip()
                 merged = f"{first_line} {second_line}"
