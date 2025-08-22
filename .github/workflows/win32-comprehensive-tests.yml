@@ -76,7 +76,7 @@ jobs:
         
         # Execute comprehensive tests
         python tests/automated_win32_tests.py \
-          --webhook "${{ secrets.DISCORD_WEBHOOK_URL }}" \
+          --webhook "${{ secrets.DISCORD_WEBHOOK }}" \
           --language "${{ matrix.language }}" \
           --priorities $PRIORITIES \
           --concurrent $MAX_CONCURRENT \
@@ -84,8 +84,8 @@ jobs:
           --quiet
       continue-on-error: true
       env:
-        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        GITHUB_TOKEN: ${{ secrets.ACTIONS }}
 
     - name: Parse test results
       id: parse_results
@@ -132,7 +132,7 @@ jobs:
         fi
 
     - name: Upload test reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: win32-test-reports-${{ matrix.language }}-${{ matrix.priority_group }}
@@ -259,7 +259,7 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
     
     - name: Aggregate test results
       run: |
