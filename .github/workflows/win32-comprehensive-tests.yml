@@ -100,11 +100,11 @@ jobs:
           echo "Found test report: $LATEST_REPORT"
           
           # Extract key metrics using Python
-          python -c "
+          python3 -c "
 import json
 import sys
 
-with open('$LATEST_REPORT', 'r') as f:
+with open('${LATEST_REPORT}', 'r') as f:
     report = json.load(f)
 
 summary = report.get('summary', {})
