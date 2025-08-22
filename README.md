@@ -4,14 +4,14 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![CI/CD](https://github.com/marcostolosa/manw-ng/actions/workflows/ci.yml/badge.svg)](https://github.com/marcostolosa/manw-ng/actions)
 
-A command-line tool for extracting Win32 API function documentation from Microsoft Learn. Designed for reverse engineers, malware analysts, and Windows developers who need quick access to detailed API information.
+A command-line tool for extracting Win32 API documentation from Microsoft Learn. Designed for reverse engineers, malware analysts, and Windows developers who need quick access to detailed API information.
 
 ## Features
 
-- **Intelligent function discovery**: Multi-stage URL discovery system with 100% success rate
+- **Intelligent discovery**: Multi-stage URL discovery system 
 - **Multiple output formats**: Rich terminal output, JSON, and Markdown
 - **Multi-language support**: English and Portuguese documentation
-- **Complete information extraction**: Function signatures, parameters, return values, and examples
+- **Complete information extraction**: Signatures, parameters, return values, and examples
 - **Robust parsing**: Handles edge cases and provides fallback mechanisms
 - **Zero configuration**: Works out of the box with no setup required
 

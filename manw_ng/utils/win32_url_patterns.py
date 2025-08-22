@@ -361,45 +361,65 @@ class Win32URLPatterns:
 
     @classmethod
     def get_all_possible_urls(
-        cls, function_name: str, locale: str = "en-us"
+        cls, symbol_name: str, locale: str = "en-us"
     ) -> List[str]:
         """
-        Gera todas as URLs possíveis para uma função
+        Gera todas as URLs possíveis para um símbolo (função, estrutura, enum, etc.)
         """
         urls = []
 
-        # URL padrão Win32
-        standard_url = cls.generate_url(function_name, locale)
-        if standard_url:
-            urls.append(standard_url)
+        # 1. URLs para funções (nf-)
+        function_url = cls.generate_url(symbol_name, locale)
+        if function_url:
+            urls.append(function_url)
 
-        # URL para drivers de hardware (RTL/NT)
-        hardware_url = cls.generate_hardware_drivers_url(function_name, locale)
+        # 2. URLs para estruturas (ns-)
+        struct_url = cls.generate_structure_url(symbol_name, locale)
+        if struct_url:
+            urls.append(struct_url)
+
+        # 3. URLs para enums (ne-)
+        enum_url = cls.generate_enum_url(symbol_name, locale)
+        if enum_url:
+            urls.append(enum_url)
+
+        # 4. URLs para callbacks (nc-)
+        callback_url = cls.generate_callback_url(symbol_name, locale)
+        if callback_url:
+            urls.append(callback_url)
+
+        # 5. URLs para interfaces COM (nn-)
+        interface_url = cls.generate_interface_url(symbol_name, locale)
+        if interface_url:
+            urls.append(interface_url)
+
+        # 6. URL para drivers de hardware (RTL/NT)
+        hardware_url = cls.generate_hardware_drivers_url(symbol_name, locale)
         if hardware_url:
             urls.append(hardware_url)
 
-        # Variações A/W se a função não tiver sufixo
-        function_lower = function_name.lower()
-        if not function_lower.endswith("a") and not function_lower.endswith("w"):
+        # 7. Variações A/W se o símbolo não tiver sufixo
+        symbol_lower = symbol_name.lower()
+        if not symbol_lower.endswith("a") and not symbol_lower.endswith("w"):
             # Tentar versão A
-            url_a = cls.generate_url(function_name + "A", locale)
+            url_a = cls.generate_url(symbol_name + "A", locale)
             if url_a:
                 urls.append(url_a)
 
             # Tentar versão W
-            url_w = cls.generate_url(function_name + "W", locale)
+            url_w = cls.generate_url(symbol_name + "W", locale)
             if url_w:
                 urls.append(url_w)
 
-        # Tentar com módulos alternativos baseado em prefixos
-        guessed_module = cls.guess_module(function_name)
+        # 8. Tentar com módulos alternativos baseado em prefixos
+        guessed_module = cls.guess_module(symbol_name)
         if guessed_module:
-            prefix = function_lower[:3]
+            prefix = symbol_lower[:3]
             if prefix in cls.MODULE_PREFIXES:
                 for alt_module in cls.MODULE_PREFIXES[prefix][
                     1:
                 ]:  # Pular o primeiro (já tentado)
-                    alt_url = f"https://learn.microsoft.com/{locale}/windows/win32/api/{alt_module}/nf-{alt_module}-{function_lower}"
+                    alt_url = f"https://learn.microsoft.com/{locale}/windows/win32/api/{alt_module}/nf-{alt_module}-{symbol_lower}"
                     urls.append(alt_url)
 
         return list(set(urls))  # Remove duplicatas
@@ -592,3 +612,81 @@ class Win32URLPatterns:
             "ntifs",
             "winternl",
         ]
+
+    @classmethod
+    def generate_structure_url(
+        cls, struct_name: str, locale: str = "en-us"
+    ) -> Optional[str]:
+        """Gera URL para estruturas (ns- prefix)"""
+        struct_lower = struct_name.lower()
+
+        # Verificar se a estrutura está mapeada
+        if struct_lower in cls.FUNCTION_TO_MODULE:
+            module = cls.FUNCTION_TO_MODULE[struct_lower]
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/{module}/ns-{module}-{struct_lower}"
+
+        # Para estruturas Native API (PEB, TEB, etc.)
+        if struct_lower in [
+            "peb",
+            "teb",
+            "kuser_shared_data",
+        ] or struct_name.upper().endswith("_INFORMATION_CLASS"):
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/winternl/ns-winternl-{struct_lower}"
+
+        # Tentar headers comuns para estruturas
+        common_struct_headers = ["winuser", "winbase", "winnt", "winternl"]
+        for header in common_struct_headers:
+            url = f"https://learn.microsoft.com/{locale}/windows/win32/api/{header}/ns-{header}-{struct_lower}"
+            # Note: idealmente verificaríamos se existe, mas por ora retornamos a primeira tentativa
+            return url
+
+        return None
+
+    @classmethod
+    def generate_enum_url(cls, enum_name: str, locale: str = "en-us") -> Optional[str]:
+        """Gera URL para enums (ne- prefix)"""
+        enum_lower = enum_name.lower()
+
+        # Tentar headers baseados no nome do enum
+        if "token" in enum_lower or "security" in enum_lower:
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/winnt/ne-winnt-{enum_lower}"
+        elif "process" in enum_lower or "thread" in enum_lower:
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/processthreadsapi/ne-processthreadsapi-{enum_lower}"
+        elif "file" in enum_lower or "dir" in enum_lower:
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/fileapi/ne-fileapi-{enum_lower}"
+        else:
+            # Fallback para winbase
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/winbase/ne-winbase-{enum_lower}"
+
+    @classmethod
+    def generate_callback_url(
+        cls, callback_name: str, locale: str = "en-us"
+    ) -> Optional[str]:
+        """Gera URL para callbacks (nc- prefix)"""
+        callback_lower = callback_name.lower()
+
+        # A maioria dos callbacks está em winuser
+        if (
+            "proc" in callback_lower
+            or "wnd" in callback_lower
+            or "dlg" in callback_lower
+        ):
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/winuser/nc-winuser-{callback_lower}"
+        elif "completion" in callback_lower or "io" in callback_lower:
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/winbase/nc-winbase-{callback_lower}"
+        else:
+            # Fallback
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/winuser/nc-winuser-{callback_lower}"
+
+    @classmethod
+    def generate_interface_url(
+        cls, interface_name: str, locale: str = "en-us"
+    ) -> Optional[str]:
+        """Gera URL para interfaces COM (nn- prefix)"""
+        interface_lower = interface_name.lower()
+
+        # A maioria das interfaces COM está em objbase ou headers específicos
+        if interface_name.startswith("I") and len(interface_name) > 1:
+            return f"https://learn.microsoft.com/{locale}/windows/win32/api/objbase/nn-objbase-{interface_lower}"
+
+        return None

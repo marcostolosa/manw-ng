@@ -11,6 +11,7 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.syntax import Syntax
+from ..core.symbol_classifier import Win32SymbolClassifier
 
 
 class RichFormatter:
@@ -24,6 +25,7 @@ class RichFormatter:
             color_system="truecolor",  # Force true color support
         )
         self.language = language
+        self.classifier = Win32SymbolClassifier()
 
         # Localized strings
         self.strings = {
@@ -62,6 +64,14 @@ class RichFormatter:
                 "name": "Nome",
                 "type": "Tipo",
                 "documentation_url": "URL da Documentação",
+                # Novos tipos de símbolos
+                "structure": "Estrutura",
+                "enumeration": "Enumeração",
+                "callback": "Função de Callback",
+                "interface": "Interface COM",
+                "members": "Membros",
+                "member_count": "Número de Membros",
+                "struct_signature": "Definição da Estrutura",
             },
         }
 
@@ -70,96 +80,54 @@ class RichFormatter:
         return self.strings.get(self.language, self.strings["us"]).get(key, key)
 
     def format_output(self, function_info: Dict) -> None:
-        """Format and display function information using Rich"""
-        # Extract function name and header from the full name
-        full_name = function_info["name"]
+        """Format and display symbol information using Rich (adaptado para diferentes tipos)"""
+        # Get symbol classification info
+        symbol_info = function_info.get("symbol_info")
+        if symbol_info:
+            display_info = self.classifier.get_display_info(symbol_info, self.language)
+            symbol_title = display_info["type_display"]
+        else:
+            # Fallback para compatibilidade
+            symbol_title = self.get_string("win32_function")
 
-        # Check if name contains header info like "Função VirtualAllocEx (memoryapi.h)"
+        # Extract symbol name and header from the full name
+        full_name = function_info["name"]
         import re
 
         header_match = re.search(r"\(([^)]+\.h)\)", full_name)
         if header_match:
             header = header_match.group(1)
-            # Extract just the function name (remove "Função " prefix and header)
-            func_name = re.sub(
-                r"^(Função\s+|Function\s+)?(.+?)\s*\([^)]+\).*$", r"\2", full_name
+            # Extract just the symbol name (remove prefixes and header)
+            symbol_name = re.sub(
+                r"^(Função\s+|Function\s+|Estrutura\s+|Structure\s+)?(.+?)\s*\([^)]+\).*$",
+                r"\2",
+                full_name,
             )
-            title_text = f"{func_name} ({header})"
+            title_text = f"{symbol_name} ({header})"
         else:
             # Fallback if no header found
-            func_name = re.sub(r"^(Função\s+|Function\s+)", "", full_name)
-            title_text = func_name
+            symbol_name = re.sub(
+                r"^(Função\s+|Function\s+|Estrutura\s+|Structure\s+)", "", full_name
+            )
+            title_text = symbol_name
 
-        # Título principal estilo Monokai
+        # Título principal estilo Monokai adaptado ao tipo
         self.console.print(
             Panel(
                 f"[bold #F92672]» {title_text}[/bold #F92672]",
-                title=f"[bold #66D9EF]» {self.get_string('win32_function')}[/bold #66D9EF]",
+                title=f"[bold #66D9EF]» {symbol_title}[/bold #66D9EF]",
                 border_style="#AE81FF",
                 expand=False,
                 padding=(1, 2),
             )
         )
 
-        # URL da documentação clicável logo embaixo do título
-        doc_url = function_info.get("url", "")
-        if doc_url:
-            self.console.print(f"[dim]📖 {doc_url}[/dim]", style="link " + doc_url)
-            self.console.print()  # Linha em branco para separação
+        # Informações básicas adaptadas ao tipo de símbolo
+        self._render_basic_info_table(function_info)
 
-        # Informacoes basicas estilo Monokai
-        basic_table = Table(
-            title=f"[bold #66D9EF]» {self.get_string('basic_info')}[/bold #66D9EF]",
-            border_style="#75715E",
-        )
-        basic_table.add_column(
-            self.get_string("property"), style="#F8F8F2", no_wrap=True
-        )
-        basic_table.add_column(self.get_string("value"), style="#E6DB74")
-
-        basic_table.add_row(self.get_string("dll"), function_info["dll"])
-        basic_table.add_row(
-            self.get_string("calling_convention"), function_info["calling_convention"]
-        )
-        basic_table.add_row(
-            self.get_string("parameter_count"), str(function_info["parameter_count"])
-        )
-        basic_table.add_row(
-            self.get_string("architectures"), ", ".join(function_info["architectures"])
-        )
-        basic_table.add_row(
-            self.get_string("return_type"), function_info["return_type"]
-        )
-
-        self.console.print(basic_table)
-
-        # Assinatura da função estilo Monokai
+        # Assinatura/Sintaxe adaptada ao tipo
         if function_info["signature"]:
-            # Use markdown com código C para melhor compatibilidade
-            from rich.markdown import Markdown
-
-            signature_markdown = f"```c\n{function_info['signature']}\n```"
-
-            try:
-                # Tentar usar Markdown com syntax highlighting
-                syntax = Markdown(signature_markdown, code_theme="monokai")
-            except Exception:
-                # Fallback: Usar manual highlighting
-                from rich.text import Text
-
-                highlighted_text = self._manual_syntax_highlight(
-                    function_info["signature"]
-                )
-                syntax = Text.from_markup(highlighted_text)
-
-            self.console.print(
-                Panel(
-                    syntax,
-                    title=f"[bold #A6E22E]» {self.get_string('function_signature')}[/bold #A6E22E]",
-                    border_style="#75715E",
-                    padding=(1, 2),
-                )
-            )
+            self._render_signature_section(function_info)
 
         # Descrição estilo Monokai
         if function_info["description"]:
@@ -172,55 +140,206 @@ class RichFormatter:
                 )
             )
 
-        # Parâmetros estilo Monokai
-        if function_info["parameters"]:
-            param_table = Table(
-                title=f"[bold #AE81FF]» {self.get_string('parameters')}[/bold #AE81FF]",
-                expand=True,
-                show_lines=True,
+        # Renderizar parâmetros ou membros baseado no tipo
+        self._render_parameters_or_members(function_info)
+
+        # Valor de retorno (só para funções)
+        if function_info.get("kind") in ["function", "callback"] and function_info.get(
+            "return_description"
+        ):
+            self._render_return_value(function_info)
+
+        # URL da documentação no final
+        doc_url = function_info.get("url", "")
+        if doc_url:
+            self.console.print()  # Linha em branco
+            self.console.print(f"[dim]📖 {doc_url}[/dim]", style="link " + doc_url)
+
+    def _render_signature_section(self, function_info: Dict) -> None:
+        """Renderiza seção de assinatura/sintaxe adaptada ao tipo"""
+        symbol_kind = function_info.get("kind", "function")
+
+        # Determinar título baseado no tipo de símbolo
+        if symbol_kind == "struct":
+            title_key = "struct_signature"
+            title = self.get_string(title_key)
+            if not title or title == title_key:  # Fallback se não encontrar
+                title = (
+                    "Definição da Estrutura"
+                    if self.language == "br"
+                    else "Structure Definition"
+                )
+        else:
+            title = self.get_string("function_signature")
+
+        # Use markdown com código C para melhor compatibilidade
+        from rich.markdown import Markdown
+
+        signature_markdown = f"```c\n{function_info['signature']}\n```"
+
+        try:
+            # Tentar usar Markdown com syntax highlighting
+            syntax = Markdown(signature_markdown, code_theme="monokai")
+        except Exception:
+            # Fallback: Usar manual highlighting
+            from rich.text import Text
+
+            highlighted_text = self._manual_syntax_highlight(function_info["signature"])
+            syntax = Text.from_markup(highlighted_text)
+
+        self.console.print(
+            Panel(
+                syntax,
+                title=f"[bold #A6E22E]» {title}[/bold #A6E22E]",
                 border_style="#75715E",
+                padding=(1, 2),
             )
-            param_table.add_column(
-                self.get_string("name"), style="#66D9EF", min_width=15, max_width=25
+        )
+
+    def _render_basic_info_table(self, function_info: Dict) -> None:
+        """Renderiza tabela de informações básicas adaptada ao tipo de símbolo"""
+        basic_table = Table(
+            title=f"[bold #66D9EF]» {self.get_string('basic_info')}[/bold #66D9EF]",
+            border_style="#75715E",
+        )
+        basic_table.add_column(
+            self.get_string("property"), style="#F8F8F2", no_wrap=True
+        )
+        basic_table.add_column(self.get_string("value"), style="#E6DB74")
+
+        # DLL sempre presente
+        basic_table.add_row(self.get_string("dll"), function_info["dll"])
+
+        symbol_kind = function_info.get("kind", "function")
+
+        if symbol_kind in ["function", "callback"]:
+            # Campos específicos para funções
+            basic_table.add_row(
+                self.get_string("calling_convention"),
+                function_info["calling_convention"],
             )
-            param_table.add_column(
-                self.get_string("type"), style="#E6DB74", min_width=8, max_width=25
+            basic_table.add_row(
+                self.get_string("parameter_count"),
+                str(function_info["parameter_count"]),
             )
-            param_table.add_column(
-                self.get_string("description"),
-                style="#F8F8F2",
-                no_wrap=False,
-                overflow="fold",
+            basic_table.add_row(
+                self.get_string("return_type"), function_info["return_type"]
+            )
+        elif symbol_kind == "struct":
+            # Campos específicos para estruturas
+            member_count = function_info.get(
+                "member_count", len(function_info.get("members", []))
+            )
+            basic_table.add_row(self.get_string("member_count"), str(member_count))
+        elif symbol_kind in ["enum", "interface"]:
+            # Campos mínimos para enums e interfaces
+            pass
+
+        # Arquiteturas sempre no final
+        basic_table.add_row(
+            self.get_string("architectures"), ", ".join(function_info["architectures"])
+        )
+
+        self.console.print(basic_table)
+
+    def _render_parameters_or_members(self, function_info: Dict) -> None:
+        """Renderiza parâmetros para funções ou membros para estruturas"""
+        symbol_kind = function_info.get("kind", "function")
+
+        if symbol_kind in ["function", "callback"] and function_info["parameters"]:
+            self._render_parameters_table(function_info)
+        elif symbol_kind == "struct" and function_info.get("members"):
+            self._render_members_table(function_info)
+
+    def _render_parameters_table(self, function_info: Dict) -> None:
+        """Renderiza tabela de parâmetros para funções"""
+        param_table = Table(
+            title=f"[bold #AE81FF]» {self.get_string('parameters')}[/bold #AE81FF]",
+            expand=True,
+            show_lines=True,
+            border_style="#75715E",
+        )
+        param_table.add_column(
+            self.get_string("name"), style="#66D9EF", min_width=15, max_width=25
+        )
+        param_table.add_column(
+            self.get_string("type"), style="#E6DB74", min_width=8, max_width=25
+        )
+        param_table.add_column(
+            self.get_string("description"),
+            style="#F8F8F2",
+            no_wrap=False,
+            overflow="fold",
+        )
+
+        for param in function_info["parameters"]:
+            # Build description with value tables if available
+            no_description = (
+                "No description available"
+                if self.language == "us"
+                else "Sem descrição disponível"
+            )
+            description = param["description"] or no_description
+
+            # Add value tables with Monokai colors
+            if "values" in param and param["values"]:
+                description += "\n\n"
+                for value_table in param["values"]:
+                    description += f"[bold #A6E22E]{value_table.get('title', 'Values')}:[/bold #A6E22E]\n"
+                    for entry in value_table.get("entries", []):
+                        # Use Monokai colors
+                        description += f"• [#66D9EF]{entry['value']}[/#66D9EF]: [#F8F8F2]{entry['meaning']}[/#F8F8F2]\n"
+                    description += "\n"
+
+            param_table.add_row(
+                param["name"],
+                param.get("type", "UNKNOWN"),
+                description.strip(),
             )
 
-            for param in function_info["parameters"]:
-                # Build description with value tables if available
-                no_description = (
-                    "No description available"
-                    if self.language == "us"
-                    else "Sem descrição disponível"
-                )
-                description = param["description"] or no_description
+        self.console.print(param_table)
 
-                # Add value tables with Monokai colors
-                if "values" in param and param["values"]:
-                    description += "\n\n"
-                    for value_table in param["values"]:
-                        description += f"[bold #A6E22E]{value_table.get('title', 'Values')}:[/bold #A6E22E]\n"
-                        for entry in value_table.get("entries", []):
-                            # Use Monokai colors
-                            description += f"• [#66D9EF]{entry['value']}[/#66D9EF]: [#F8F8F2]{entry['meaning']}[/#F8F8F2]\n"
-                        description += "\n"
+    def _render_members_table(self, function_info: Dict) -> None:
+        """Renderiza tabela de membros para estruturas"""
+        members = function_info.get("members", [])
 
-                param_table.add_row(
-                    param["name"],
-                    param.get("type", "UNKNOWN"),
-                    description.strip(),
-                )
+        member_table = Table(
+            title=f"[bold #AE81FF]» {self.get_string('members')}[/bold #AE81FF]",
+            expand=True,
+            show_lines=True,
+            border_style="#75715E",
+        )
+        member_table.add_column(
+            self.get_string("name"), style="#66D9EF", min_width=15, max_width=25
+        )
+        member_table.add_column(
+            self.get_string("type"), style="#E6DB74", min_width=8, max_width=25
+        )
+        member_table.add_column(
+            self.get_string("description"),
+            style="#F8F8F2",
+            no_wrap=False,
+            overflow="fold",
+        )
 
-            self.console.print(param_table)
+        for member in members:
+            no_description = (
+                "No description available"
+                if self.language == "us"
+                else "Sem descrição disponível"
+            )
+            description = member.get("description", no_description)
 
-        # Valor de retorno estilo Monokai
+            member_table.add_row(
+                member.get("name", "Unknown"),
+                member.get("type", "Unknown"),
+                description,
+            )
+
+        self.console.print(member_table)
+
+    def _render_return_value(self, function_info: Dict) -> None:
+        """Renderiza seção de valor de retorno para funções"""
         if function_info["return_description"]:
             # Se contém markdown bullets (linhas começando com "- "), renderizar como markdown
             if function_info["return_description"].strip().startswith("- "):

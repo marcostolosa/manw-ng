@@ -7,12 +7,16 @@ Extracts function information from Microsoft documentation pages.
 import re
 from typing import Dict, List, Tuple, Optional
 from bs4 import BeautifulSoup
+from .symbol_classifier import Win32SymbolClassifier
 
 
 class Win32PageParser:
     """
     Parser for Microsoft Win32 API documentation pages
     """
+
+    def __init__(self):
+        self.classifier = Win32SymbolClassifier()
 
     def parse_function_page(self, soup: BeautifulSoup, url: str) -> Dict:
         """
@@ -38,24 +42,59 @@ class Win32PageParser:
             "symbol_type": "unknown",
             "fallback_used": False,
             "fallback_attempts": [],
+            # Campos de classificação profissional
+            "symbol_info": None,
+            "kind": "unknown",
+            "surface": "unknown",
+            "header": "unknown",
         }
 
         # Extract all information
         function_info["name"] = self._extract_function_name(soup)
-        function_info["dll"] = self._extract_dll(soup)
+
+        # Classificar o símbolo profissionalmente
+        symbol_info = self.classifier.classify_symbol(function_info["name"], url)
+        function_info["symbol_info"] = symbol_info
+        function_info["kind"] = symbol_info.kind
+        function_info["surface"] = symbol_info.surface
+        function_info["header"] = symbol_info.header
+        function_info["symbol_type"] = symbol_info.kind  # Backward compatibility
+
+        # DLL baseada na classificação profissional
+        function_info["dll"] = symbol_info.dll or self._extract_dll(soup)
+
+        # Extrair assinatura/sintaxe para todos os tipos de símbolos
         signature_info = self._extract_signature_with_language(soup)
         function_info["signature"] = signature_info["signature"]
         function_info["signature_language"] = signature_info["language"]
-        function_info["parameters"] = self._extract_parameters(soup)
-        function_info["parameter_count"] = len(function_info["parameters"])
-        function_info["return_type"], function_info["return_description"] = (
-            self._extract_return_info(soup)
-        )
-        function_info["architectures"] = self._extract_architectures(soup)
-        function_info["description"] = self._extract_description(soup)
 
-        # Classificar o tipo do símbolo via scraper para evitar import circular
-        function_info["symbol_type"] = "unknown"
+        # Para estruturas, certificar que a definição C seja extraída
+        if symbol_info.kind == "struct" and not function_info["signature"]:
+            struct_definition = self._extract_struct_definition(soup)
+            if struct_definition:
+                function_info["signature"] = struct_definition
+                function_info["signature_language"] = "c"
+
+        # Extrair informações baseadas no tipo de símbolo
+        if symbol_info.kind in ["function", "callback"]:
+            function_info["parameters"] = self._extract_parameters(soup)
+            function_info["parameter_count"] = len(function_info["parameters"])
+            function_info["return_type"], function_info["return_description"] = (
+                self._extract_return_info(soup)
+            )
+        elif symbol_info.kind == "struct":
+            # Para estruturas, extrair membros ao invés de parâmetros
+            function_info["members"] = self._extract_struct_members(soup)
+            function_info["member_count"] = len(function_info.get("members", []))
+            function_info["parameters"] = []  # Limpar parâmetros irrelevantes
+            function_info["parameter_count"] = 0
+            function_info["calling_convention"] = "N/A"  # Não aplicável a estruturas
+            function_info["return_type"] = "N/A"
+
+        function_info["architectures"] = self._extract_architectures(soup)
+        function_info["description"] = self._extract_complete_description(
+            soup, symbol_info.kind
+        )
 
         return function_info
 
@@ -686,66 +725,374 @@ class Win32PageParser:
 
         return architectures if architectures else ["x86", "x64"]
 
-    def _extract_description(self, soup: BeautifulSoup) -> str:
-        """Extract function description"""
+    def _extract_complete_description(
+        self, soup: BeautifulSoup, symbol_kind: str
+    ) -> str:
+        """Extract COMPLETE description for any type of symbol"""
         title = soup.find("h1")
-        if title:
-            description_parts = []
-            current_elem = title.find_next_sibling()
-            paragraph_count = 0
-            max_paragraphs = 5  # Limit to avoid getting too much content
+        if not title:
+            return ""
 
-            while current_elem and paragraph_count < max_paragraphs:
-                # Stop at the next section header (h2, h3, h4, etc.)
-                if current_elem.name in ["h1", "h2", "h3", "h4", "h5", "h6"]:
+        description_parts = []
+        current_elem = title.find_next_sibling()
+
+        # Para estruturas, buscar em mais seções incluindo comentários
+        max_paragraphs = None if symbol_kind in ["struct", "enum", "interface"] else 10
+        paragraph_count = 0
+        found_comments_section = False
+
+        while current_elem:
+            # Para estruturas, procurar também seções de comentários/observações
+            if current_elem.name in ["h1", "h2", "h3"]:
+                header_text = current_elem.get_text().strip().lower()
+                # Se é uma seção de comentários, observações, sintaxe ou notas, continuar
+                if any(
+                    section in header_text
+                    for section in [
+                        "comment",
+                        "remark",
+                        "note",
+                        "observa",
+                        "nota",
+                        "comentário",
+                        "sintaxe",
+                        "syntax",
+                    ]
+                ):
+                    found_comments_section = True
+                    # Para seções de comentários, incluir o conteúdo todo
+                    current_elem = current_elem.find_next_sibling()
+
+                    # Coletar conteúdo da seção de comentários
+                    while current_elem and current_elem.name not in ["h1", "h2", "h3"]:
+                        if current_elem.name == "p":
+                            text = current_elem.get_text().strip()
+                            if text and len(text) > 10:
+                                description_parts.append(text)
+                                paragraph_count += 1
+                        elif current_elem.name in ["pre", "code"]:
+                            # Incluir também código de exemplo da seção comentários
+                            code_text = current_elem.get_text().strip()
+                            if code_text and "typedef" in code_text:
+                                description_parts.append(
+                                    f"Sintaxe para Windows 64-bit:\\n{code_text}"
+                                )
+                        current_elem = current_elem.find_next_sibling()
+                    continue
+                elif not found_comments_section or symbol_kind not in [
+                    "struct",
+                    "enum",
+                ]:
                     break
 
-                # Collect paragraph text
-                if current_elem.name == "p":
-                    text = current_elem.get_text().strip()
-                    if text and len(text) > 10:  # Skip very short paragraphs
-                        # Skip paragraphs that look like navigation or metadata
-                        if not any(
-                            skip_word in text.lower()
-                            for skip_word in [
-                                "requirements",
-                                "see also",
-                                "library",
-                                "dll",
-                                "header",
-                                "unicode",
-                                "ansi",
-                            ]
-                        ):
+            # Collect paragraph text
+            if current_elem.name == "p":
+                text = current_elem.get_text().strip()
+                if text and len(text) > 5:  # Lowered threshold
+                    # Skip navigation/metadata paragraphs but be less aggressive
+                    if not any(
+                        skip_word in text.lower()
+                        for skip_word in [
+                            "requirements",
+                            "see also",
+                            "library:",
+                            "dll:",
+                            "header:",
+                            "minimum supported client",
+                            "minimum supported server",
+                            "target platform",
+                        ]
+                    ):
+                        description_parts.append(text)
+                        paragraph_count += 1
+
+                        # Check paragraph limit only if set
+                        if max_paragraphs and paragraph_count >= max_paragraphs:
+                            break
+
+            # Also collect from divs and other containers
+            elif current_elem.name in ["div", "section"]:
+                # Look for paragraphs within divs
+                for p in current_elem.find_all("p", recursive=True):
+                    text = p.get_text().strip()
+                    if text and len(text) > 5:
+                        # Avoid duplicates
+                        if text not in description_parts:
                             description_parts.append(text)
                             paragraph_count += 1
 
-                current_elem = current_elem.find_next_sibling()
+                            if max_paragraphs and paragraph_count >= max_paragraphs:
+                                break
 
-            if description_parts:
-                return " ".join(description_parts)
+                if max_paragraphs and paragraph_count >= max_paragraphs:
+                    break
 
-        # Alternative approach: look for content between h1 and first h2/h3
-        if title:
-            # Find the section containing the main description
-            next_section = title.find_next(["h2", "h3", "h4"])
-            if next_section:
-                description_parts = []
-                current = title.next_sibling
-                while current and current != next_section:
-                    if hasattr(current, "name") and current.name == "p":
-                        text = current.get_text().strip()
-                        if text and len(text) > 10:
-                            description_parts.append(text)
-                    current = current.next_sibling
-                if description_parts:
-                    return " ".join(
-                        description_parts[:3]
-                    )  # Limit to first 3 paragraphs
+            current_elem = current_elem.find_next_sibling()
 
-        # Final fallback: just get the first paragraph after h1
+        if description_parts:
+            # Join with proper spacing, preserving paragraph breaks
+            return " ".join(description_parts)
+
+        # Fallback: try to get any content near the title
+        return self._extract_description_fallback(soup)
+
+    def _extract_description_fallback(self, soup: BeautifulSoup) -> str:
+        """Fallback method for description extraction"""
+        title = soup.find("h1")
         if title:
             next_p = title.find_next("p")
             if next_p:
                 return next_p.get_text().strip()
         return ""
+
+    def _extract_struct_members(self, soup: BeautifulSoup) -> List[Dict]:
+        """Extract structure members for struct types"""
+        members = []
+
+        # Look for Members or Membros section
+        member_headers = soup.find_all(
+            ["h2", "h3", "h4"],
+            string=re.compile(r"Members|Membros|members", re.IGNORECASE),
+        )
+
+        for header in member_headers:
+            next_elem = header.find_next_sibling()
+
+            while next_elem:
+                if next_elem.name in ["h1", "h2", "h3"]:
+                    break
+
+                # Look for member definitions in various formats
+                if next_elem.name in ["dl", "table", "div"]:
+                    struct_members = self._parse_struct_members_from_element(next_elem)
+                    members.extend(struct_members)
+
+                next_elem = next_elem.find_next_sibling()
+
+            if members:
+                break
+
+        # Segunda tentativa: Extract from structure definition in <pre> blocks
+        if not members:
+            members = self._extract_members_from_code_blocks(soup)
+
+        return members
+
+    def _extract_members_from_code_blocks(self, soup: BeautifulSoup) -> List[Dict]:
+        """Extract structure members from C typedef definitions in <pre> blocks"""
+        members = []
+
+        # Find all pre/code blocks that might contain struct definitions
+        code_blocks = soup.find_all(["pre", "code"])
+
+        for block in code_blocks:
+            code_text = block.get_text()
+
+            # Look for typedef struct patterns
+            if "typedef" in code_text and "{" in code_text and "}" in code_text:
+                struct_members = self._parse_c_struct_definition(code_text, soup)
+                if struct_members:
+                    members.extend(struct_members)
+                    break
+
+        return members
+
+    def _parse_c_struct_definition(
+        self, code_text: str, soup: BeautifulSoup
+    ) -> List[Dict]:
+        """Parse C struct definition to extract member names and types"""
+        members = []
+
+        # Find the struct body between { and }
+        struct_match = re.search(r"\{([^}]+)\}", code_text, re.DOTALL)
+        if not struct_match:
+            return members
+
+        struct_body = struct_match.group(1)
+
+        # Split into lines and process each member
+        lines = struct_body.split("\n")
+
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith("//") or line.startswith("/*"):
+                continue
+
+            # Remove trailing semicolon and comments
+            line = re.sub(r";.*$", "", line).strip()
+            if not line:
+                continue
+
+            # Parse member: type name or type name[size]
+            # Examples: "BYTE Reserved1[2]", "BOOLEAN BeingDebugged", "PPEB_LDR_DATA Ldr"
+            member_match = re.match(
+                r"^([A-Z_][A-Z0-9_]*\s*\*?\s*)([a-zA-Z_][a-zA-Z0-9_]*)(\[\d+\])?",
+                line,
+                re.IGNORECASE,
+            )
+
+            if member_match:
+                member_type = member_match.group(1).strip()
+                member_name = member_match.group(2)
+                array_suffix = member_match.group(3) or ""
+
+                # Add array suffix to type if present
+                if array_suffix:
+                    member_type += array_suffix
+
+                members.append(
+                    {
+                        "name": member_name,
+                        "type": member_type,
+                        "description": self._get_member_description_from_docs(
+                            soup, member_name
+                        ),
+                    }
+                )
+
+        return members
+
+    def _get_member_description_from_docs(
+        self, soup: BeautifulSoup, member_name: str
+    ) -> str:
+        """Try to find description for a specific struct member in the documentation"""
+        # 1. Look for Members/Membros section with detailed descriptions
+        member_headers = soup.find_all(
+            ["h2", "h3", "h4"],
+            string=re.compile(r"Members|Membros|members", re.IGNORECASE),
+        )
+
+        for header in member_headers:
+            current_elem = header.find_next_sibling()
+
+            while current_elem and current_elem.name not in ["h1", "h2"]:
+                # Look for subsections with member names
+                if current_elem.name in ["h3", "h4", "h5"]:
+                    heading_text = current_elem.get_text().strip()
+                    if member_name in heading_text:
+                        # Found member heading, get next paragraph
+                        next_p = current_elem.find_next_sibling("p")
+                        if next_p:
+                            return next_p.get_text().strip()
+
+                # Look for dt/dd lists with member descriptions
+                elif current_elem.name == "dl":
+                    dts = current_elem.find_all("dt")
+                    for dt in dts:
+                        if member_name.lower() in dt.get_text().lower():
+                            dd = dt.find_next_sibling("dd")
+                            if dd:
+                                return dd.get_text().strip()
+
+                # Look for paragraphs that start with the member name
+                elif current_elem.name == "p":
+                    p_text = current_elem.get_text().strip()
+                    if p_text.startswith(member_name) or f"`{member_name}`" in p_text:
+                        # Extract description after the member name
+                        if ":" in p_text:
+                            desc = p_text.split(":", 1)[1].strip()
+                            if desc:
+                                return desc
+                        # Se só tem o nome, não retornar, continuar para fallbacks
+                        if len(p_text.strip()) <= len(member_name) + 10:
+                            continue
+                        return p_text
+
+                current_elem = current_elem.find_next_sibling()
+
+        # 2. Fallback: look for any mention in the document (skip if just member name)
+        paragraphs = soup.find_all("p")
+        for p in paragraphs:
+            p_text = p.get_text().strip()
+            # Skip if paragraph is just the member name or very similar
+            if (
+                p_text == member_name
+                or p_text == f"{member_name}[{member_name}]"
+                or p_text.startswith(f"{member_name}[")
+                and p_text.endswith("]")
+            ):
+                continue
+            if member_name in p_text and len(p_text) > len(member_name) + 10:
+                return p_text
+
+        # 3. Default description based on member name patterns
+        if "reserved" in member_name.lower():
+            return "Campo reservado para uso interno do sistema"
+        elif member_name.lower() == "beingdebugged":
+            return "Indica se o processo está sendo depurado"
+        elif member_name.lower() == "ldr":
+            return "Ponteiro para dados do loader de módulos carregados"
+        elif member_name.lower() == "processparameters":
+            return "Ponteiro para parâmetros do processo como linha de comando"
+        elif member_name.lower() == "sessionid":
+            return "Identificador da sessão do Terminal Services"
+        elif "atlthunk" in member_name.lower():
+            return "Ponteiro para lista ATL thunk para compatibilidade"
+        elif "postprocessinit" in member_name.lower():
+            return "Rotina de inicialização pós-processo"
+        else:
+            return "Membro da estrutura"
+
+    def _extract_struct_definition(self, soup: BeautifulSoup) -> str:
+        """Extract the complete C struct definition for display"""
+        # Look for pre/code blocks that contain typedef struct definitions
+        code_blocks = soup.find_all(["pre", "code"])
+
+        for block in code_blocks:
+            code_text = block.get_text().strip()
+
+            # Look for typedef struct patterns
+            if (
+                "typedef" in code_text
+                and "{" in code_text
+                and "}" in code_text
+                and ("PEB" in code_text or "struct" in code_text.lower())
+            ):
+
+                # Clean and format the struct definition
+                lines = code_text.split("\n")
+                formatted_lines = []
+
+                for line in lines:
+                    line = line.strip()
+                    if line and not line.startswith("//"):
+                        formatted_lines.append(line)
+
+                if formatted_lines:
+                    return "\n".join(formatted_lines)
+
+        return ""
+
+    def _parse_struct_members_from_element(self, element) -> List[Dict]:
+        """Parse struct members from dl, table, or div elements"""
+        members = []
+
+        if element.name == "dl":
+            # Definition list format
+            dts = element.find_all("dt")
+            for dt in dts:
+                dd = dt.find_next_sibling("dd")
+                if dd:
+                    member_name = dt.get_text().strip()
+                    description = dd.get_text().strip()
+                    members.append(
+                        {
+                            "name": member_name,
+                            "type": "Unknown",  # Type extraction would need more work
+                            "description": description,
+                        }
+                    )
+
+        elif element.name == "table":
+            # Table format
+            rows = element.find_all("tr")
+            for row in rows[1:]:  # Skip header row
+                cells = row.find_all(["td", "th"])
+                if len(cells) >= 2:
+                    name = cells[0].get_text().strip()
+                    desc = cells[1].get_text().strip()
+                    members.append(
+                        {"name": name, "type": "Unknown", "description": desc}
+                    )
+
+        return members
