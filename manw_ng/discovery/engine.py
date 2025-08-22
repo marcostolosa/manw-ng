@@ -138,23 +138,29 @@ class Win32DiscoveryEngine:
 
     def discover_function_urls(self, function_name: str) -> List[str]:
         """
-        Multi-stage discovery pipeline to find any Win32 function using new smart system
+        Multi-stage discovery pipeline com cobertura completa usando padrões expandidos
         """
         discovered_urls = []
 
-        # Nova estratégia principal: Sistema inteligente baseado em padrões
+        # Sistema inteligente original
         url, method = self.smart_discovery.discover_function_url(
             function_name, self.locale
         )
         if url:
-            # Não printar aqui - deixar o scraper gerenciar o status
             discovered_urls.append(url)
-            return (
-                discovered_urls  # Se encontrou, não precisa tentar outras estratégias
-            )
+            return discovered_urls
 
-        # Fallback para sistema antigo se o novo não funcionar
-        # Não printar aqui - deixar o scraper gerenciar o status
+        # Descoberta específica por tipo de símbolo
+        symbol_type = self._classify_symbol_type_safe(function_name)
+
+        if symbol_type == "structure":
+            discovered_urls.extend(self._structure_discovery(function_name))
+        elif symbol_type == "native_function":
+            discovered_urls.extend(self._native_api_discovery(function_name))
+        elif symbol_type == "callback":
+            discovered_urls.extend(self._callback_discovery(function_name))
+        elif symbol_type == "com_interface":
+            discovered_urls.extend(self._com_interface_discovery(function_name))
 
         # Special handling for RTL functions
         if function_name.lower().startswith("rtl"):
@@ -176,6 +182,90 @@ class Win32DiscoveryEngine:
 
         # Remove duplicatas mantendo ordem de prioridade
         return self._deduplicate_urls(discovered_urls)[:20]
+
+    def _native_api_discovery(self, function_name: str) -> List[str]:
+        """Descoberta específica para Native API (Nt*/Zw*/Rtl*/Ldr*)"""
+        urls = []
+        function_lower = function_name.lower()
+
+        # Headers específicos para Native API
+        native_headers = ["winternl", "ntifs", "wdm", "ntddk", "fltkernel"]
+
+        for header in native_headers:
+            # Tentar em winternl primeiro
+            url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{function_lower}"
+            urls.append(url)
+
+            # Tentar em DDI drivers
+            url = f"https://learn.microsoft.com/{self.locale}/windows-hardware/drivers/ddi/{header}/nf-{header}-{function_lower}"
+            urls.append(url)
+
+        return urls
+
+    def _structure_discovery(self, function_name: str) -> List[str]:
+        """Descoberta específica para estruturas"""
+        urls = []
+        function_lower = function_name.lower()
+
+        # Headers comuns para estruturas
+        struct_headers = ["winternl", "winnt", "winbase", "winuser"]
+
+        for header in struct_headers:
+            url = f"{self.base_url}/windows/win32/api/{header}/ns-{header}-{function_lower}"
+            urls.append(url)
+
+        return urls
+
+    def _callback_discovery(self, function_name: str) -> List[str]:
+        """Descoberta específica para callbacks"""
+        urls = []
+        function_lower = function_name.lower()
+
+        # Headers comuns para callbacks
+        callback_headers = ["winuser", "winbase", "winnt"]
+
+        for header in callback_headers:
+            url = f"{self.base_url}/windows/win32/api/{header}/nc-{header}-{function_lower}"
+            urls.append(url)
+
+        return urls
+
+    def _com_interface_discovery(self, function_name: str) -> List[str]:
+        """Descoberta específica para interfaces COM"""
+        urls = []
+        function_lower = function_name.lower()
+
+        # Headers comuns para interfaces COM
+        com_headers = ["unknwn", "objidl", "shobjidl", "comcat", "oleidl"]
+
+        for header in com_headers:
+            url = f"{self.base_url}/windows/win32/api/{header}/nn-{header}-{function_lower}"
+            urls.append(url)
+
+        return urls
+
+    def _classify_symbol_type_safe(self, symbol_name: str) -> str:
+        """Classificação de símbolo segura (sem imports circulares)"""
+        symbol_lower = symbol_name.lower()
+
+        if any(symbol_name.startswith(prefix) for prefix in ["Nt", "Zw", "Rtl", "Ldr"]):
+            return "native_function"
+        elif (symbol_name.isupper() and "_" in symbol_name) or symbol_lower in [
+            "peb",
+            "teb",
+            "token_control",
+        ]:
+            return "structure"
+        elif any(pattern in symbol_lower for pattern in ["proc", "callback", "hook"]):
+            return "callback"
+        elif (
+            symbol_name.startswith("I")
+            and len(symbol_name) > 1
+            and symbol_name[1].isupper()
+        ):
+            return "com_interface"
+        else:
+            return "win32_function"
 
     def _intelligent_fuzzing(self, function_name: str) -> List[str]:
         """

@@ -9,7 +9,7 @@ to extract detailed information about Win32 API functions from Microsoft documen
 Supports both English and Portuguese documentation with precise parameter
 descriptions, function signatures, and return values.
 
-Author: Marcos
+Author: Marcos Tolosa
 License: MIT
 """
 

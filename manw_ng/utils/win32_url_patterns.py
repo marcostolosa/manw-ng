@@ -10,6 +10,72 @@ import re
 from typing import Dict, List, Optional, Tuple
 from urllib.parse import urljoin
 
+# Padrões expandidos para cobertura completa de todos os tipos de símbolos
+EXTENDED_PATTERNS = {
+    "win32_functions": [
+        "windows/win32/api/{header}/nf-{header}-{symbol}",
+        "windows/win32/api/{header}/nf-{header}-{symbol_lower}",
+    ],
+    "structures": [
+        "windows/win32/api/{header}/ns-{header}-{symbol}",
+        "windows/win32/api/{header}/ns-{header}-{symbol_lower}",
+        "windows/win32/api/winternl/ns-winternl-{symbol_lower}",
+    ],
+    "enums": [
+        "windows/win32/api/{header}/ne-{header}-{symbol}",
+        "windows/win32/api/{header}/ne-{header}-{symbol_lower}",
+    ],
+    "callbacks": [
+        "windows/win32/api/{header}/nc-{header}-{symbol}",
+        "windows/win32/api/{header}/nc-{header}-{symbol_lower}",
+    ],
+    "com_interfaces": [
+        "windows/win32/api/{header}/nn-{header}-{symbol}",
+        "windows/win32/api/{header}/nn-{header}-{symbol_lower}",
+    ],
+    "printdocs": [
+        "windows/win32/printdocs/{symbol}",
+        "windows/win32/printdocs/{symbol_lower}",
+    ],
+    "native_api": [
+        "windows/win32/api/winternl/nf-winternl-{symbol_lower}",
+        "windows-hardware/drivers/ddi/{header}/nf-{header}-{symbol_lower}",
+        "windows-hardware/drivers/ddi/ntifs/nf-ntifs-{symbol_lower}",
+        "windows-hardware/drivers/ddi/wdm/nf-wdm-{symbol_lower}",
+        "windows-hardware/drivers/ddi/ntddk/nf-ntddk-{symbol_lower}",
+        "windows-hardware/drivers/ddi/fltkernel/nf-fltkernel-{symbol_lower}",
+    ],
+}
+
+# Headers específicos por categoria
+NATIVE_API_HEADERS = ["ntifs", "wdm", "ntddk", "fltkernel", "winternl"]
+MULTIMEDIA_HEADERS = ["mmiscapi", "mmeapi", "timeapi", "mmreg", "winmm"]
+COM_HEADERS = ["objidl", "shobjidl", "comcat", "unknwn", "oleidl"]
+PRINT_HEADERS = ["winspool", "wingdi"]
+
+# Mapeamento de estruturas conhecidas para headers
+STRUCTURE_TO_HEADER = {
+    "peb": "winternl",
+    "teb": "winternl",
+    "token_control": "winternl",
+    "process_basic_information": "winternl",
+    "unicode_string": "winternl",
+    "object_attributes": "winternl",
+    "io_status_block": "winternl",
+    "client_id": "winternl",
+    "curdir": "winternl",
+    "rtl_user_process_parameters": "winternl",
+}
+
+# Mapeamento de callbacks conhecidos
+CALLBACK_TO_HEADER = {
+    "wndproc": "winuser",
+    "enumwindowsproc": "winuser",
+    "hookproc": "winuser",
+    "timerproc": "winuser",
+    "enumresnameproc": "winbase",
+}
+
 
 class Win32URLPatterns:
     """Sistema de descoberta de URLs baseado em padrões do Microsoft Learn"""
@@ -337,6 +403,162 @@ class Win32URLPatterns:
                     urls.append(alt_url)
 
         return list(set(urls))  # Remove duplicatas
+
+    @classmethod
+    def classify_symbol_type(cls, symbol_name: str) -> str:
+        """Classifica o tipo do símbolo baseado no padrão do nome"""
+        symbol_lower = symbol_name.lower()
+
+        # Native API
+        if any(symbol_name.startswith(prefix) for prefix in ["Nt", "Zw", "Rtl", "Ldr"]):
+            return "native_function"
+
+        # Estruturas (geralmente UPPER_CASE ou conhecidas)
+        if (
+            symbol_name.isupper() and "_" in symbol_name
+        ) or symbol_lower in STRUCTURE_TO_HEADER:
+            return "structure"
+
+        # Callbacks
+        if (
+            any(pattern in symbol_lower for pattern in ["proc", "callback", "hook"])
+            or symbol_lower in CALLBACK_TO_HEADER
+        ):
+            return "callback"
+
+        # COM Interfaces
+        if (
+            symbol_name.startswith("I")
+            and len(symbol_name) > 1
+            and symbol_name[1].isupper()
+        ):
+            return "com_interface"
+
+        # Enums (frequentemente começam com maiúscula)
+        if (
+            symbol_name[0].isupper()
+            and not any(c.islower() for c in symbol_name[:3])
+            and "_" not in symbol_name
+        ):
+            return "enum"
+
+        return "win32_function"
+
+    @classmethod
+    def generate_extended_urls(
+        cls, symbol_name: str, locale: str = "en-us"
+    ) -> List[str]:
+        """
+        Gera URLs usando os padrões expandidos baseado no tipo do símbolo
+        """
+        urls = []
+        symbol_type = cls.classify_symbol_type(symbol_name)
+        symbol_lower = symbol_name.lower()
+
+        # Obter headers possíveis baseado no tipo e nome
+        possible_headers = cls._get_possible_headers(symbol_name, symbol_type)
+
+        # Gerar URLs baseado no tipo
+        if symbol_type == "structure":
+            patterns = EXTENDED_PATTERNS["structures"]
+            for pattern in patterns:
+                for header in possible_headers:
+                    url = f"https://learn.microsoft.com/{locale}/" + pattern.format(
+                        header=header, symbol=symbol_name, symbol_lower=symbol_lower
+                    )
+                    urls.append(url)
+
+        elif symbol_type == "callback":
+            patterns = EXTENDED_PATTERNS["callbacks"]
+            for pattern in patterns:
+                for header in possible_headers:
+                    url = f"https://learn.microsoft.com/{locale}/" + pattern.format(
+                        header=header, symbol=symbol_name, symbol_lower=symbol_lower
+                    )
+                    urls.append(url)
+
+        elif symbol_type == "com_interface":
+            patterns = EXTENDED_PATTERNS["com_interfaces"]
+            for pattern in patterns:
+                for header in possible_headers:
+                    url = f"https://learn.microsoft.com/{locale}/" + pattern.format(
+                        header=header, symbol=symbol_name, symbol_lower=symbol_lower
+                    )
+                    urls.append(url)
+
+        elif symbol_type == "enum":
+            patterns = EXTENDED_PATTERNS["enums"]
+            for pattern in patterns:
+                for header in possible_headers:
+                    url = f"https://learn.microsoft.com/{locale}/" + pattern.format(
+                        header=header, symbol=symbol_name, symbol_lower=symbol_lower
+                    )
+                    urls.append(url)
+
+        elif symbol_type == "native_function":
+            patterns = EXTENDED_PATTERNS["native_api"]
+            for pattern in patterns:
+                for header in possible_headers:
+                    url = f"https://learn.microsoft.com/{locale}/" + pattern.format(
+                        header=header, symbol=symbol_name, symbol_lower=symbol_lower
+                    )
+                    urls.append(url)
+
+        else:  # win32_function
+            patterns = EXTENDED_PATTERNS["win32_functions"]
+            for pattern in patterns:
+                for header in possible_headers:
+                    url = f"https://learn.microsoft.com/{locale}/" + pattern.format(
+                        header=header, symbol=symbol_name, symbol_lower=symbol_lower
+                    )
+                    urls.append(url)
+
+            # Adicionar printdocs para funções que podem estar lá
+            if any(
+                keyword in symbol_lower for keyword in ["print", "spool", "doc", "page"]
+            ):
+                for pattern in EXTENDED_PATTERNS["printdocs"]:
+                    url = f"https://learn.microsoft.com/{locale}/" + pattern.format(
+                        symbol=symbol_name, symbol_lower=symbol_lower
+                    )
+                    urls.append(url)
+
+        return list(set(urls))  # Remove duplicatas
+
+    @classmethod
+    def _get_possible_headers(cls, symbol_name: str, symbol_type: str) -> List[str]:
+        """Retorna headers possíveis baseado no símbolo e tipo"""
+        symbol_lower = symbol_name.lower()
+        headers = []
+
+        # Mapeamento direto primeiro
+        if symbol_type == "structure" and symbol_lower in STRUCTURE_TO_HEADER:
+            headers.append(STRUCTURE_TO_HEADER[symbol_lower])
+
+        if symbol_type == "callback" and symbol_lower in CALLBACK_TO_HEADER:
+            headers.append(CALLBACK_TO_HEADER[symbol_lower])
+
+        # Headers baseado no tipo
+        if symbol_type == "native_function":
+            headers.extend(NATIVE_API_HEADERS)
+        elif symbol_type == "com_interface":
+            headers.extend(COM_HEADERS)
+        elif symbol_type in ["structure", "callback"] and not headers:
+            headers.extend(["winuser", "winbase", "winnt", "winternl"])
+
+        # Headers baseado no prefixo da função
+        if symbol_lower.startswith(("rtl", "nt", "zw")):
+            headers.extend(NATIVE_API_HEADERS)
+        elif any(keyword in symbol_lower for keyword in ["print", "spool"]):
+            headers.extend(PRINT_HEADERS)
+        elif any(keyword in symbol_lower for keyword in ["wave", "midi", "time", "mm"]):
+            headers.extend(MULTIMEDIA_HEADERS)
+
+        # Fallback para headers comuns se nenhum encontrado
+        if not headers:
+            headers = cls.get_common_modules()
+
+        return list(set(headers))  # Remove duplicatas
 
     @classmethod
     def get_common_modules(cls) -> List[str]:

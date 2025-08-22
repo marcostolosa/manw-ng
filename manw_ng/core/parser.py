@@ -31,6 +31,13 @@ class Win32PageParser:
             "return_type": "",
             "return_description": "",
             "description": "",
+            # Novos campos de metadata expandida
+            "documentation_found": True,
+            "documentation_online": True,
+            "documentation_language": "en-us" if "en-us" in url else "pt-br",
+            "symbol_type": "unknown",
+            "fallback_used": False,
+            "fallback_attempts": [],
         }
 
         # Extract all information
@@ -46,6 +53,9 @@ class Win32PageParser:
         )
         function_info["architectures"] = self._extract_architectures(soup)
         function_info["description"] = self._extract_description(soup)
+
+        # Classificar o tipo do símbolo via scraper para evitar import circular
+        function_info["symbol_type"] = "unknown"
 
         return function_info
 

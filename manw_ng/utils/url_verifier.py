@@ -161,7 +161,7 @@ class SmartURLDiscovery:
         self.patterns = Win32URLPatterns
 
     def discover_function_url(
-        self, function_name: str, locale: str = "en-us"
+        self, function_name: str, locale: str = "en-us", _visited: Optional[set] = None
     ) -> Tuple[Optional[str], str]:
         """
         Descobre a URL de documentação para uma função
@@ -173,6 +173,14 @@ class SmartURLDiscovery:
         Returns:
             Tupla (url_encontrada, método_usado)
         """
+        # Proteção contra recursão infinita
+        if _visited is None:
+            _visited = set()
+
+        if function_name in _visited:
+            return None, "recursion_protection"
+
+        _visited.add(function_name)
         # 1. Tentar padrões conhecidos
         possible_urls = self.patterns.get_all_possible_urls(function_name, locale)
 
@@ -189,12 +197,14 @@ class SmartURLDiscovery:
         # 4. Tentar sem sufixos A/W
         base_function = self._strip_aw_suffix(function_name)
         if base_function != function_name:
-            return self.discover_function_url(base_function, locale)
+            return self.discover_function_url(base_function, locale, _visited)
 
         # 5. Tentar com sufixos A/W se não tiver
         if not function_name.lower().endswith(("a", "w")):
             for suffix in ["A", "W"]:
-                url, method = self.discover_function_url(function_name + suffix, locale)
+                url, method = self.discover_function_url(
+                    function_name + suffix, locale, _visited
+                )
                 if url:
                     return url, f"suffix_{suffix.lower()}"
 

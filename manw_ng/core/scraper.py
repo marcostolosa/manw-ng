@@ -4,7 +4,7 @@ Core Win32 API Scraper for MANW-NG
 Main scraper class that orchestrates the discovery and parsing process.
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 import requests
 from bs4 import BeautifulSoup
 from rich.console import Console
@@ -80,11 +80,13 @@ class Win32APIScraper:
                 status.update(f"[blue]{self.get_string('trying_direct')}[/blue]")
                 direct_url = self._try_direct_url(function_name)
                 if direct_url:
-                    status.stop()
-                    self.console.print(
-                        f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
-                    )
-                    return self._parse_function_page(direct_url)
+                    result = self._parse_function_page(direct_url)
+                    if result:
+                        status.stop()
+                        self.console.print(
+                            f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
+                        )
+                        return result
 
                 # Use intelligent discovery system
                 status.update(f"[blue]{self.get_string('discovery_search')}[/blue]")
@@ -96,7 +98,9 @@ class Win32APIScraper:
             # Silent mode - no status indicators
             direct_url = self._try_direct_url(function_name)
             if direct_url:
-                return self._parse_function_page(direct_url)
+                result = self._parse_function_page(direct_url)
+                if result:
+                    return result
             search_results = self.discovery_engine.discover_function_urls(function_name)
 
         # Try each discovered URL with Rich Status
@@ -109,11 +113,12 @@ class Win32APIScraper:
                         )
                         result = self._parse_function_page(url, status)
 
-                        status.stop()
-                        self.console.print(
-                            f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
-                        )
-                        return result
+                        if result:  # Se resultado válido
+                            status.stop()
+                            self.console.print(
+                                f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
+                            )
+                            return result
 
                     except Exception as e:
                         continue
@@ -124,17 +129,74 @@ class Win32APIScraper:
             for url in search_results:
                 try:
                     result = self._parse_function_page(url)
-                    if not self.quiet:
-                        self.console.print(
-                            f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
-                        )
-                    return result
+                    if result:  # Se resultado válido
+                        if not self.quiet:
+                            self.console.print(
+                                f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
+                            )
+                        return result
                 except Exception as e:
                     continue
 
-        raise Exception(
-            self.get_string("function_not_found").format(function_name=function_name)
-        )
+        # Retornar estrutura indicando que documentação não foi encontrada
+        return self._create_not_found_result(function_name, search_results)
+
+    def _classify_symbol_type(self, symbol_name: str) -> str:
+        """Classifica o tipo do símbolo baseado no padrão do nome (versão segura)"""
+        symbol_lower = symbol_name.lower()
+
+        if any(symbol_name.startswith(prefix) for prefix in ["Nt", "Zw", "Rtl", "Ldr"]):
+            return "native_function"
+        elif (symbol_name.isupper() and "_" in symbol_name) or symbol_lower in [
+            "peb",
+            "teb",
+            "token_control",
+        ]:
+            return "structure"
+        elif any(pattern in symbol_lower for pattern in ["proc", "callback", "hook"]):
+            return "callback"
+        elif (
+            symbol_name.startswith("I")
+            and len(symbol_name) > 1
+            and symbol_name[1].isupper()
+        ):
+            return "com_interface"
+        elif (
+            symbol_name[0].isupper()
+            and not any(c.islower() for c in symbol_name[:3])
+            and "_" not in symbol_name
+        ):
+            return "enum"
+        else:
+            return "win32_function"
+
+    def _create_not_found_result(
+        self, function_name: str, attempted_urls: List[str]
+    ) -> Dict:
+        """Cria resultado estruturado quando documentação não é encontrada"""
+        return {
+            "symbol": function_name,
+            "name": function_name,
+            "documentation_found": False,
+            "documentation_online": False,
+            "documentation_language": None,
+            "symbol_type": self._classify_symbol_type(function_name),
+            "fallback_used": self.language == "br",
+            "fallback_attempts": attempted_urls,
+            "url": None,
+            "error": self.get_string("function_not_found").format(
+                function_name=function_name
+            ),
+            "dll": None,
+            "calling_convention": None,
+            "parameters": [],
+            "parameter_count": 0,
+            "architectures": [],
+            "signature": None,
+            "return_type": None,
+            "return_description": None,
+            "description": None,
+        }
 
     def _try_direct_url(self, function_name: str) -> Optional[str]:
         """
@@ -170,13 +232,17 @@ class Win32APIScraper:
                     soup = BeautifulSoup(response.content, "html.parser")
                     url = fallback_url
                 except Exception as fallback_e:
-                    raise Exception(
-                        f"Erro ao acessar página (pt-br): {e}, (en-us): {fallback_e}"
-                    )
+                    # Em vez de raise, retornar None para indicar falha
+                    return None
             else:
-                raise Exception(f"Erro ao acessar página: {e}")
+                # Em vez de raise, retornar None para indicar falha
+                return None
 
-        return self.parser.parse_function_page(soup, url)
+        result = self.parser.parse_function_page(soup, url)
+        # Adicionar classificação do símbolo após o parsing
+        if result:
+            result["symbol_type"] = self._classify_symbol_type(result["name"])
+        return result
 
     def _format_url_display(self, url: str) -> str:
         """Format URL for clean display"""
