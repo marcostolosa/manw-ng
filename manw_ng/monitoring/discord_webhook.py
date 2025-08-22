@@ -302,7 +302,7 @@ class DiscordWebhook:
         self.message_history = []
         self._session = None
         self._aiohttp_available = AIOHTTP_AVAILABLE
-        
+
         # Debug information
         print(f"🔧 DiscordWebhook inicializado:")
         print(f"   - URL configurada: {'Sim' if self.webhook_url else 'Não'}")
@@ -359,11 +359,11 @@ class DiscordWebhook:
         if not self.webhook_url:
             print("❌ Webhook: URL não configurada")
             return False
-            
+
         if not self._check_rate_limit():
             print("❌ Webhook: Rate limit excedido")
             return False
-            
+
         if not self._aiohttp_available:
             print("❌ Webhook: aiohttp não disponível")
             return False
@@ -383,7 +383,7 @@ class DiscordWebhook:
 
         try:
             print(f"📤 Enviando webhook: {title}")
-            
+
             if not self._session:
                 self._session = aiohttp.ClientSession()
 
@@ -405,6 +405,7 @@ class DiscordWebhook:
         except Exception as e:
             print(f"❌ Erro no webhook: {e}")
             import traceback
+
             traceback.print_exc()
             return False
 
