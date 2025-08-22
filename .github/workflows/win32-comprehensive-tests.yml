@@ -57,7 +57,12 @@ jobs:
 
     - name: Prepare test environment
       run: |
-        mkdir -p tests/reports
+        echo "Current directory: $(pwd)"
+        echo "Repository contents:"
+        ls -la
+        echo "Tests directory contents:"
+        ls -la tests/ || echo "Tests directory not found"
+        mkdir -p ./tests/reports
         
     - name: Run Win32 comprehensive tests - ${{ matrix.priority_group }} (${{ matrix.language }})
       id: tests
@@ -73,7 +78,7 @@ jobs:
         echo "Timeout: $TIMEOUT"
         
         # Execute comprehensive tests
-        python tests/automated_win32_tests.py \
+        python ./tests/automated_win32_tests.py \
           --webhook "${{ secrets.DISCORD_WEBHOOK }}" \
           --language "${{ matrix.language }}" \
           --priorities $PRIORITIES \
@@ -89,7 +94,7 @@ jobs:
       id: parse_results
       run: |
         # Find the most recent test report
-        LATEST_REPORT=$(find tests/reports -name "win32_tests_report_*.json" -type f -printf '%T+ %p\n' | sort -r | head -1 | cut -d' ' -f2-)
+        LATEST_REPORT=$(find ./tests/reports -name "win32_tests_report_*.json" -type f -printf '%T+ %p\n' | sort -r | head -1 | cut -d' ' -f2-)
         
         if [ -f "$LATEST_REPORT" ]; then
           echo "Found test report: $LATEST_REPORT"
@@ -134,7 +139,7 @@ jobs:
       if: always()
       with:
         name: win32-test-reports-${{ matrix.language }}-${{ matrix.priority_group }}
-        path: tests/reports/
+        path: ./tests/reports/
         retention-days: 30
 
     - name: Comment PR with results
@@ -146,7 +151,7 @@ jobs:
           const path = require('path');
           
           // Find the latest report
-          const reportsDir = 'tests/reports';
+          const reportsDir = './tests/reports';
           if (!fs.existsSync(reportsDir)) {
             console.log('No reports directory found');
             return;
