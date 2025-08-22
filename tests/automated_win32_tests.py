@@ -382,12 +382,24 @@ class Win32TestRunner:
             ),
         }
 
-        # Enviar relatório via webhook
-        if self.webhook:
+        # Enviar relatório via webhook com debug detalhado
+        if self.webhook and self.webhook.webhook_url:
             print("📡 Enviando relatório final via webhook...")
-            await self._send_webhook_report(report)
+            print(f"   - URL: {self.webhook.webhook_url[:50]}...")
+            try:
+                await self._send_webhook_report(report)
+            except Exception as e:
+                print(f"❌ Erro ao enviar webhook: {e}")
+                import traceback
+
+                traceback.print_exc()
         else:
             print("⚠️ Webhook não disponível - relatório final não enviado")
+            if self.webhook:
+                print(f"   - Webhook object exists: True")
+                print(f"   - Webhook URL exists: {bool(self.webhook.webhook_url)}")
+            else:
+                print(f"   - Webhook object: None")
 
         # Salvar relatório em arquivo
         self._save_report_to_file(report)
@@ -453,6 +465,41 @@ class Win32TestRunner:
 
             fields.append(
                 {"name": "📊 Top 5 DLLs", "value": "\n".join(dll_info), "inline": False}
+            )
+
+        # Adicionar funções mais lentas
+        slowest_funcs = report.get("slowest_functions", [])[:5]
+        if slowest_funcs:
+            slowest_info = []
+            for func in slowest_funcs:
+                duration = func.get("duration", 0)
+                name = func.get("function", "Unknown")
+                dll = func.get("dll", "unknown.dll")
+                slowest_info.append(f"{name} ({dll}): {duration:.1f}s")
+
+            fields.append(
+                {
+                    "name": "🐌 Top 5 Mais Lentas",
+                    "value": "\n".join(slowest_info),
+                    "inline": False,
+                }
+            )
+
+        # Adicionar estatísticas por prioridade
+        priority_info = []
+        for priority, stats in report.get("by_priority", {}).items():
+            rate = (stats["passed"] / stats["total"] * 100) if stats["total"] > 0 else 0
+            priority_info.append(
+                f"{priority.title()}: {stats['passed']}/{stats['total']} ({rate:.1f}%)"
+            )
+
+        if priority_info:
+            fields.append(
+                {
+                    "name": "📈 Por Prioridade",
+                    "value": "\n".join(priority_info),
+                    "inline": False,
+                }
             )
 
         success = await self.webhook.send_message(
