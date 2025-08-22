@@ -469,20 +469,23 @@ class JSONFormatter:
         # Convert SymbolInfo objects to dict for JSON serialization
         json_compatible = JSONFormatter._make_json_serializable(function_info)
         return json.dumps(json_compatible, indent=2, ensure_ascii=False, default=str)
-    
+
     @staticmethod
     def _make_json_serializable(obj):
         """Make object JSON serializable"""
-        if hasattr(obj, '__dict__'):
+        if hasattr(obj, "__dict__"):
             # Convert dataclass or object to dict
-            return {k: JSONFormatter._make_json_serializable(v) for k, v in obj.__dict__.items()}
+            return {
+                k: JSONFormatter._make_json_serializable(v)
+                for k, v in obj.__dict__.items()
+            }
         elif isinstance(obj, dict):
             return {k: JSONFormatter._make_json_serializable(v) for k, v in obj.items()}
         elif isinstance(obj, (list, tuple)):
             return [JSONFormatter._make_json_serializable(item) for item in obj]
         elif isinstance(obj, (set, frozenset)):
             return list(obj)
-        elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
+        elif hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes)):
             # Handle other iterables
             return [JSONFormatter._make_json_serializable(item) for item in obj]
         else:
