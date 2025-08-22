@@ -34,6 +34,7 @@ class Win32PageParser:
             "signature_language": "c",
             "return_type": "",
             "return_description": "",
+            "remarks": "",
             "description": "",
             # Novos campos de metadata expandida
             "documentation_found": True,
@@ -82,6 +83,7 @@ class Win32PageParser:
             function_info["return_type"], function_info["return_description"] = (
                 self._extract_return_info(soup)
             )
+            function_info["remarks"] = self._extract_remarks(soup)
         elif symbol_info.kind == "struct":
             # Para estruturas, extrair membros ao invés de parâmetros
             function_info["members"] = self._extract_struct_members(soup)
@@ -712,6 +714,46 @@ class Win32PageParser:
                     return_type = potential_type
 
         return return_type, return_desc
+
+    def _extract_remarks(self, soup: BeautifulSoup) -> str:
+        """Extract Remarks section from documentation"""
+        remarks_content = ""
+
+        # Look for Remarks section in multiple languages
+        remarks_headers = soup.find_all(
+            ["h2", "h3", "h4"],
+            string=re.compile(
+                r"Remarks|Observações|Comentários|remarks",
+                re.IGNORECASE,
+            ),
+        )
+
+        for header in remarks_headers:
+            content_parts = []
+            next_elem = header.find_next_sibling()
+
+            while next_elem:
+                if next_elem.name in ["h1", "h2", "h3", "h4"]:
+                    break
+
+                if next_elem.name in ["p"]:
+                    text = next_elem.get_text().strip()
+                    if text and len(text) > 10:
+                        content_parts.append(text)
+
+                # Also capture lists and other elements with text
+                elif next_elem.name in ["ul", "ol", "div"]:
+                    text = next_elem.get_text().strip()
+                    if text and len(text) > 10:
+                        content_parts.append(text)
+
+                next_elem = next_elem.find_next_sibling()
+
+            if content_parts:
+                remarks_content = "\n\n".join(content_parts)
+                break
+
+        return remarks_content
 
     def _extract_architectures(self, soup: BeautifulSoup) -> List[str]:
         """Extract supported architectures"""

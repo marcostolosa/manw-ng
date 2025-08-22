@@ -138,7 +138,19 @@ class Win32APIScraper:
                 except Exception as e:
                     continue
 
-        # Retornar estrutura indicando que documentação não foi encontrada
+        # Retornar mensagem de erro quando não encontrar documentação
+        if not self.quiet:
+            error_msg = self.get_string("function_not_found").format(
+                function_name=function_name
+            )
+            self.console.print(f"[red]✗ {error_msg}[/red]")
+            if search_results:
+                self.console.print(f"[dim]URLs testados:[/dim]")
+                for i, url in enumerate(search_results, 1):
+                    self.console.print(
+                        f"[dim]  {i}. {self._format_url_display(url)}[/dim]"
+                    )
+
         return self._create_not_found_result(function_name, search_results)
 
     def _classify_symbol_type(self, symbol_name: str) -> str:

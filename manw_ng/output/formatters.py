@@ -149,6 +149,12 @@ class RichFormatter:
         ):
             self._render_return_value(function_info)
 
+        # Renderizar seção de observações/remarks após valor de retorno
+        if function_info.get("kind") in ["function", "callback"] and function_info.get(
+            "remarks"
+        ):
+            self._render_remarks(function_info)
+
         # URL da documentação no final
         doc_url = function_info.get("url", "")
         if doc_url:
@@ -362,6 +368,19 @@ class RichFormatter:
                     )
                 )
 
+    def _render_remarks(self, function_info: Dict) -> None:
+        """Renderiza seção de observações/remarks"""
+        if function_info.get("remarks"):
+            remarks_title = "Observações" if self.language == "br" else "Remarks"
+            self.console.print(
+                Panel(
+                    f"[#F8F8F2]{function_info['remarks']}[/#F8F8F2]",
+                    title=f"[bold #F92672]» {remarks_title}[/bold #F92672]",
+                    border_style="#75715E",
+                    padding=(1, 2),
+                )
+            )
+
     def _manual_syntax_highlight(self, code: str) -> str:
         """Manual C++ syntax highlighting fallback for Windows"""
         import re
@@ -497,5 +516,9 @@ class MarkdownFormatter:
             md_content += (
                 f"\n## Valor de Retorno\n\n{function_info['return_description']}"
             )
+
+        if function_info.get("remarks"):
+            section_title = "Observações" if self.language == "br" else "Remarks"
+            md_content += f"\n## {section_title}\n\n{function_info['remarks']}"
 
         return md_content
