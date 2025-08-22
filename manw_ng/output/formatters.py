@@ -466,14 +466,38 @@ class JSONFormatter:
     @staticmethod
     def format_output(function_info: Dict) -> str:
         """Format function information as JSON"""
-        return json.dumps(function_info, indent=2, ensure_ascii=False)
+        # Convert SymbolInfo objects to dict for JSON serialization
+        json_compatible = JSONFormatter._make_json_serializable(function_info)
+        return json.dumps(json_compatible, indent=2, ensure_ascii=False, default=str)
+    
+    @staticmethod
+    def _make_json_serializable(obj):
+        """Make object JSON serializable"""
+        if hasattr(obj, '__dict__'):
+            # Convert dataclass or object to dict
+            return {k: JSONFormatter._make_json_serializable(v) for k, v in obj.__dict__.items()}
+        elif isinstance(obj, dict):
+            return {k: JSONFormatter._make_json_serializable(v) for k, v in obj.items()}
+        elif isinstance(obj, (list, tuple)):
+            return [JSONFormatter._make_json_serializable(item) for item in obj]
+        elif isinstance(obj, (set, frozenset)):
+            return list(obj)
+        elif hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
+            # Handle other iterables
+            return [JSONFormatter._make_json_serializable(item) for item in obj]
+        else:
+            # Try to convert to string for unsupported types
+            try:
+                return str(obj)
+            except:
+                return repr(obj)
 
 
 class MarkdownFormatter:
     """Markdown formatter for documentation"""
 
     @staticmethod
-    def format_output(function_info: Dict) -> str:
+    def format_output(function_info: Dict, language: str = "br") -> str:
         """Format function information as Markdown"""
         md_content = f"""# {function_info['name']}
 
@@ -518,7 +542,7 @@ class MarkdownFormatter:
             )
 
         if function_info.get("remarks"):
-            section_title = "Observações" if self.language == "br" else "Remarks"
+            section_title = "Observações" if language == "br" else "Remarks"
             md_content += f"\n## {section_title}\n\n{function_info['remarks']}"
 
         return md_content

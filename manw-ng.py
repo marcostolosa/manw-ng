@@ -59,6 +59,7 @@ Examples:
         help="Idioma da documentação: 'br' para português ou 'us' para inglês (padrão: us)",
     )
     parser.add_argument(
+        "-o",
         "--output",
         choices=["rich", "json", "markdown"],
         default="rich",
@@ -93,7 +94,7 @@ Examples:
             print(formatter.format_output(function_info))
         elif args.output == "markdown":
             formatter = MarkdownFormatter()
-            print(formatter.format_output(function_info))
+            print(formatter.format_output(function_info, language=args.language))
 
     except Exception as e:
         console.print(f"[red]Erro: {e}[/red]")
