@@ -33,6 +33,9 @@ jobs:
       run: mkdir -p tests/reports
     
     - name: Run Win32 tests
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        GITHUB_ACTIONS: ${{ secrets.ACTIONS }}
       run: |
         echo "🚀 Running Win32 tests for ${{ matrix.language }}-${{ matrix.priority_group }}"
         python tests/automated_win32_tests.py \
