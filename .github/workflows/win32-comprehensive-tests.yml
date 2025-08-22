@@ -274,12 +274,12 @@ else:
         # Process all test reports
         find . -name "win32_tests_report_*.json" -type f | while read report; do
           if [ -f "$report" ]; then
-            python -c "
+            python3 -c "
 import json
 import os
 import re
 
-report_file = '$report'
+report_file = '${report}'
 
 with open(report_file, 'r') as f:
     data = json.load(f)
@@ -321,9 +321,9 @@ print(f'| {language} | {priority} | {status} {success_rate:.1f}% | {total} | {pa
         
         find . -name "win32_tests_report_*.json" -type f | while read report; do
           if [ -f "$report" ]; then
-            success_rate=$(python -c "
+            success_rate=$(python3 -c "
 import json
-with open('$report', 'r') as f:
+with open('${report}', 'r') as f:
     data = json.load(f)
 print(data.get('summary', {}).get('success_rate', 0))
 ")

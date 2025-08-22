@@ -47,7 +47,7 @@ python manw-ng.py --help
 
 ![Demo Screenshot](assets/demo.png)
 
-*MANW-NG running in terminal showing Win32 API documentation with rich formatting*
+*MANW-NG running in tmux terminal splited with radare2, showing Win32 API documentation with rich formatting*
 
 ## Supported Functions
 

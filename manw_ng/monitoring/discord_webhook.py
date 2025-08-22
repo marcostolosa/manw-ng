@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Discord Webhook Integration for MANW-NG Win32 API Monitoring
 =============================================================
@@ -7,6 +8,7 @@ Enhanced version for comprehensive test reporting and monitoring.
 """
 
 import os
+import sys
 import time
 import json
 import asyncio
@@ -14,6 +16,15 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import requests
+
+# Fix Windows encoding issues
+if sys.platform.startswith("win"):
+    os.environ["PYTHONIOENCODING"] = "utf-8"
+    # Force UTF-8 mode
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8")
 
 # Import aiohttp optionally for async webhook support
 try:

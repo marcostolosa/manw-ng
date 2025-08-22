@@ -479,7 +479,8 @@ class Win32TestRunner:
                     error_details.append(f"❌ {func['name']} ({func['dll']})")
 
                 for func in error_funcs:
-                    error_msg = func.get("error", "Unknown error")[:50]
+                    error_msg = func.get("error", "Unknown error") or "Unknown error"
+                    error_msg = error_msg[:50] if len(error_msg) > 50 else error_msg
                     error_details.append(f"⚠️ {func['name']}: {error_msg}")
 
                 await self.webhook.send_message(

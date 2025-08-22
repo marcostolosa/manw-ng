@@ -17,7 +17,7 @@ from ..core.symbol_classifier import Win32SymbolClassifier
 class RichFormatter:
     """Rich console formatter for beautiful terminal output"""
 
-    def __init__(self, language="us"):
+    def __init__(self, language="us", show_remarks=False):
         self.console = Console(
             force_terminal=True,
             legacy_windows=True,  # Enable Windows compatibility
@@ -25,6 +25,7 @@ class RichFormatter:
             color_system="truecolor",  # Force true color support
         )
         self.language = language
+        self.show_remarks = show_remarks
         self.classifier = Win32SymbolClassifier()
 
         # Localized strings
@@ -149,9 +150,11 @@ class RichFormatter:
         ):
             self._render_return_value(function_info)
 
-        # Renderizar seção de observações/remarks após valor de retorno
-        if function_info.get("kind") in ["function", "callback"] and function_info.get(
-            "remarks"
+        # Renderizar seção de observações/remarks após valor de retorno (apenas se habilitado)
+        if (
+            self.show_remarks
+            and function_info.get("kind") in ["function", "callback"]
+            and function_info.get("remarks")
         ):
             self._render_remarks(function_info)
 
@@ -500,7 +503,9 @@ class MarkdownFormatter:
     """Markdown formatter for documentation"""
 
     @staticmethod
-    def format_output(function_info: Dict, language: str = "br") -> str:
+    def format_output(
+        function_info: Dict, language: str = "br", show_remarks: bool = False
+    ) -> str:
         """Format function information as Markdown"""
         md_content = f"""# {function_info['name']}
 
@@ -544,7 +549,7 @@ class MarkdownFormatter:
                 f"\n## Valor de Retorno\n\n{function_info['return_description']}"
             )
 
-        if function_info.get("remarks"):
+        if show_remarks and function_info.get("remarks"):
             section_title = "Observações" if language == "br" else "Remarks"
             md_content += f"\n## {section_title}\n\n{function_info['remarks']}"
 

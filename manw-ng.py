@@ -65,6 +65,12 @@ Examples:
         default="rich",
         help="Formato de saída (padrão: rich)",
     )
+    parser.add_argument(
+        "-O",
+        "--obs",
+        action="store_true",
+        help="Mostrar observações/remarks na saída (padrão: não mostrar)",
+    )
     parser.add_argument("--version", action="version", version="MANW-NG 2.0.0")
 
     args = parser.parse_args()
@@ -87,14 +93,18 @@ Examples:
 
         # Format output
         if args.output == "rich":
-            formatter = RichFormatter(language=args.language)
+            formatter = RichFormatter(language=args.language, show_remarks=args.obs)
             formatter.format_output(function_info)
         elif args.output == "json":
             formatter = JSONFormatter()
             print(formatter.format_output(function_info))
         elif args.output == "markdown":
             formatter = MarkdownFormatter()
-            print(formatter.format_output(function_info, language=args.language))
+            print(
+                formatter.format_output(
+                    function_info, language=args.language, show_remarks=args.obs
+                )
+            )
 
     except Exception as e:
         console.print(f"[red]Erro: {e}[/red]")
