@@ -302,6 +302,12 @@ class DiscordWebhook:
         self.message_history = []
         self._session = None
         self._aiohttp_available = AIOHTTP_AVAILABLE
+        
+        # Debug information
+        print(f"🔧 DiscordWebhook inicializado:")
+        print(f"   - URL configurada: {'Sim' if self.webhook_url else 'Não'}")
+        print(f"   - aiohttp disponível: {'Sim' if self._aiohttp_available else 'Não'}")
+        print(f"   - Rate limit: {self.rate_limit}/hora")
 
     async def __aenter__(self):
         if self._aiohttp_available:
@@ -350,11 +356,16 @@ class DiscordWebhook:
         Returns:
             True if sent successfully
         """
-        if (
-            not self.webhook_url
-            or not self._check_rate_limit()
-            or not self._aiohttp_available
-        ):
+        if not self.webhook_url:
+            print("❌ Webhook: URL não configurada")
+            return False
+            
+        if not self._check_rate_limit():
+            print("❌ Webhook: Rate limit excedido")
+            return False
+            
+        if not self._aiohttp_available:
+            print("❌ Webhook: aiohttp não disponível")
             return False
 
         embed = {
@@ -371,6 +382,8 @@ class DiscordWebhook:
         payload = {"embeds": [embed]}
 
         try:
+            print(f"📤 Enviando webhook: {title}")
+            
             if not self._session:
                 self._session = aiohttp.ClientSession()
 
@@ -379,14 +392,20 @@ class DiscordWebhook:
                 json=payload,
                 headers={"Content-Type": "application/json"},
             ) as response:
+                print(f"📨 Resposta webhook: {response.status}")
                 if response.status == 204:
                     self.message_history.append(datetime.now())
+                    print("✅ Webhook enviado com sucesso")
                     return True
                 else:
+                    response_text = await response.text()
+                    print(f"❌ Webhook falhou: {response.status} - {response_text}")
                     return False
 
         except Exception as e:
-            print(f"Webhook error: {e}")
+            print(f"❌ Erro no webhook: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     async def send_test_start(
