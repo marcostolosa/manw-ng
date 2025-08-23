@@ -172,6 +172,18 @@ class URLVerifier:
             "cache_hit_rate": round((working / total * 100) if total > 0 else 0, 2),
         }
 
+    # Context management -------------------------------------------------
+
+    def close(self):
+        """Fechar explicitamente a sessão HTTP utilizada."""
+        self.session.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+
 
 class SmartURLDiscovery:
     """
