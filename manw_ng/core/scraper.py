@@ -5,20 +5,21 @@ Main scraper class that orchestrates the discovery and parsing process.
 """
 
 from typing import Dict, Optional, List
-import requests
 import random
 import os
 import time
+import asyncio
 from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
 
 from ..discovery.engine import Win32DiscoveryEngine
 from ..core.parser import Win32PageParser
-from ..utils.complete_win32_api_mapping import get_function_url, get_function_url_fast
+from ..utils.complete_win32_api_mapping import get_function_url_fast
 from ..utils.url_verifier import USER_AGENTS
 from ..utils.smart_url_generator import SmartURLGenerator
 from ..utils.catalog_integration import get_catalog
+from ..utils.http_client import HTTPClient
 
 
 class Win32APIScraper:
@@ -27,7 +28,13 @@ class Win32APIScraper:
     """
 
     def __init__(
-        self, language="us", quiet: bool = False, user_agent: Optional[str] = None
+        self,
+        language="us",
+        quiet: bool = False,
+        user_agent: Optional[str] = None,
+        proxies: Optional[List[str]] = None,
+        rate_limit: int = 5,
+        rotate_user_agent: bool = False,
     ):
         self.language = language
         self.quiet = quiet
@@ -37,15 +44,21 @@ class Win32APIScraper:
         else:
             self.base_url = "https://learn.microsoft.com/en-us"
 
-        self.session = requests.Session()
         if user_agent is None:
             user_agent = random.choice(USER_AGENTS)
-        self.session.headers.update({"User-Agent": user_agent})
+
+        # Async HTTP client with caching and rotation support
+        self.http = HTTPClient(
+            user_agent=user_agent,
+            proxies=proxies,
+            rate_limit=rate_limit,
+            rotate_user_agent=rotate_user_agent,
+        )
         self.user_agent = user_agent
 
         # Initialize modules
         self.discovery_engine = Win32DiscoveryEngine(
-            self.base_url, self.session, quiet, user_agent
+            self.base_url, self.http, quiet, user_agent
         )
         self.parser = Win32PageParser()
         self.console = Console()
@@ -73,6 +86,10 @@ class Win32APIScraper:
                 "function_not_found": "Função {function_name} não encontrada na documentação Microsoft",
             },
         }
+
+    def set_current_function_dll(self, dll_name: str) -> None:
+        """Public setter to define the DLL used for smart URL generation."""
+        self._current_function_dll = dll_name
 
     def get_string(self, key: str) -> str:
         """Get localized string"""
@@ -139,8 +156,10 @@ class Win32APIScraper:
 
                 # Use the SMART synchronous method with maximum concurrency
                 dll_name = getattr(self, "_current_function_dll", None)
-                found_url = self.smart_generator.find_valid_url_sync(
-                    function_name, dll_name, self.base_url, max_workers=30
+                found_url = asyncio.run(
+                    self.smart_generator.find_valid_url_async(
+                        function_name, dll_name, self.base_url
+                    )
                 )
 
                 if found_url:
@@ -170,11 +189,10 @@ class Win32APIScraper:
 
             # PRIORITY: ULTRA-FAST Smart generator with ALL patterns
             dll_name = getattr(self, "_current_function_dll", None)
-            found_url = self.smart_generator.find_valid_url_sync(
-                function_name,
-                dll_name,
-                self.base_url,
-                max_workers=20,  # Lighter load in silent mode
+            found_url = asyncio.run(
+                self.smart_generator.find_valid_url_async(
+                    function_name, dll_name, self.base_url
+                )
             )
 
             if found_url:
@@ -220,38 +238,54 @@ class Win32APIScraper:
                 except Exception as e:
                     continue
 
-        # PRIORITY 4: Check if function might need A/W suffix before giving up
-        if not function_name.endswith(("A", "W")) and not self.quiet:
-            with Status(
-                f"[cyan]4/4[/cyan] Testando sufixos A/W para [bold]{function_name}[/bold]...",
-                console=self.console,
-            ) as status:
-                # Try with A suffix first (most common)
-                status.update(
-                    f"[cyan]4/4[/cyan] Tentando [bold]{function_name}A[/bold]..."
-                )
+        # PRIORITY 4: Handle A/W suffix variations before giving up
+        if not function_name.endswith(("A", "W")):
+            if not self.quiet:
+                with Status(
+                    f"[cyan]4/4[/cyan] Testando sufixos A/W para [bold]{function_name}[/bold]...",
+                    console=self.console,
+                ) as status:
+                    # Try with A suffix first (most common)
+                    status.update(
+                        f"[cyan]4/4[/cyan] Tentando [bold]{function_name}A[/bold]..."
+                    )
+                    a_suffix_result = self._try_with_suffix(function_name, "A")
+                    if a_suffix_result:
+                        status.stop()
+                        return a_suffix_result
+
+                    # Try with W suffix
+                    status.update(
+                        f"[cyan]4/4[/cyan] Tentando [bold]{function_name}W[/bold]..."
+                    )
+                    w_suffix_result = self._try_with_suffix(function_name, "W")
+                    if w_suffix_result:
+                        status.stop()
+                        return w_suffix_result
+                    status.update(
+                        f"[red]4/4[/red] Sufixos A/W também falharam"
+                    )
+            else:
+                # Silent mode
                 a_suffix_result = self._try_with_suffix(function_name, "A")
                 if a_suffix_result:
-                    status.stop()
                     return a_suffix_result
-
-                # Try with W suffix
-                status.update(
-                    f"[cyan]4/4[/cyan] Tentando [bold]{function_name}W[/bold]..."
-                )
                 w_suffix_result = self._try_with_suffix(function_name, "W")
                 if w_suffix_result:
-                    status.stop()
                     return w_suffix_result
-                status.update(f"[red]4/4[/red] Sufixos A/W também falharam")
-        elif not function_name.endswith(("A", "W")):
-            # Silent mode
-            a_suffix_result = self._try_with_suffix(function_name, "A")
-            if a_suffix_result:
-                return a_suffix_result
-            w_suffix_result = self._try_with_suffix(function_name, "W")
-            if w_suffix_result:
-                return w_suffix_result
+        else:
+            # Function already has A/W suffix, try without it
+            base_name = function_name[:-1]
+            original_quiet = self.quiet
+            self.quiet = True
+            base_result = self.scrape_function(base_name)
+            self.quiet = original_quiet
+            if base_result and base_result.get("documentation_found"):
+                if not self.quiet:
+                    self.console.print(
+                        f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(base_result['url'])}[/green]"
+                    )
+                return base_result
 
         # Retornar mensagem de erro quando não encontrar documentação
         if not self.quiet:
@@ -345,9 +379,8 @@ class Win32APIScraper:
 
         for attempt in range(max_retries):
             try:
-                response = self.session.get(url, timeout=timeout)
-                response.raise_for_status()
-                soup = BeautifulSoup(response.content, "html.parser")
+                html = self.http.get(url)
+                soup = BeautifulSoup(html, "html.parser")
                 break  # Success - exit retry loop
 
             except Exception as e:
@@ -368,9 +401,8 @@ class Win32APIScraper:
                     )
 
                     try:
-                        response = self.session.get(fallback_url, timeout=timeout)
-                        response.raise_for_status()
-                        soup = BeautifulSoup(response.content, "html.parser")
+                        html = self.http.get(fallback_url)
+                        soup = BeautifulSoup(html, "html.parser")
                         url = fallback_url
                         break
                     except Exception:
