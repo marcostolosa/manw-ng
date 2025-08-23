@@ -340,7 +340,6 @@ class DiscordWebhook(DiscordWebhookBase):
         if self._session and self._aiohttp_available:
             await self._session.close()
 
-
     async def send_message(
         self,
         title: str,

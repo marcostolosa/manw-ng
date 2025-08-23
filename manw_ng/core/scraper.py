@@ -22,7 +22,9 @@ class Win32APIScraper:
     Main Win32 API documentation scraper
     """
 
-    def __init__(self, language="us", quiet: bool = False, user_agent: Optional[str] = None):
+    def __init__(
+        self, language="us", quiet: bool = False, user_agent: Optional[str] = None
+    ):
         self.language = language
         self.quiet = quiet
 

@@ -47,7 +47,9 @@ class Win32TestRunner:
         offline: bool = False,
         fixtures_dir: Optional[Path] = None,
     ):
-        self.scraper = Win32APIScraper(language=language, quiet=quiet, user_agent=user_agent)
+        self.scraper = Win32APIScraper(
+            language=language, quiet=quiet, user_agent=user_agent
+        )
         self.webhook = DiscordWebhook(webhook_url) if webhook_url else None
         self.language = language
         self.offline = offline
@@ -252,9 +254,7 @@ class Win32TestRunner:
 
         try:
             # Executar scraping com timeout
-            with Win32APIScraper(
-                language=self.language, quiet=self.quiet
-            ) as scraper:
+            with Win32APIScraper(language=self.language, quiet=self.quiet) as scraper:
                 result = scraper.scrape_function(function.name)
 
             duration = time.time() - start_time
