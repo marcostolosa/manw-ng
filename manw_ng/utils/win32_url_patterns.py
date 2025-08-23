@@ -117,7 +117,6 @@ class Win32URLPatterns:
         "consoleapi2.h": "consoleapi2",
         "consoleapi3.h": "consoleapi3",
         # Comm/Device APIs
-        "fileapi.h": "fileapi",
         "commapi.h": "winbase",  # Often grouped under winbase
         # Crypto APIs
         "wincrypt.h": "wincrypt",
@@ -730,10 +729,8 @@ class Win32URLPatterns:
             "sensapi",
             "setupapi",
             "sfc",
-            "shdocvw",
             "shell32",
             "shfolder",
-            "shlwapi",
             "snmpapi",
             "spoolss",
             "sti",
