@@ -74,12 +74,14 @@ def _should_refresh() -> bool:
     return datetime.now() - mtime > _UPDATE_INTERVAL
 
 
-def _load_mapping(force_refresh: bool = False) -> Dict[str, str]:
+def _load_mapping(
+    force_refresh: bool = False, allow_network: bool = True
+) -> Dict[str, str]:
     """Retrieve mapping with caching and optional refresh."""
     global _MAPPING_CACHE
     if _MAPPING_CACHE is None or force_refresh:
         data: Optional[Dict[str, str]] = None
-        if force_refresh or _should_refresh():
+        if allow_network and (force_refresh or _should_refresh()):
             data = _download_latest_mapping()
         if data is None:
             data = _load_cached_mapping()
@@ -95,10 +97,12 @@ def refresh_mapping() -> None:
 
 
 def get_function_url(
-    function_name: str, base_url: str = "https://learn.microsoft.com/en-us"
+    function_name: str,
+    base_url: str = "https://learn.microsoft.com/en-us",
+    allow_network: bool = True,
 ) -> Optional[str]:
     """Get the full documentation URL for a Win32 API function."""
-    mapping = _load_mapping()
+    mapping = _load_mapping(allow_network=allow_network)
     func_lower = function_name.lower()
     path = mapping.get(func_lower)
     if path:
@@ -106,6 +110,13 @@ def get_function_url(
             return f"{base_url}/windows-hardware/drivers/ddi/{path}"
         return f"{base_url}/windows/win32/api/{path}"
     return None
+
+
+def get_function_url_fast(
+    function_name: str, base_url: str = "https://learn.microsoft.com/en-us"
+) -> Optional[str]:
+    """Get the full documentation URL for a Win32 API function without network requests."""
+    return get_function_url(function_name, base_url, allow_network=False)
 
 
 def get_all_functions() -> List[str]:

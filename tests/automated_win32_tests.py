@@ -18,7 +18,12 @@ from dataclasses import asdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import requests_mock
+try:
+    import requests_mock
+
+    REQUESTS_MOCK_AVAILABLE = True
+except ImportError:
+    REQUESTS_MOCK_AVAILABLE = False
 
 # Adicionar path do MANW-NG para importação
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -82,6 +87,11 @@ class Win32TestRunner:
 
     def _setup_offline_mode(self) -> None:
         """Configura mocks para execução offline usando fixtures."""
+        if not REQUESTS_MOCK_AVAILABLE:
+            print("⚠️ requests_mock não disponível - modo offline desabilitado")
+            self.offline = False
+            return
+
         self._offline_mock = requests_mock.Mocker()
         self._offline_mock.start()
         if not self.fixtures_dir.exists():

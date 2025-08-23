@@ -13,7 +13,7 @@ from rich.status import Status
 
 from ..discovery.engine import Win32DiscoveryEngine
 from ..core.parser import Win32PageParser
-from ..utils.complete_win32_api_mapping import get_function_url
+from ..utils.complete_win32_api_mapping import get_function_url, get_function_url_fast
 from ..utils.url_verifier import USER_AGENTS
 
 
@@ -231,8 +231,8 @@ class Win32APIScraper:
         """
         Try direct URL mapping for known functions (fastest path)
         """
-        # Try complete Win32 API mapping
-        direct_url = get_function_url(function_name, self.base_url)
+        # Try complete Win32 API mapping without network requests for speed
+        direct_url = get_function_url_fast(function_name, self.base_url)
         if direct_url:
             return direct_url
         return None
