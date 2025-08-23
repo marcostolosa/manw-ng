@@ -183,6 +183,9 @@ class SmartURLGenerator:
             if header not in seen:
                 headers_to_try.append(header)
                 seen.add(header)
+            # Limit to max 8 headers to prevent infinite generation
+            if len(headers_to_try) >= 8:
+                break
 
         # 4. Generate URLs for each header
         for header in headers_to_try:

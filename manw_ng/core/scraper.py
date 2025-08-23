@@ -85,42 +85,67 @@ class Win32APIScraper:
 
         if not self.quiet:
             # PRIORITY 1: Try catalog lookup first (fastest)
-            catalog_url = self.catalog.get_function_url(
-                function_name, "en-us" if self.language == "us" else "pt-br"
-            )
-            if catalog_url:
-                result = self._parse_function_page(catalog_url)
-                if result:
-                    self.console.print(
-                        f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(catalog_url)}[/green]"
+            with Status(
+                f"[cyan]1/4[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
+                console=self.console,
+            ) as status:
+                catalog_url = self.catalog.get_function_url(
+                    function_name, "en-us" if self.language == "us" else "pt-br"
+                )
+                if catalog_url:
+                    status.update(
+                        f"[cyan]1/4[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
                     )
-                    return result
+                    result = self._parse_function_page(catalog_url)
+                    if result:
+                        status.stop()
+                        self.console.print(
+                            f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(catalog_url)}[/green]"
+                        )
+                        return result
+                    status.update(
+                        f"[yellow]1/4[/yellow] Catálogo não retornou resultado válido"
+                    )
 
             # PRIORITY 2: Use direct mapping
-            direct_url = self._try_direct_url(function_name)
-            if direct_url:
-                result = self._parse_function_page(direct_url)
-                if result:
-                    self.console.print(
-                        f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(direct_url)}[/green]"
+            with Status(
+                f"[cyan]2/4[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
+                console=self.console,
+            ) as status:
+                direct_url = self._try_direct_url(function_name)
+                if direct_url:
+                    status.update(
+                        f"[cyan]2/4[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
                     )
-                    return result
+                    result = self._parse_function_page(direct_url)
+                    if result:
+                        status.stop()
+                        self.console.print(
+                            f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(direct_url)}[/green]"
+                        )
+                        return result
+                    status.update(
+                        f"[yellow]2/4[/yellow] Mapeamento direto não funcionou"
+                    )
 
-            # Smart generator only - no discovery engine
-            if hasattr(self, "_current_function_dll"):
-                smart_urls = self.smart_generator.generate_possible_urls(
-                    function_name, self._current_function_dll, self.base_url
-                )
-            else:
-                smart_urls = self.smart_generator.generate_possible_urls(
-                    function_name, None, self.base_url
-                )
+            # PRIORITY 3: Smart generator URLs
+            with Status(
+                f"[cyan]3/4[/cyan] Gerando URLs inteligentes para [bold]{function_name}[/bold]...",
+                console=self.console,
+            ) as status:
+                if hasattr(self, "_current_function_dll"):
+                    smart_urls = self.smart_generator.generate_possible_urls(
+                        function_name, self._current_function_dll, self.base_url
+                    )
+                else:
+                    smart_urls = self.smart_generator.generate_possible_urls(
+                        function_name, None, self.base_url
+                    )
 
-            # Test ONLY top 5 URLs with status indicator
-            with Status("", console=self.console) as status:
+                # Test ONLY top 5 URLs with status indicator
                 for i, url in enumerate(smart_urls[:5], 1):
                     status.update(
-                        f"[cyan]•[/cyan] [bold]{function_name}[/bold] [dim]({i}/5)[/dim] → [blue]{self._format_url_display(url)}[/blue]"
+                        f"[cyan]3/4[/cyan] [bold]{function_name}[/bold] [dim]({i}/5)[/dim] → [blue]{self._format_url_display(url)}[/blue]"
                     )
                     try:
                         result = self._parse_function_page(url)
@@ -132,7 +157,7 @@ class Win32APIScraper:
                             return result
                     except Exception:
                         continue
-                status.stop()
+                status.update(f"[yellow]3/4[/yellow] Nenhuma URL inteligente funcionou")
 
             search_results = []  # No discovery engine
         else:
@@ -153,8 +178,8 @@ class Win32APIScraper:
                     function_name, None, self.base_url
                 )
 
-            # Test ONLY top 5 smart URLs for speed
-            for url in smart_urls[:5]:
+            # Test ONLY top 3 smart URLs for speed in silent mode
+            for url in smart_urls[:3]:
                 try:
                     result = self._parse_function_page(url)
                     if result and result.get("documentation_found"):
@@ -200,14 +225,35 @@ class Win32APIScraper:
                 except Exception as e:
                     continue
 
-        # Check if function might need A/W suffix before giving up
-        if not function_name.endswith(("A", "W")):
-            # Try with A suffix first (most common)
+        # PRIORITY 4: Check if function might need A/W suffix before giving up
+        if not function_name.endswith(("A", "W")) and not self.quiet:
+            with Status(
+                f"[cyan]4/4[/cyan] Testando sufixos A/W para [bold]{function_name}[/bold]...",
+                console=self.console,
+            ) as status:
+                # Try with A suffix first (most common)
+                status.update(
+                    f"[cyan]4/4[/cyan] Tentando [bold]{function_name}A[/bold]..."
+                )
+                a_suffix_result = self._try_with_suffix(function_name, "A")
+                if a_suffix_result:
+                    status.stop()
+                    return a_suffix_result
+
+                # Try with W suffix
+                status.update(
+                    f"[cyan]4/4[/cyan] Tentando [bold]{function_name}W[/bold]..."
+                )
+                w_suffix_result = self._try_with_suffix(function_name, "W")
+                if w_suffix_result:
+                    status.stop()
+                    return w_suffix_result
+                status.update(f"[red]4/4[/red] Sufixos A/W também falharam")
+        elif not function_name.endswith(("A", "W")):
+            # Silent mode
             a_suffix_result = self._try_with_suffix(function_name, "A")
             if a_suffix_result:
                 return a_suffix_result
-
-            # Try with W suffix
             w_suffix_result = self._try_with_suffix(function_name, "W")
             if w_suffix_result:
                 return w_suffix_result
@@ -298,8 +344,8 @@ class Win32APIScraper:
         """
         Parse Microsoft documentation page with fallback support with retry logic
         """
-        timeout = 30 if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") else 15
-        max_retries = 3
+        timeout = 15  # Reduced timeout for faster failure
+        max_retries = 2  # Reduced retries for faster failure
         base_delay = 1
 
         for attempt in range(max_retries):
@@ -310,46 +356,44 @@ class Win32APIScraper:
                 break  # Success - exit retry loop
 
             except Exception as e:
-                pass  # Remove prints irritantes de retry
-
                 # Se não é a última tentativa, aguardar antes de tentar novamente
                 if attempt < max_retries - 1:
                     delay = base_delay * (2**attempt)  # Exponential backoff
                     time.sleep(delay)
                     continue
 
-                # Última tentativa falhou - tentar fallback pt-br → en-us silenciosamente
-                if self.language == "br" and "404" in str(e) and "pt-br" in url:
+                # Última tentativa falhou - tentar fallback pt-br → en-us apenas uma vez
+                if (
+                    self.language == "br"
+                    and "pt-br" in url
+                    and attempt == max_retries - 1
+                ):
                     fallback_url = url.replace(
                         "learn.microsoft.com/pt-br", "learn.microsoft.com/en-us"
                     )
 
-                    # Retry no fallback URL também
-                    for fb_attempt in range(max_retries):
-                        try:
-                            response = self.session.get(fallback_url, timeout=timeout)
-                            response.raise_for_status()
-                            soup = BeautifulSoup(response.content, "html.parser")
-                            url = fallback_url
-                            break
-                        except Exception as fallback_e:
-                            if fb_attempt < max_retries - 1:
-                                fb_delay = base_delay * (2**fb_attempt)
-                                time.sleep(fb_delay)
-                                continue
-                            return None
-                    else:
-                        # Fallback também falhou em todas as tentativas
+                    try:
+                        response = self.session.get(fallback_url, timeout=timeout)
+                        response.raise_for_status()
+                        soup = BeautifulSoup(response.content, "html.parser")
+                        url = fallback_url
+                        break
+                    except Exception:
                         return None
                 else:
                     # Não é fallback pt-br e todas as tentativas falharam
                     return None
 
-        result = self.parser.parse_function_page(soup, url)
-        # Adicionar classificação do símbolo após o parsing
-        if result:
-            result["symbol_type"] = self._classify_symbol_type(result["name"])
-        return result
+        # Add timeout protection for parsing
+        try:
+            result = self.parser.parse_function_page(soup, url)
+            # Adicionar classificação do símbolo após o parsing
+            if result:
+                result["symbol_type"] = self._classify_symbol_type(result["name"])
+            return result
+        except Exception:
+            # If parsing fails, return None instead of hanging
+            return None
 
     def _try_with_suffix(self, function_name: str, suffix: str) -> Optional[Dict]:
         """Try to find function with A or W suffix"""
