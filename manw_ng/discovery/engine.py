@@ -605,3 +605,7 @@ class Win32DiscoveryEngine:
             self.console.print(f"\n[bold]Success rate: {success_rate:.1f}%[/bold]")
 
         return results
+
+    def close(self):
+        """Close resources used by the discovery engine."""
+        self.url_verifier.close()
