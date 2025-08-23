@@ -125,6 +125,7 @@ Examples:
                 formatter.format_output(
                     function_info, language=args.language, show_remarks=args.obs
                 )
+            )
 
     except Exception as e:
         console.print(f"[red]Erro: {e}[/red]")
