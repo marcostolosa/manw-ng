@@ -20,7 +20,13 @@ class Win32DiscoveryEngine:
     Intelligent discovery engine for Win32 API documentation
     """
 
-    def __init__(self, base_url: str, session: requests.Session, quiet: bool = False):
+    def __init__(
+        self,
+        base_url: str,
+        session: requests.Session,
+        quiet: bool = False,
+        user_agent: Optional[str] = None,
+    ):
         self.base_url = base_url
         self.session = session
         self.quiet = quiet
@@ -33,7 +39,7 @@ class Win32DiscoveryEngine:
             self.locale = "en-us"
 
         # Initialize new smart discovery system
-        self.url_verifier = URLVerifier()
+        self.url_verifier = URLVerifier(user_agent=user_agent)
         self.smart_discovery = SmartURLDiscovery(self.url_verifier)
         self.patterns = Win32URLPatterns()
 
@@ -605,3 +611,7 @@ class Win32DiscoveryEngine:
             self.console.print(f"\n[bold]Success rate: {success_rate:.1f}%[/bold]")
 
         return results
+
+    def close(self):
+        """Close resources used by the discovery engine."""
+        self.url_verifier.close()

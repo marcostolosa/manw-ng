@@ -6,6 +6,7 @@ Main scraper class that orchestrates the discovery and parsing process.
 
 from typing import Dict, Optional, List
 import requests
+import random
 from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
@@ -13,6 +14,7 @@ from rich.status import Status
 from ..discovery.engine import Win32DiscoveryEngine
 from ..core.parser import Win32PageParser
 from ..utils.complete_win32_api_mapping import get_function_url
+from ..utils.url_verifier import USER_AGENTS
 
 
 class Win32APIScraper:
@@ -20,7 +22,7 @@ class Win32APIScraper:
     Main Win32 API documentation scraper
     """
 
-    def __init__(self, language="us", quiet=False):
+    def __init__(self, language="us", quiet: bool = False, user_agent: Optional[str] = None):
         self.language = language
         self.quiet = quiet
 
@@ -30,14 +32,15 @@ class Win32APIScraper:
             self.base_url = "https://learn.microsoft.com/en-us"
 
         self.session = requests.Session()
-        self.session.headers.update(
-            {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            }
-        )
+        if user_agent is None:
+            user_agent = random.choice(USER_AGENTS)
+        self.session.headers.update({"User-Agent": user_agent})
+        self.user_agent = user_agent
 
         # Initialize modules
-        self.discovery_engine = Win32DiscoveryEngine(self.base_url, self.session, quiet)
+        self.discovery_engine = Win32DiscoveryEngine(
+            self.base_url, self.session, quiet, user_agent
+        )
         self.parser = Win32PageParser()
         self.console = Console()
 
@@ -263,3 +266,19 @@ class Win32APIScraper:
             if len(parts) > 1:
                 return f"api/{parts[1]}"
         return url.replace("https://learn.microsoft.com/", "")
+
+    # ------------------------------------------------------------------
+    # Context management
+
+    def close(self):
+        """Close the underlying HTTP session and related resources."""
+        try:
+            self.discovery_engine.close()
+        finally:
+            self.session.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
