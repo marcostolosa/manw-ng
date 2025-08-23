@@ -1184,13 +1184,25 @@ class Win32PageParser:
                 member_name = first_line
                 description = "Membro da estrutura"
 
-                # Try to find description in next sibling paragraph
+                # Try to find description in next sibling paragraph(s)
                 next_p = element.find_next_sibling("p")
                 if next_p:
                     desc_text = next_p.get_text().strip()
                     # Description should be longer than member name
                     if len(desc_text) > len(member_name) + 10:
-                        description = desc_text[:500]  # Limit description length
+                        description = desc_text
+                        
+                        # If description is cut off, try to get more from subsequent paragraphs
+                        if len(desc_text) > 400 and not desc_text.endswith('.'):
+                            next_next_p = next_p.find_next_sibling("p")
+                            if next_next_p:
+                                next_desc = next_next_p.get_text().strip()
+                                # Only add if it seems like a continuation (long text, not another member name)
+                                if len(next_desc) > 50 and not next_desc.replace('_', '').replace('[', '').replace(']', '').isalnum():
+                                    description += " " + next_desc
+                        
+                        # Limit final description length
+                        description = description[:800]
 
                 members.append(
                     {"name": member_name, "type": "Unknown", "description": description}

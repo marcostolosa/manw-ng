@@ -153,7 +153,7 @@ class RichFormatter:
         # Renderizar seção de observações/remarks após valor de retorno (apenas se habilitado)
         if (
             self.show_remarks
-            and function_info.get("kind") in ["function", "callback"]
+            and function_info.get("kind") in ["function", "callback", "struct"]
             and function_info.get("remarks")
         ):
             self._render_remarks(function_info)

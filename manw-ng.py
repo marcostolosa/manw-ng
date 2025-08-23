@@ -71,7 +71,7 @@ Examples:
         action="store_true",
         help="Mostrar observações/remarks na saída (padrão: não mostrar)",
     )
-    parser.add_argument("--version", action="version", version="MANW-NG 2.0.0")
+    parser.add_argument("--version", action="version", version="MANW-NG 3.1")
 
     args = parser.parse_args()
 
