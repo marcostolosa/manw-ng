@@ -71,13 +71,23 @@ Examples:
         action="store_true",
         help="Mostrar observações/remarks na saída (padrão: não mostrar)",
     )
+    parser.add_argument(
+        "-u",
+        "--user-agent",
+        dest="user_agent",
+        help="User-Agent personalizado para as requisições (padrão: aleatório)",
+    )
     parser.add_argument("--version", action="version", version="MANW-NG 3.1")
 
     args = parser.parse_args()
 
     try:
         # Initialize scraper
-        scraper = Win32APIScraper(language=args.language, quiet=(args.output == "json"))
+        scraper = Win32APIScraper(
+            language=args.language,
+            quiet=(args.output == "json"),
+            user_agent=args.user_agent,
+        )
 
         if args.output != "json":
             # Localized loading messages
