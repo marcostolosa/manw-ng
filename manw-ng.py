@@ -186,6 +186,12 @@ Examples:
 
         # Auto-detect DLL for smart URL generation
         dll_map = {
+            # Native API functions (ntdll.dll)
+            "nt": "ntdll.dll",
+            "zw": "ntdll.dll",
+            "rtl": "ntdll.dll",
+            "allocatevirtualmemory": "ntdll.dll",
+            "freevirtualmemory": "ntdll.dll",
             "createfile": "kernel32.dll",
             "readfile": "kernel32.dll",
             "writefile": "kernel32.dll",

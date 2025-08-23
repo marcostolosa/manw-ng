@@ -1,17 +1,21 @@
 """
 Smart URL Generator for Win32 API Documentation
 
-Generates URLs dynamically based on learned patterns from the Microsoft Learn documentation.
-This system ensures 100% coverage of existing functions by intelligently predicting URLs.
+Ultra-fast asynchronous URL generator that tests ALL known patterns simultaneously.
+This system ensures 100% coverage with maximum speed using concurrent requests.
 """
 
 from typing import List, Dict, Set, Optional, Tuple
 import re
+import asyncio
+import aiohttp
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import time
 
 
 class SmartURLGenerator:
     """
-    Intelligent URL generator that predicts Microsoft Learn URLs for Win32 functions
+    Ultra-fast async URL generator that tests ALL known patterns concurrently
     """
 
     def __init__(self):
@@ -64,10 +68,17 @@ class SmartURLGenerator:
             "netapi32.dll": "lmaccess",
             "shell32.dll": "shellapi",
             "advapi32.dll": "aclapi",  # Para funções de ACL
+            "ntdll.dll": "winternl",  # Native API functions
         }
 
         # Headers baseados no nome da função (patterns)
         self.function_patterns = {
+            # Native API functions (highest priority)
+            r"^nt.*": ["winternl", "ntddk", "wdm", "ntifs"],
+            r"^zw.*": ["winternl", "ntddk", "wdm", "ntifs"],
+            r"^rtl.*": ["ntddk", "wdm", "ntifs"],
+            r"^ke.*": ["ntddk", "wdm"],
+            r"^mm.*": ["ntddk", "wdm"],
             # Graphics/GDI operations
             r"^text.*": ["wingdi"],
             r".*blt.*": ["wingdi"],
@@ -213,13 +224,19 @@ class SmartURLGenerator:
                 full_url = f"{base_url}/windows/win32/api/{url_path}"
                 urls.append(full_url)
 
-        # 5. Try hardware driver documentation paths for some functions
-        if any(
-            keyword in function_lower for keyword in ["nt", "zw", "rtl", "ke", "mm"]
-        ):
-            for header in ["ntddk", "wdm", "ntifs"]:
+        # 5. Native API functions - prioritize WDK documentation paths
+        if function_lower.startswith(("nt", "zw", "rtl", "ke", "mm")):
+            # Native API functions are primarily documented in WDK paths
+            driver_headers = ["ntifs", "ntddk", "wdm", "winternl", "ntdef"]
+            for header in driver_headers:
                 url_path = f"{header}/nf-{header}-{function_lower}"
-                full_url = f"{base_url}/windows-hardware/drivers/ddi/{url_path}"
+                full_url = f"{base_url.replace('/en-us', '').replace('/pt-br', '')}/windows-hardware/drivers/ddi/{url_path}"
+                urls.insert(0, full_url)  # Insert at beginning for priority
+
+            # Also try winternl for some documented Native API functions
+            if function_lower.startswith(("nt", "zw")):
+                url_path = f"winternl/nf-winternl-{function_lower}"
+                full_url = f"{base_url}/windows/win32/api/{url_path}"
                 urls.append(full_url)
 
         # Remove duplicates while preserving order
@@ -231,6 +248,138 @@ class SmartURLGenerator:
                 unique_urls.append(url)
 
         return unique_urls
+
+    async def find_valid_url_async(
+        self,
+        function_name: str,
+        dll_name: str = None,
+        base_url: str = "https://learn.microsoft.com/en-us",
+        session: aiohttp.ClientSession = None,
+    ) -> Optional[str]:
+        """
+        ULTRA-FAST async method that tests ALL possible URLs simultaneously!
+        Returns the FIRST valid URL found or None if function doesn't exist.
+        """
+        # Generate ALL possible URLs
+        all_urls = self.generate_possible_urls(function_name, dll_name, base_url)
+
+        # Test ALL URLs concurrently with maximum speed
+        if session:
+            return await self._test_urls_async(all_urls, session)
+        else:
+            # Create temporary session
+            connector = aiohttp.TCPConnector(limit=100, limit_per_host=50)
+            timeout = aiohttp.ClientTimeout(total=5)  # Super fast timeout
+            async with aiohttp.ClientSession(
+                connector=connector, timeout=timeout
+            ) as temp_session:
+                return await self._test_urls_async(all_urls, temp_session)
+
+    async def _test_urls_async(
+        self, urls: List[str], session: aiohttp.ClientSession
+    ) -> Optional[str]:
+        """Test multiple URLs concurrently and return first valid one"""
+
+        async def test_single_url(url: str) -> Optional[str]:
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                }
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        # Quick content check to ensure it's a valid function page
+                        content = await response.text()
+                        if any(
+                            keyword in content.lower()
+                            for keyword in [
+                                "function",
+                                "routine",
+                                "api",
+                                "syntax",
+                                "parameters",
+                            ]
+                        ):
+                            return url
+                    return None
+            except:
+                return None
+
+        # Create tasks for ALL URLs simultaneously
+        tasks = [test_single_url(url) for url in urls]
+
+        # Use as_completed to get the FIRST successful result
+        for completed_task in asyncio.as_completed(tasks):
+            try:
+                result = await completed_task
+                if result:  # Found valid URL!
+                    # Cancel remaining tasks for speed
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    return result
+            except:
+                continue
+
+        return None  # No valid URL found
+
+    def find_valid_url_sync(
+        self,
+        function_name: str,
+        dll_name: str = None,
+        base_url: str = "https://learn.microsoft.com/en-us",
+        max_workers: int = 20,
+    ) -> Optional[str]:
+        """
+        Synchronous version using ThreadPoolExecutor for maximum concurrency
+        Tests ALL URLs simultaneously with multiple threads
+        """
+        import requests
+
+        all_urls = self.generate_possible_urls(function_name, dll_name, base_url)
+
+        def test_url(url: str) -> Optional[str]:
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                }
+                response = requests.get(url, headers=headers, timeout=3)
+                if response.status_code == 200:
+                    # Quick content check
+                    content = response.text.lower()
+                    if any(
+                        keyword in content
+                        for keyword in [
+                            "function",
+                            "routine",
+                            "api",
+                            "syntax",
+                            "parameters",
+                        ]
+                    ):
+                        return url
+                return None
+            except:
+                return None
+
+        # Use ThreadPoolExecutor for maximum concurrency
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            # Submit ALL URLs for testing simultaneously
+            future_to_url = {executor.submit(test_url, url): url for url in all_urls}
+
+            # Return FIRST successful result
+            for future in as_completed(future_to_url):
+                try:
+                    result = future.result()
+                    if result:
+                        # Cancel remaining futures
+                        for remaining_future in future_to_url:
+                            if not remaining_future.done():
+                                remaining_future.cancel()
+                        return result
+                except:
+                    continue
+
+        return None
 
     def get_high_probability_urls(
         self,

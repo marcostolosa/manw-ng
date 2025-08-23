@@ -128,36 +128,36 @@ class Win32APIScraper:
                         f"[yellow]2/4[/yellow] Mapeamento direto não funcionou"
                     )
 
-            # PRIORITY 3: Smart generator URLs
+            # PRIORITY 3: ULTRA-FAST Smart URL Testing (ALL patterns simultaneously!)
             with Status(
-                f"[cyan]3/4[/cyan] Gerando URLs inteligentes para [bold]{function_name}[/bold]...",
+                f"[cyan]3/4[/cyan] Testando TODAS as URLs possíveis para [bold]{function_name}[/bold]...",
                 console=self.console,
             ) as status:
-                if hasattr(self, "_current_function_dll"):
-                    smart_urls = self.smart_generator.generate_possible_urls(
-                        function_name, self._current_function_dll, self.base_url
-                    )
-                else:
-                    smart_urls = self.smart_generator.generate_possible_urls(
-                        function_name, None, self.base_url
-                    )
+                status.update(
+                    f"[cyan]3/4[/cyan] Executando busca assíncrona em paralelo..."
+                )
 
-                # Test ONLY top 5 URLs with status indicator
-                for i, url in enumerate(smart_urls[:5], 1):
+                # Use the SMART synchronous method with maximum concurrency
+                dll_name = getattr(self, "_current_function_dll", None)
+                found_url = self.smart_generator.find_valid_url_sync(
+                    function_name, dll_name, self.base_url, max_workers=30
+                )
+
+                if found_url:
                     status.update(
-                        f"[cyan]3/4[/cyan] [bold]{function_name}[/bold] [dim]({i}/5)[/dim] → [blue]{self._format_url_display(url)}[/blue]"
+                        f"[green]3/4[/green] URL encontrada: [blue]{self._format_url_display(found_url)}[/blue]"
                     )
-                    try:
-                        result = self._parse_function_page(url)
-                        if result and result.get("documentation_found"):
-                            status.stop()
-                            self.console.print(
-                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(url)}[/green]"
-                            )
-                            return result
-                    except Exception:
-                        continue
-                status.update(f"[yellow]3/4[/yellow] Nenhuma URL inteligente funcionou")
+                    result = self._parse_function_page(found_url)
+                    if result and result.get("documentation_found"):
+                        status.stop()
+                        self.console.print(
+                            f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(found_url)}[/green]"
+                        )
+                        return result
+
+                status.update(
+                    f"[yellow]3/4[/yellow] Nenhuma URL encontrada nos padrões conhecidos"
+                )
 
             search_results = []  # No discovery engine
         else:
@@ -168,24 +168,19 @@ class Win32APIScraper:
                 if result:
                     return result
 
-            # PRIORITY: Smart generator ONLY - no fallback to discovery engine
-            if hasattr(self, "_current_function_dll"):
-                smart_urls = self.smart_generator.generate_possible_urls(
-                    function_name, self._current_function_dll, self.base_url
-                )
-            else:
-                smart_urls = self.smart_generator.generate_possible_urls(
-                    function_name, None, self.base_url
-                )
+            # PRIORITY: ULTRA-FAST Smart generator with ALL patterns
+            dll_name = getattr(self, "_current_function_dll", None)
+            found_url = self.smart_generator.find_valid_url_sync(
+                function_name,
+                dll_name,
+                self.base_url,
+                max_workers=20,  # Lighter load in silent mode
+            )
 
-            # Test ONLY top 3 smart URLs for speed in silent mode
-            for url in smart_urls[:3]:
-                try:
-                    result = self._parse_function_page(url)
-                    if result and result.get("documentation_found"):
-                        return result
-                except Exception:
-                    continue
+            if found_url:
+                result = self._parse_function_page(found_url)
+                if result and result.get("documentation_found"):
+                    return result
 
             # NO DISCOVERY ENGINE FALLBACK - too slow
             search_results = []

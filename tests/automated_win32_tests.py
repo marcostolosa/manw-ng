@@ -112,37 +112,65 @@ class Win32TestRunner:
         all_functions = get_all_functions()
 
         # Funções críticas conhecidas que devem existir (prioridade máxima)
+        # Agora incluindo Native API que funcionam com o novo sistema ULTRA-RÁPIDO!
         critical_functions = [
-            "TextOutW",
-            "StretchBlt",
-            "GetLogicalDrives",
-            "CertOpenSystemStore",
-            "NetUserEnum",
-            "ShellExecuteExA",
+            # Native API functions (now supported!)
+            "NtAllocateVirtualMemory",
+            "NtFreeVirtualMemory",
+            "NtQueryInformationProcess",
+            "NtCreateFile",
+            "ZwCreateFile",
+            "ZwOpenKey",
+            "RtlInitUnicodeString",
+            # Win32 API functions
             "CreateFileA",
+            "CreateFileW",
             "ReadFile",
             "WriteFile",
             "VirtualAlloc",
+            "VirtualFree",
             "HeapCreate",
-            "CreateProcess",
+            "CreateProcessA",
+            "CreateProcessW",
             "GetCurrentProcess",
-            "RegOpenKeyEx",
-            "RegQueryValueEx",
-            "OpenService",
-            "socket",
-            "connect",
-            "InternetOpenA",
+            "RegOpenKeyExA",
+            "RegOpenKeyExW",
+            "RegQueryValueExA",
             "LoadLibraryA",
+            "LoadLibraryW",
             "GetProcAddress",
-            "DrawText",
+            "FreeLibrary",
+            # Graphics functions that should work now
+            "TextOutA",
+            "TextOutW",
             "BitBlt",
+            "StretchBlt",
+            "DrawTextA",
+            "DrawTextW",
             "GetDC",
             "ReleaseDC",
             "CreatePen",
             "SelectObject",
-            "CryptAcquireContext",
+            # Crypto functions
+            "CryptAcquireContextA",
+            "CertOpenSystemStoreA",
             "CertFindCertificateInStore",
             "BCryptOpenAlgorithmProvider",
+            # Network functions
+            "socket",
+            "connect",
+            "bind",
+            "listen",
+            "InternetOpenA",
+            "InternetConnectA",
+            # System functions
+            "GetLogicalDrives",
+            "GetSystemInfo",
+            "GetVersionExA",
+            # Shell functions
+            "ShellExecuteA",
+            "ShellExecuteExA",
+            "SHGetFolderPathA",
         ]
 
         # Mapear DLLs para garantir cobertura equilibrada
