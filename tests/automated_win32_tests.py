@@ -41,9 +41,9 @@ class Win32TestRunner:
         language: str = "us",
         quiet: bool = True,
     ):
-        self.scraper = Win32APIScraper(language=language, quiet=quiet)
         self.webhook = DiscordWebhook(webhook_url) if webhook_url else None
         self.language = language
+        self.quiet = quiet
 
         # Debug webhook configuration
         if webhook_url:
@@ -217,7 +217,10 @@ class Win32TestRunner:
 
         try:
             # Executar scraping com timeout
-            result = self.scraper.scrape_function(function.name)
+            with Win32APIScraper(
+                language=self.language, quiet=self.quiet
+            ) as scraper:
+                result = scraper.scrape_function(function.name)
 
             duration = time.time() - start_time
 

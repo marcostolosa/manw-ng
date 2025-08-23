@@ -263,3 +263,19 @@ class Win32APIScraper:
             if len(parts) > 1:
                 return f"api/{parts[1]}"
         return url.replace("https://learn.microsoft.com/", "")
+
+    # ------------------------------------------------------------------
+    # Context management
+
+    def close(self):
+        """Close the underlying HTTP session and related resources."""
+        try:
+            self.discovery_engine.close()
+        finally:
+            self.session.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
