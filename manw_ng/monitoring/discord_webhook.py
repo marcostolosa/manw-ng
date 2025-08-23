@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 import requests
+import threading
 
 # Fix Windows encoding issues
 if sys.platform.startswith("win"):
@@ -46,7 +47,31 @@ class FunctionFailure:
     timestamp: datetime
 
 
-class DiscordWebhookMonitor:
+class DiscordWebhookBase:
+    """Base class providing rate limiting with thread safety."""
+
+    def __init__(self, rate_limit: int):
+        self.rate_limit = rate_limit
+        self.message_history: List[datetime] = []
+        self._lock = threading.Lock()
+
+    def _check_rate_limit(self) -> bool:
+        """Check if message can be sent within the hourly limit."""
+        now = datetime.now()
+        hour_ago = now - timedelta(hours=1)
+        with self._lock:
+            self.message_history = [
+                msg_time for msg_time in self.message_history if msg_time > hour_ago
+            ]
+            return len(self.message_history) < self.rate_limit
+
+    def _record_message(self) -> None:
+        """Record a message send time in history."""
+        with self._lock:
+            self.message_history.append(datetime.now())
+
+
+class DiscordWebhookMonitor(DiscordWebhookBase):
     """Discord webhook integration for Win32 API monitoring"""
 
     def __init__(self, webhook_url: str, rate_limit: int = 10):
@@ -58,21 +83,8 @@ class DiscordWebhookMonitor:
             rate_limit: Maximum messages per hour (default: 10)
         """
         self.webhook_url = webhook_url
-        self.rate_limit = rate_limit
-        self.message_history = []
+        super().__init__(rate_limit)
         self.session = requests.Session()
-
-    def _check_rate_limit(self) -> bool:
-        """Check if we're within rate limits"""
-        now = datetime.now()
-        hour_ago = now - timedelta(hours=1)
-
-        # Clean old messages
-        self.message_history = [
-            msg_time for msg_time in self.message_history if msg_time > hour_ago
-        ]
-
-        return len(self.message_history) < self.rate_limit
 
     def _send_webhook_message(self, embed: Dict[str, Any]) -> bool:
         """
@@ -98,7 +110,7 @@ class DiscordWebhookMonitor:
             )
 
             if response.status_code == 204:
-                self.message_history.append(datetime.now())
+                self._record_message()
                 return True
             else:
                 return False
@@ -301,7 +313,7 @@ def create_webhook_monitor_from_env() -> Optional[DiscordWebhookMonitor]:
     return DiscordWebhookMonitor(webhook_url, rate_limit)
 
 
-class DiscordWebhook:
+class DiscordWebhook(DiscordWebhookBase):
     """
     Enhanced Discord webhook client for async operations
     Compatible with automated testing system
@@ -309,8 +321,7 @@ class DiscordWebhook:
 
     def __init__(self, webhook_url: Optional[str] = None, rate_limit: int = 30):
         self.webhook_url = webhook_url or os.getenv("DISCORD_WEBHOOK")
-        self.rate_limit = rate_limit
-        self.message_history = []
+        super().__init__(rate_limit)
         self._session = None
         self._aiohttp_available = AIOHTTP_AVAILABLE
 
@@ -329,20 +340,6 @@ class DiscordWebhook:
         if self._session and self._aiohttp_available:
             await self._session.close()
 
-    def _check_rate_limit(self) -> bool:
-        """Check if within rate limits"""
-        if not self.webhook_url:
-            return False
-
-        now = datetime.now()
-        hour_ago = now - timedelta(hours=1)
-
-        # Clean old messages
-        self.message_history = [
-            msg_time for msg_time in self.message_history if msg_time > hour_ago
-        ]
-
-        return len(self.message_history) < self.rate_limit
 
     async def send_message(
         self,
@@ -405,7 +402,7 @@ class DiscordWebhook:
             ) as response:
                 print(f"📨 Resposta webhook: {response.status}")
                 if response.status == 204:
-                    self.message_history.append(datetime.now())
+                    self._record_message()
                     print("✅ Webhook enviado com sucesso")
                     return True
                 else:
