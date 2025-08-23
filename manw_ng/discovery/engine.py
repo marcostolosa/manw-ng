@@ -8,12 +8,12 @@ Multi-stage discovery pipeline to find any Win32 function.
 import re
 import os
 from typing import List, Dict, Set, Optional, Tuple
-import requests
 from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
 from ..utils.url_verifier import SmartURLDiscovery, URLVerifier
 from ..utils.catalog_integration import get_catalog
+from ..utils.http_client import HTTPClient
 
 
 class Win32DiscoveryEngine:
@@ -24,12 +24,12 @@ class Win32DiscoveryEngine:
     def __init__(
         self,
         base_url: str,
-        session: requests.Session,
+        http_client: HTTPClient,
         quiet: bool = False,
         user_agent: Optional[str] = None,
     ):
         self.base_url = base_url
-        self.session = session
+        self.http = http_client
         self.quiet = quiet
         self.console = Console()
 
@@ -351,10 +351,7 @@ class Win32DiscoveryEngine:
 
             # Timeout maior para CI/CD
             timeout = 30 if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") else 15
-            response = self.session.get(api_url, params=params, timeout=timeout)
-            response.raise_for_status()
-
-            search_data = response.json()
+            search_data = self.http.get(api_url, params=params, return_json=True)
 
             if "results" in search_data:
                 for result in search_data["results"]:
@@ -405,10 +402,8 @@ class Win32DiscoveryEngine:
             )
             # Timeout maior para CI/CD
             timeout = 25 if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") else 10
-            response = self.session.get(search_url, timeout=timeout)
-            response.raise_for_status()
-
-            soup = BeautifulSoup(response.content, "html.parser")
+            html = self.http.get(search_url)
+            soup = BeautifulSoup(html, "html.parser")
 
             for link in soup.find_all("a", href=True):
                 href = link["href"]
