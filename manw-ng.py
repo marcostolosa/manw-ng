@@ -82,41 +82,48 @@ Examples:
         action="store_true",
         help="Mostrar observações/remarks na saída (padrão: não mostrar)",
     )
+    parser.add_argument(
+        "-u",
+        "--user-agent",
+        dest="user_agent",
+        help="User-Agent personalizado para as requisições (padrão: aleatório)",
+    )
     parser.add_argument("--version", action="version", version="MANW-NG 3.1")
 
     args = parser.parse_args()
 
     try:
-        # Initialize scraper within context manager
-        with Win32APIScraper(
-            language=args.language, quiet=(args.output == "json")
-        ) as scraper:
+        # Initialize scraper
+        scraper = Win32APIScraper(
+            language=args.language,
+            quiet=(args.output == "json"),
+            user_agent=args.user_agent,
+        )
 
-            if args.output != "json":
-                # Localized loading messages
-                loading_messages = {
-                    "us": f"Scraping function: {args.function_name} (language: {args.language})",
-                    "br": f"Fazendo scraping da função: {args.function_name} (idioma: {args.language})",
-                }
-                message = loading_messages.get(args.language, loading_messages["us"])
-                console.print(f"[yellow]{message}[/yellow]")
+        if args.output != "json":
+            # Localized loading messages
+            loading_messages = {
+                "us": f"Scraping function: {args.function_name} (language: {args.language})",
+                "br": f"Fazendo scraping da função: {args.function_name} (idioma: {args.language})",
+            }
+            message = loading_messages.get(args.language, loading_messages["us"])
+            console.print(f"[yellow]{message}[/yellow]")
 
-            # Scrape function information
-            function_info = scraper.scrape_function(args.function_name)
+        # Scrape function information
+        function_info = scraper.scrape_function(args.function_name)
 
-            # Format output
-            if args.output == "rich":
-                formatter = RichFormatter(language=args.language, show_remarks=args.obs)
-                formatter.format_output(function_info)
-            elif args.output == "json":
-                formatter = JSONFormatter()
-                print(formatter.format_output(function_info))
-            elif args.output == "markdown":
-                formatter = MarkdownFormatter()
-                print(
-                    formatter.format_output(
-                        function_info, language=args.language, show_remarks=args.obs
-                    )
+        # Format output
+        if args.output == "rich":
+            formatter = RichFormatter(language=args.language, show_remarks=args.obs)
+            formatter.format_output(function_info)
+        elif args.output == "json":
+            formatter = JSONFormatter()
+            print(formatter.format_output(function_info))
+        elif args.output == "markdown":
+            formatter = MarkdownFormatter()
+            print(
+                formatter.format_output(
+                    function_info, language=args.language, show_remarks=args.obs
                 )
 
     except Exception as e:

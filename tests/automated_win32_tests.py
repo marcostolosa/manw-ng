@@ -40,7 +40,9 @@ class Win32TestRunner:
         webhook_url: Optional[str] = None,
         language: str = "us",
         quiet: bool = True,
+        user_agent: Optional[str] = None,
     ):
+        self.scraper = Win32APIScraper(language=language, quiet=quiet, user_agent=user_agent)
         self.webhook = DiscordWebhook(webhook_url) if webhook_url else None
         self.language = language
         self.quiet = quiet

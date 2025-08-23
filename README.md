@@ -13,6 +13,7 @@ A command-line tool for extracting Win32 API documentation from Microsoft Learn.
 - **Multi-language support**: English and Portuguese documentation
 - **Complete information extraction**: Signatures, parameters, return values, and examples
 - **Robust parsing**: Handles edge cases and provides fallback mechanisms
+- **Randomized User-Agent**: Rotates realistic headers to reduce blocking
 - **Zero configuration**: Works out of the box with no setup required
 
 ## Installation
@@ -39,8 +40,17 @@ python manw-ng.py CreateProcessW -l br
 # JSON output for scripting
 python manw-ng.py CreateProcessW --output json
 
+# Custom User-Agent
+python manw-ng.py CreateProcessW --user-agent "MyAgent/1.0"
+
 # Get help
 python manw-ng.py --help
+```
+For programmatic usage:
+
+```python
+from manw_ng.core.scraper import Win32APIScraper
+scraper = Win32APIScraper(user_agent="MyAgent/1.0")
 ```
 
 ## Example Output
@@ -65,7 +75,7 @@ The tool can extract documentation for any Win32 API function available on Micro
 ## Command Line Options
 
 ```
-usage: manw-ng.py [-h] [-l {br,us}] [--output {rich,json,markdown}] [--version] function_name
+usage: manw-ng.py [-h] [-l {br,us}] [--output {rich,json,markdown}] [-u USER_AGENT] [--version] function_name
 
 positional arguments:
   function_name         Win32 function name (e.g., CreateProcessW, VirtualAlloc)
@@ -74,6 +84,8 @@ options:
   -h, --help           show help message and exit
   -l {br,us}           language: 'br' for Portuguese, 'us' for English (default: us)
   --output FORMAT      output format: rich, json, or markdown (default: rich)
+  -u USER_AGENT, --user-agent USER_AGENT
+                        custom User-Agent header (default: random)
   --version            show version number and exit
 ```
 
