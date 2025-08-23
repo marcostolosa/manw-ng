@@ -262,9 +262,8 @@ class Win32TestRunner:
         start_time = time.time()
 
         try:
-            # Executar scraping com timeout
-            with Win32APIScraper(language=self.language, quiet=self.quiet) as scraper:
-                result = scraper.scrape_function(function.name)
+            # Reutilizar o scraper existente para melhor performance e consistência
+            result = self.scraper.scrape_function(function.name)
 
             duration = time.time() - start_time
 
@@ -562,34 +561,123 @@ class Win32TestRunner:
         )
 
         # Se houver muitas falhas, enviar detalhes
-        if summary["failed"] > 0 or summary["parser_errors"] > 0:
-            failed_funcs = report.get("failed_functions", [])[:10]  # Top 10 falhas
-            error_funcs = report.get("parser_errors", [])[:10]  # Top 10 erros
+        if (
+            summary["failed"] > 0
+            or summary["parser_errors"] > 0
+            or summary["documentation_not_found"] > 0
+        ):
+            failed_funcs = report.get("failed_functions", [])
+            error_funcs = report.get("parser_errors", [])
+            not_found_funcs = report.get("documentation_not_found", [])
 
-            if failed_funcs or error_funcs:
-                error_details = []
-
-                for func in failed_funcs:
-                    error_details.append(f"❌ {func['name']} ({func['dll']})")
-
-                for func in error_funcs:
-                    error_msg = func.get("error", "Unknown error") or "Unknown error"
-                    error_msg = error_msg[:50] if len(error_msg) > 50 else error_msg
-                    error_details.append(f"⚠️ {func['name']}: {error_msg}")
+            # Enviar relatório de falhas se houver
+            if failed_funcs:
+                failed_details = []
+                for i, func in enumerate(failed_funcs[:20], 1):  # Top 20 falhas
+                    failed_details.append(
+                        f"{i}. **{func['name']}** ({func['dll']}) - {func.get('priority', 'unknown')} priority"
+                    )
 
                 await self.webhook.send_message(
-                    title="🔍 Detalhes dos Erros",
-                    description="Principais falhas encontradas:",
+                    title="❌ Funções com Falha de Teste",
+                    description=f"Encontradas {len(failed_funcs)} funções que falharam nos testes:",
+                    color=0xFF0000,
+                    fields=[
+                        {
+                            "name": f"Lista de Falhas ({len(failed_funcs)} total)",
+                            "value": (
+                                "\n".join(failed_details[:20])
+                                if failed_details
+                                else "Nenhuma falha encontrada"
+                            ),
+                            "inline": False,
+                        }
+                    ]
+                    + (
+                        [
+                            {
+                                "name": "Funções Adicionais",
+                                "value": f"... e mais {len(failed_funcs) - 20} funções falharam",
+                                "inline": False,
+                            }
+                        ]
+                        if len(failed_funcs) > 20
+                        else []
+                    ),
+                )
+
+            # Enviar relatório de erros de parser
+            if error_funcs:
+                parser_details = []
+                for i, func in enumerate(error_funcs[:20], 1):
+                    error_msg = func.get("error", "Unknown error") or "Unknown error"
+                    error_msg = error_msg[:100] if len(error_msg) > 100 else error_msg
+                    parser_details.append(
+                        f"{i}. **{func['name']}** ({func['dll']}) - {error_msg}"
+                    )
+
+                await self.webhook.send_message(
+                    title="⚠️ Funções com Erro de Parser",
+                    description=f"Encontradas {len(error_funcs)} funções com erros de parsing:",
                     color=0xFF6600,
                     fields=[
                         {
-                            "name": "Falhas Detalhadas",
-                            "value": "\n".join(
-                                error_details[:15]
-                            ),  # Limitar para não passar do limite Discord
+                            "name": f"Lista de Erros ({len(error_funcs)} total)",
+                            "value": (
+                                "\n".join(parser_details[:20])
+                                if parser_details
+                                else "Nenhum erro encontrado"
+                            ),
                             "inline": False,
                         }
-                    ],
+                    ]
+                    + (
+                        [
+                            {
+                                "name": "Erros Adicionais",
+                                "value": f"... e mais {len(error_funcs) - 20} funções com erro",
+                                "inline": False,
+                            }
+                        ]
+                        if len(error_funcs) > 20
+                        else []
+                    ),
+                )
+
+            # Enviar relatório de documentação não encontrada
+            if not_found_funcs:
+                not_found_details = []
+                for i, func in enumerate(not_found_funcs[:25], 1):  # Top 25
+                    not_found_details.append(
+                        f"{i}. **{func['name']}** ({func['dll']}) - {func.get('priority', 'unknown')} priority"
+                    )
+
+                await self.webhook.send_message(
+                    title="📖 Funções Sem Documentação",
+                    description=f"Encontradas {len(not_found_funcs)} funções sem documentação disponível:",
+                    color=0xFFAA00,
+                    fields=[
+                        {
+                            "name": f"Lista Sem Documentação ({len(not_found_funcs)} total)",
+                            "value": (
+                                "\n".join(not_found_details[:25])
+                                if not_found_details
+                                else "Todas com documentação"
+                            ),
+                            "inline": False,
+                        }
+                    ]
+                    + (
+                        [
+                            {
+                                "name": "Funções Adicionais",
+                                "value": f"... e mais {len(not_found_funcs) - 25} funções sem documentação",
+                                "inline": False,
+                            }
+                        ]
+                        if len(not_found_funcs) > 25
+                        else []
+                    ),
                 )
 
     def _save_report_to_file(self, report: Dict) -> None:
