@@ -5,7 +5,7 @@ Ultra-fast asynchronous URL generator that tests ALL known patterns simultaneous
 This system ensures 100% coverage with maximum speed using concurrent requests.
 """
 
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Set, Optional, Tuple, Callable
 import re
 import asyncio
 import aiohttp
@@ -255,6 +255,7 @@ class SmartURLGenerator:
         dll_name: str = None,
         base_url: str = "https://learn.microsoft.com/en-us",
         session: aiohttp.ClientSession = None,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """
         ULTRA-FAST async method that tests ALL possible URLs simultaneously!
@@ -265,7 +266,7 @@ class SmartURLGenerator:
 
         # Test ALL URLs concurrently with maximum speed
         if session:
-            return await self._test_urls_async(all_urls, session)
+            return await self._test_urls_async(all_urls, session, progress_callback)
         else:
             # Create temporary session
             connector = aiohttp.TCPConnector(limit=100, limit_per_host=50)
@@ -273,10 +274,13 @@ class SmartURLGenerator:
             async with aiohttp.ClientSession(
                 connector=connector, timeout=timeout
             ) as temp_session:
-                return await self._test_urls_async(all_urls, temp_session)
+                return await self._test_urls_async(all_urls, temp_session, progress_callback)
 
     async def _test_urls_async(
-        self, urls: List[str], session: aiohttp.ClientSession
+        self,
+        urls: List[str],
+        session: aiohttp.ClientSession,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """Test multiple URLs concurrently and return first valid one"""
 
@@ -306,11 +310,16 @@ class SmartURLGenerator:
 
         # Create tasks for ALL URLs simultaneously
         tasks = [test_single_url(url) for url in urls]
+        total = len(tasks)
+        completed = 0
 
         # Use as_completed to get the FIRST successful result
         for completed_task in asyncio.as_completed(tasks):
             try:
                 result = await completed_task
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total)
                 if result:  # Found valid URL!
                     # Cancel remaining tasks for speed
                     for task in tasks:
@@ -318,6 +327,9 @@ class SmartURLGenerator:
                             task.cancel()
                     return result
             except:
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total)
                 continue
 
         return None  # No valid URL found
