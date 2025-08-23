@@ -1,1 +1,1 @@
-
+# Assets package

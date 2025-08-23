@@ -17,6 +17,8 @@ from ..discovery.engine import Win32DiscoveryEngine
 from ..core.parser import Win32PageParser
 from ..utils.complete_win32_api_mapping import get_function_url, get_function_url_fast
 from ..utils.url_verifier import USER_AGENTS
+from ..utils.smart_url_generator import SmartURLGenerator
+from ..utils.catalog_integration import get_catalog
 
 
 class Win32APIScraper:
@@ -47,6 +49,8 @@ class Win32APIScraper:
         )
         self.parser = Win32PageParser()
         self.console = Console()
+        self.smart_generator = SmartURLGenerator()
+        self.catalog = get_catalog()
 
         # Localized strings
         self.strings = {
@@ -80,35 +84,86 @@ class Win32APIScraper:
         """
 
         if not self.quiet:
-            with Status(
-                f"[dim]{self.get_string('searching')}[/dim]", console=self.console
-            ) as status:
-                # Try direct URL first (fastest)
-                status.update(f"[blue]{self.get_string('trying_direct')}[/blue]")
-                direct_url = self._try_direct_url(function_name)
-                if direct_url:
-                    result = self._parse_function_page(direct_url)
-                    if result:
-                        status.stop()
-                        self.console.print(
-                            f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
-                        )
-                        return result
+            # PRIORITY 1: Try catalog lookup first (fastest)
+            catalog_url = self.catalog.get_function_url(
+                function_name, "en-us" if self.language == "us" else "pt-br"
+            )
+            if catalog_url:
+                result = self._parse_function_page(catalog_url)
+                if result:
+                    self.console.print(
+                        f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(catalog_url)}[/green]"
+                    )
+                    return result
 
-                # Use intelligent discovery system
-                status.update(f"[blue]{self.get_string('discovery_search')}[/blue]")
-                search_results = self.discovery_engine.discover_function_urls(
-                    function_name
+            # PRIORITY 2: Use direct mapping
+            direct_url = self._try_direct_url(function_name)
+            if direct_url:
+                result = self._parse_function_page(direct_url)
+                if result:
+                    self.console.print(
+                        f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(direct_url)}[/green]"
+                    )
+                    return result
+
+            # Smart generator only - no discovery engine
+            if hasattr(self, "_current_function_dll"):
+                smart_urls = self.smart_generator.generate_possible_urls(
+                    function_name, self._current_function_dll, self.base_url
                 )
+            else:
+                smart_urls = self.smart_generator.generate_possible_urls(
+                    function_name, None, self.base_url
+                )
+
+            # Test ONLY top 5 URLs with status indicator
+            with Status("", console=self.console) as status:
+                for i, url in enumerate(smart_urls[:5], 1):
+                    status.update(
+                        f"[cyan]•[/cyan] [bold]{function_name}[/bold] [dim]({i}/5)[/dim] → [blue]{self._format_url_display(url)}[/blue]"
+                    )
+                    try:
+                        result = self._parse_function_page(url)
+                        if result and result.get("documentation_found"):
+                            status.stop()
+                            self.console.print(
+                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(url)}[/green]"
+                            )
+                            return result
+                    except Exception:
+                        continue
                 status.stop()
+
+            search_results = []  # No discovery engine
         else:
-            # Silent mode - no status indicators
+            # Silent mode - use ONLY smart generator for speed
             direct_url = self._try_direct_url(function_name)
             if direct_url:
                 result = self._parse_function_page(direct_url)
                 if result:
                     return result
-            search_results = self.discovery_engine.discover_function_urls(function_name)
+
+            # PRIORITY: Smart generator ONLY - no fallback to discovery engine
+            if hasattr(self, "_current_function_dll"):
+                smart_urls = self.smart_generator.generate_possible_urls(
+                    function_name, self._current_function_dll, self.base_url
+                )
+            else:
+                smart_urls = self.smart_generator.generate_possible_urls(
+                    function_name, None, self.base_url
+                )
+
+            # Test ONLY top 5 smart URLs for speed
+            for url in smart_urls[:5]:
+                try:
+                    result = self._parse_function_page(url)
+                    if result and result.get("documentation_found"):
+                        return result
+                except Exception:
+                    continue
+
+            # NO DISCOVERY ENGINE FALLBACK - too slow
+            search_results = []
 
         # Try each discovered URL with Rich Status
         if not self.quiet and search_results:
@@ -116,14 +171,14 @@ class Win32APIScraper:
                 for i, url in enumerate(search_results, 1):
                     try:
                         status.update(
-                            f"[bold blue]\\[{i}/{len(search_results)}] {self.get_string('testing')}:[/bold blue] {self._format_url_display(url)}"
+                            f"[cyan]•[/cyan] [bold]{function_name}[/bold] [dim]({i}/{len(search_results)})[/dim] → [blue]{self._format_url_display(url)}[/blue]"
                         )
                         result = self._parse_function_page(url, status)
 
                         if result:  # Se resultado válido
                             status.stop()
                             self.console.print(
-                                f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
+                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(url)}[/green]"
                             )
                             return result
 
@@ -139,7 +194,7 @@ class Win32APIScraper:
                     if result:  # Se resultado válido
                         if not self.quiet:
                             self.console.print(
-                                f"[green]✓ {self.get_string('documentation_found')}[/green] [dim]{self._format_url_display(url)}[/dim]"
+                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(url)}[/green]"
                             )
                         return result
                 except Exception as e:
@@ -255,11 +310,7 @@ class Win32APIScraper:
                 break  # Success - exit retry loop
 
             except Exception as e:
-                # Debug apenas em ambiente CI/CD para reduzir noise
-                if (os.getenv("CI") or os.getenv("GITHUB_ACTIONS")) and not self.quiet:
-                    print(
-                        f"🌐 Tentativa {attempt + 1}/{max_retries} - Erro: {str(e)[:80]}"
-                    )
+                pass  # Remove prints irritantes de retry
 
                 # Se não é a última tentativa, aguardar antes de tentar novamente
                 if attempt < max_retries - 1:
@@ -267,15 +318,11 @@ class Win32APIScraper:
                     time.sleep(delay)
                     continue
 
-                # Última tentativa falhou - tentar fallback pt-br → en-us
+                # Última tentativa falhou - tentar fallback pt-br → en-us silenciosamente
                 if self.language == "br" and "404" in str(e) and "pt-br" in url:
                     fallback_url = url.replace(
                         "learn.microsoft.com/pt-br", "learn.microsoft.com/en-us"
                     )
-                    if not self.quiet and status:
-                        status.update(
-                            f"[yellow]{self.get_string('fallback_to_english')}:[/yellow] {self._format_url_display(fallback_url)}"
-                        )
 
                     # Retry no fallback URL também
                     for fb_attempt in range(max_retries):
@@ -290,11 +337,6 @@ class Win32APIScraper:
                                 fb_delay = base_delay * (2**fb_attempt)
                                 time.sleep(fb_delay)
                                 continue
-                            # Debug: Log erro de fallback
-                            if not self.quiet:
-                                print(
-                                    f"🌐 Fallback falhou após {max_retries} tentativas: {str(fallback_e)[:100]}"
-                                )
                             return None
                     else:
                         # Fallback também falhou em todas as tentativas

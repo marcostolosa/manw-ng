@@ -6,13 +6,14 @@ Multi-stage discovery pipeline to find any Win32 function.
 """
 
 import re
+import os
 from typing import List, Dict, Set, Optional, Tuple
 import requests
 from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
 from ..utils.url_verifier import SmartURLDiscovery, URLVerifier
-from ..utils.win32_url_patterns import Win32URLPatterns
+from ..utils.catalog_integration import get_catalog
 
 
 class Win32DiscoveryEngine:
@@ -41,106 +42,23 @@ class Win32DiscoveryEngine:
         # Initialize new smart discovery system
         self.url_verifier = URLVerifier(user_agent=user_agent)
         self.smart_discovery = SmartURLDiscovery(self.url_verifier)
-        self.patterns = Win32URLPatterns()
+        self.catalog = get_catalog()
 
-        # Complete list of Win32 headers for intelligent fuzzing
-        self.all_headers = [
-            # Core System APIs
-            "winbase",
-            "winuser",
-            "winreg",
-            "winnt",
-            "winnls",
-            "wincon",
-            "winerror",
-            # Process/Thread
-            "processthreadsapi",
-            "synchapi",
-            "handleapi",
-            "namedpipeapi",
-            # Memory
-            "memoryapi",
-            "heapapi",
-            "virtualalloc",
-            # RTL/Native API locations
-            "winternl",
-            "wdm",
-            "ntddk",
-            "ntifs",
-            # File System
-            "fileapi",
-            "winioctl",
-            "ioapiset",
-            "wow64apiset",
-            # Debugging
-            "debugapi",
-            "minidumpapiset",
-            "imagehlp",
-            "dbghelp",
-            # Security
-            "securitybaseapi",
-            "authz",
-            "sddl",
-            "wincrypt",
-            "ncrypt",
-            "bcrypt",
-            # Services
-            "winsvc",
-            "securityappcontainer",
-            # Registry (extended)
-            "winreg",
-            "winperf",
-            # Threading (extended)
-            "threadpoollegacyapiset",
-            "threadpoolapiset",
-            # Libraries
-            "libloaderapi",
-            "errhandlingapi",
-            # System Info
-            "sysinfoapi",
-            "systemtopologyapi",
-            "processtopologyapi",
-            # UI Extended
-            "commctrl",
-            "commdlg",
-            "richedit",
-            "shellapi",
-            "shlobj_core",
-            "shlwapi",
-            # GDI
-            "wingdi",
-            # Network
-            "winsock",
-            "winsock2",
-            "ws2tcpip",
-            "wininet",
-            "winhttp",
-            "iphlpapi",
-            "urlmon",
-            # COM
-            "objbase",
-            "oleauto",
-            "ole2",
-            "olectl",
-            # DirectX/Graphics
-            "d3d11",
-            "d3d12",
-            "dxgi",
-            "d2d1",
-            # Crypto Extended
-            "wintrust",
-            "softpub",
-            "mssip",
-            # Tools/Debug Extended
-            "tlhelp32",
-            "psapi",
-            "toolhelp",
-            # Advanced
-            "ntddscsi",
-            "ntdddisk",
-            "ntddser",
-            "winternl",
-        ]
+        # Get headers from catalog (more accurate and up-to-date)
+        if self.catalog.is_catalog_available():
+            self.all_headers = list(self.catalog.get_all_headers())
+        else:
+            # Fallback to essential headers
+            self.all_headers = [
+                "winuser",
+                "winbase",
+                "processthreadsapi",
+                "memoryapi",
+                "fileapi",
+                "winreg",
+                "synchapi",
+                "libloaderapi",
+            ]
 
     def discover_function_urls(self, function_name: str) -> List[str]:
         """
@@ -431,7 +349,9 @@ class Win32DiscoveryEngine:
                 "expandScope": "true",
             }
 
-            response = self.session.get(api_url, params=params, timeout=15)
+            # Timeout maior para CI/CD
+            timeout = 30 if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") else 15
+            response = self.session.get(api_url, params=params, timeout=timeout)
             response.raise_for_status()
 
             search_data = response.json()
@@ -483,7 +403,9 @@ class Win32DiscoveryEngine:
             search_url = (
                 f"{search_url_base}{function_name}+win32&category=Documentation"
             )
-            response = self.session.get(search_url, timeout=10)
+            # Timeout maior para CI/CD
+            timeout = 25 if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") else 10
+            response = self.session.get(search_url, timeout=timeout)
             response.raise_for_status()
 
             soup = BeautifulSoup(response.content, "html.parser")

@@ -105,6 +105,268 @@ class Win32TestRunner:
             self._offline_map[func_name] = url
         print(f"📚 Modo offline habilitado com {len(self._offline_map)} fixtures")
 
+    def get_comprehensive_test_functions(
+        self, max_functions: int = 100
+    ) -> List[Win32Function]:
+        """Retorna conjunto abrangente de funções para teste com máxima cobertura de DLLs e tipos"""
+        all_functions = get_all_functions()
+
+        # Funções críticas conhecidas que devem existir (prioridade máxima)
+        critical_functions = [
+            "TextOutW",
+            "StretchBlt",
+            "GetLogicalDrives",
+            "CertOpenSystemStore",
+            "NetUserEnum",
+            "ShellExecuteExA",
+            "CreateFileA",
+            "ReadFile",
+            "WriteFile",
+            "VirtualAlloc",
+            "HeapCreate",
+            "CreateProcess",
+            "GetCurrentProcess",
+            "RegOpenKeyEx",
+            "RegQueryValueEx",
+            "OpenService",
+            "socket",
+            "connect",
+            "InternetOpenA",
+            "LoadLibraryA",
+            "GetProcAddress",
+            "DrawText",
+            "BitBlt",
+            "GetDC",
+            "ReleaseDC",
+            "CreatePen",
+            "SelectObject",
+            "CryptAcquireContext",
+            "CertFindCertificateInStore",
+            "BCryptOpenAlgorithmProvider",
+        ]
+
+        # Mapear DLLs para garantir cobertura equilibrada
+        dll_coverage = {}
+        selected_functions = []
+
+        # Primeiro, adicionar funções críticas
+        for func_name in critical_functions:
+            if len(selected_functions) >= max_functions:
+                break
+            func = next(
+                (f for f in all_functions if f.name.lower() == func_name.lower()), None
+            )
+            if func:
+                selected_functions.append(func)
+                dll = func.dll.lower() if func.dll else "unknown"
+                dll_coverage[dll] = dll_coverage.get(dll, 0) + 1
+
+        # Depois, adicionar funções de diferentes DLLs para máxima cobertura
+        remaining_functions = [f for f in all_functions if f not in selected_functions]
+
+        # Ordenar por DLL para distribuir melhor
+        from collections import defaultdict
+
+        functions_by_dll = defaultdict(list)
+        for func in remaining_functions:
+            dll = func.dll.lower() if func.dll else "unknown"
+            functions_by_dll[dll].append(func)
+
+        # Adicionar funções distribuindo por DLL
+        dll_keys = list(functions_by_dll.keys())
+        dll_index = 0
+
+        while len(selected_functions) < max_functions and any(
+            functions_by_dll.values()
+        ):
+            current_dll = dll_keys[dll_index % len(dll_keys)]
+
+            if functions_by_dll[current_dll]:
+                func = functions_by_dll[current_dll].pop(0)
+                selected_functions.append(func)
+                dll_coverage[current_dll] = dll_coverage.get(current_dll, 0) + 1
+
+            dll_index += 1
+
+            # Limpar DLLs vazias
+            dll_keys = [dll for dll in dll_keys if functions_by_dll[dll]]
+            if not dll_keys:
+                break
+
+        if not self.quiet:
+            print(f"📊 Cobertura de DLLs para {len(selected_functions)} funções:")
+            for dll, count in sorted(dll_coverage.items()):
+                percentage = (count / len(selected_functions)) * 100
+                print(f"  {dll}: {count} funções ({percentage:.1f}%)")
+
+        return selected_functions[:max_functions]
+
+    def get_failed_and_diverse_functions(
+        self, min_functions: int = 50
+    ) -> List[Win32Function]:
+        """Retorna funções que falharam anteriormente + amostra diversa de headers"""
+        all_functions = get_all_functions()
+        selected = []
+
+        # Funções conhecidas que falharam anteriormente
+        known_failed = [
+            "TextOutW",
+            "StretchBlt",
+            "GetLogicalDrives",
+            "CertOpenSystemStore",
+            "NetUserEnum",
+            "ShellExecuteExA",
+            "BitBlt",
+            "DrawText",
+            "GetDC",
+            "CryptAcquireContext",
+            "LoadLibraryA",
+            "GetProcAddress",
+            "VirtualAlloc",
+            "CreateProcess",
+            "RegOpenKeyEx",
+            "InternetOpenA",
+            "socket",
+            "connect",
+        ]
+
+        # Adicionar funções que falharam
+        for func_name in known_failed:
+            if len(selected) >= min_functions // 2:  # Metade para failed functions
+                break
+            func = next(
+                (f for f in all_functions if f.name.lower() == func_name.lower()), None
+            )
+            if func:
+                selected.append(func)
+
+        # Funções aleatórias de headers diversos para teste de cobertura
+        import random
+
+        diverse_headers_funcs = {
+            "wingdi": ["CreatePen", "GetPixel", "SetPixel", "Rectangle"],
+            "fileapi": ["FindFirstFile", "CopyFile", "DeleteFile", "MoveFile"],
+            "memoryapi": ["VirtualProtect", "VirtualFree", "GlobalAlloc"],
+            "processthreadsapi": ["TerminateProcess", "SuspendThread", "ResumeThread"],
+            "winreg": ["RegCreateKey", "RegDeleteKey", "RegSetValueEx"],
+            "winsock2": ["bind", "listen", "accept", "send", "recv"],
+            "wincrypt": ["CryptCreateHash", "CryptEncrypt", "CryptDecrypt"],
+            "shellapi": ["SHGetFolderPath", "SHFileOperation", "ShellExecute"],
+            "wininet": ["InternetConnect", "HttpOpenRequest", "InternetReadFile"],
+            "consoleapi": ["GetConsoleTitle", "SetConsoleTitle", "AllocConsole"],
+            "libloaderapi": ["FreeLibrary", "GetModuleHandle", "GetModuleFileName"],
+            "synchapi": ["CreateMutex", "WaitForSingleObject", "ReleaseMutex"],
+            "errhandlingapi": ["GetLastError", "SetLastError", "FormatMessage"],
+            "securitybaseapi": ["OpenProcessToken", "GetTokenInformation"],
+            "winsvc": ["StartService", "StopService", "ControlService"],
+            "psapi": ["GetProcessMemoryInfo", "EnumProcesses", "GetModuleBaseName"],
+        }
+
+        # Selecionar 2 funções de cada header aleatoriamente
+        remaining_slots = min_functions - len(selected)
+        headers_list = list(diverse_headers_funcs.keys())
+        random.shuffle(headers_list)
+
+        funcs_per_header = max(2, remaining_slots // len(headers_list))
+
+        for header in headers_list:
+            if len(selected) >= min_functions:
+                break
+
+            header_funcs = diverse_headers_funcs[header]
+            random.shuffle(header_funcs)
+
+            added_from_header = 0
+            for func_name in header_funcs:
+                if (
+                    added_from_header >= funcs_per_header
+                    or len(selected) >= min_functions
+                ):
+                    break
+
+                func = next(
+                    (f for f in all_functions if f.name.lower() == func_name.lower()),
+                    None,
+                )
+                if func and func not in selected:
+                    selected.append(func)
+                    added_from_header += 1
+
+        if not self.quiet:
+            print(f"🎯 Selecionadas {len(selected)} funções:")
+            print(
+                f"  - {sum(1 for f in selected if f.name in known_failed)} funções que falharam anteriormente"
+            )
+            print(
+                f"  - {len(selected) - sum(1 for f in selected if f.name in known_failed)} funções de headers diversos"
+            )
+
+        return selected
+
+    async def run_failed_and_diverse_tests(
+        self, min_functions: int = 50, max_concurrent: int = 5
+    ) -> Dict:
+        """
+        Executa testes focados nas funções que falharam + amostra diversa de headers
+        """
+        print(f"🎯 Iniciando testes focados em funções que falharam + headers diversos")
+
+        # Selecionar funções para teste
+        test_functions = self.get_failed_and_diverse_functions(min_functions)
+
+        if not test_functions:
+            return {"error": "Nenhuma função encontrada para teste"}
+
+        print(f"📋 Testando {len(test_functions)} funções selecionadas...")
+        self.test_start_time = time.time()
+
+        # Reset results
+        self.results = {
+            "total_tested": 0,
+            "passed": 0,
+            "failed": 0,
+            "documentation_not_found": 0,
+            "parser_errors": 0,
+            "skipped": 0,
+            "test_duration": 0,
+            "functions_by_status": {},
+            "detailed_results": [],
+        }
+
+        # Executar testes em lotes concorrentes
+        with ThreadPoolExecutor(max_workers=max_concurrent) as executor:
+            # Submit all tasks
+            future_to_function = {
+                executor.submit(self._test_single_function, func, 30): func
+                for func in test_functions
+            }
+
+            # Process completed tasks
+            for future in as_completed(future_to_function):
+                function = future_to_function[future]
+                try:
+                    result = future.result()
+                    self._process_single_test_result(result, function)
+                except Exception as e:
+                    print(f"❌ Erro ao testar {function.name}: {str(e)}")
+                    self.results["failed"] += 1
+                    self.results["total_tested"] += 1
+
+        # Calcular duração total
+        self.results["test_duration"] = time.time() - self.test_start_time
+
+        # Gerar relatório
+        report = await self._generate_final_report()
+
+        # Enviar via webhook se configurado
+        if self.webhook:
+            await self._send_webhook_report(report)
+
+        # Salvar relatório em arquivo
+        self._save_report_to_file(report)
+
+        return report
+
     async def run_comprehensive_tests(
         self,
         priorities: List[str] = None,
@@ -262,6 +524,9 @@ class Win32TestRunner:
         start_time = time.time()
 
         try:
+            # Pass DLL info to scraper for intelligent URL generation
+            self.scraper._current_function_dll = function.dll
+
             # Reutilizar o scraper existente para melhor performance e consistência
             result = self.scraper.scrape_function(function.name)
 
@@ -727,6 +992,17 @@ async def main():
         action="store_true",
         help="Executa testes usando fixtures offline",
     )
+    parser.add_argument(
+        "--test-failed",
+        action="store_true",
+        help="Testa funções que falharam + headers diversos (pelo menos 50 funções)",
+    )
+    parser.add_argument(
+        "--min-functions",
+        type=int,
+        default=50,
+        help="Número mínimo de funções para teste focado",
+    )
 
     args = parser.parse_args()
 
@@ -742,13 +1018,22 @@ async def main():
     )
 
     try:
-        # Executar testes
-        report = await runner.run_comprehensive_tests(
-            priorities=args.priorities,
-            dlls=args.dlls,
-            max_concurrent=args.concurrent,
-            timeout_per_function=args.timeout,
-        )
+        # Escolher tipo de teste
+        if args.test_failed:
+            print(
+                "🎯 Executando teste focado em funções que falharam + headers diversos"
+            )
+            report = await runner.run_failed_and_diverse_tests(
+                min_functions=args.min_functions, max_concurrent=args.concurrent
+            )
+        else:
+            # Teste abrangente normal
+            report = await runner.run_comprehensive_tests(
+                priorities=args.priorities,
+                dlls=args.dlls,
+                max_concurrent=args.concurrent,
+                timeout_per_function=args.timeout,
+            )
 
         # Imprimir resumo
         print("\n" + "=" * 60)

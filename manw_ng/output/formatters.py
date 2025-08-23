@@ -558,7 +558,7 @@ class JSONFormatter:
             # Try to convert to string for unsupported types
             try:
                 return str(obj)
-            except:
+            except Exception:
                 return repr(obj)
 
 
