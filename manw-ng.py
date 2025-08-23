@@ -16,6 +16,7 @@ License: MIT
 import argparse
 import sys
 import os
+import re
 
 # Fix Windows encoding issues
 if sys.platform.startswith("win"):
@@ -34,6 +35,15 @@ from rich.console import Console
 console = Console(force_terminal=True, legacy_windows=True, width=100)
 
 
+def validate_function_name(value: str) -> str:
+    pattern = r"^[A-Za-z0-9_]+$"
+    if not re.match(pattern, value):
+        raise argparse.ArgumentTypeError(
+            "function name must contain only letters, numbers or underscores"
+        )
+    return value
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="MANW-NG - Win32 API Documentation Scraper (Next Generation)",
@@ -49,6 +59,7 @@ Examples:
 
     parser.add_argument(
         "function_name",
+        type=validate_function_name,
         help="Nome da função Win32 para fazer scraping (ex: CreateProcessW, VirtualAlloc)",
     )
     parser.add_argument(
@@ -71,13 +82,23 @@ Examples:
         action="store_true",
         help="Mostrar observações/remarks na saída (padrão: não mostrar)",
     )
+    parser.add_argument(
+        "-u",
+        "--user-agent",
+        dest="user_agent",
+        help="User-Agent personalizado para as requisições (padrão: aleatório)",
+    )
     parser.add_argument("--version", action="version", version="MANW-NG 3.1")
 
     args = parser.parse_args()
 
     try:
         # Initialize scraper
-        scraper = Win32APIScraper(language=args.language, quiet=(args.output == "json"))
+        scraper = Win32APIScraper(
+            language=args.language,
+            quiet=(args.output == "json"),
+            user_agent=args.user_agent,
+        )
 
         if args.output != "json":
             # Localized loading messages
@@ -104,7 +125,6 @@ Examples:
                 formatter.format_output(
                     function_info, language=args.language, show_remarks=args.obs
                 )
-            )
 
     except Exception as e:
         console.print(f"[red]Erro: {e}[/red]")

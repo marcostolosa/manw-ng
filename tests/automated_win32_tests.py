@@ -16,6 +16,9 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 from dataclasses import asdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
+
+import requests_mock
 
 # Adicionar path do MANW-NG para importação
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
@@ -30,6 +33,7 @@ from win32_functions_database import (
 )
 from manw_ng.core.scraper import Win32APIScraper
 from manw_ng.monitoring.discord_webhook import DiscordWebhook
+from manw_ng.utils.complete_win32_api_mapping import get_function_url
 
 
 class Win32TestRunner:
@@ -40,10 +44,18 @@ class Win32TestRunner:
         webhook_url: Optional[str] = None,
         language: str = "us",
         quiet: bool = True,
+        offline: bool = False,
+        fixtures_dir: Optional[Path] = None,
     ):
-        self.scraper = Win32APIScraper(language=language, quiet=quiet)
+        self.scraper = Win32APIScraper(language=language, quiet=quiet, user_agent=user_agent)
         self.webhook = DiscordWebhook(webhook_url) if webhook_url else None
         self.language = language
+        self.offline = offline
+        self.fixtures_dir = fixtures_dir or Path(__file__).parent / "fixtures"
+        self._offline_mock = None
+        self._offline_map = {}
+        if self.offline:
+            self._setup_offline_mode()
 
         # Debug webhook configuration
         if webhook_url:
@@ -66,6 +78,21 @@ class Win32TestRunner:
             "functions_by_status": {},
             "detailed_results": [],
         }
+
+    def _setup_offline_mode(self) -> None:
+        """Configura mocks para execução offline usando fixtures."""
+        self._offline_mock = requests_mock.Mocker()
+        self._offline_mock.start()
+        if not self.fixtures_dir.exists():
+            return
+        for fixture in self.fixtures_dir.glob("*.html"):
+            func_name = fixture.stem.lower()
+            url = get_function_url(func_name, self.scraper.base_url)
+            if not url:
+                continue
+            self._offline_mock.get(url, text=fixture.read_text())
+            self._offline_map[func_name] = url
+        print(f"📚 Modo offline habilitado com {len(self._offline_map)} fixtures")
 
     async def run_comprehensive_tests(
         self,
@@ -131,6 +158,9 @@ class Win32TestRunner:
         # Gerar relatório final
         report = await self._generate_final_report()
 
+        if self.offline and self._offline_mock:
+            self._offline_mock.stop()
+
         return report
 
     def _select_functions_for_test(
@@ -150,6 +180,11 @@ class Win32TestRunner:
                 f
                 for f in all_functions
                 if any(dll_filter in f.dll.lower() for dll_filter in dll_filters)
+            ]
+
+        if self.offline:
+            all_functions = [
+                f for f in all_functions if f.name.lower() in self._offline_map
             ]
 
         return all_functions
@@ -217,7 +252,10 @@ class Win32TestRunner:
 
         try:
             # Executar scraping com timeout
-            result = self.scraper.scrape_function(function.name)
+            with Win32APIScraper(
+                language=self.language, quiet=self.quiet
+            ) as scraper:
+                result = scraper.scrape_function(function.name)
 
             duration = time.time() - start_time
 
@@ -579,6 +617,11 @@ async def main():
     parser.add_argument("--concurrent", type=int, default=5, help="Testes simultâneos")
     parser.add_argument("--timeout", type=int, default=30, help="Timeout por função")
     parser.add_argument("--quiet", action="store_true", help="Modo silencioso")
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Executa testes usando fixtures offline",
+    )
 
     args = parser.parse_args()
 
@@ -587,7 +630,10 @@ async def main():
 
     # Criar runner
     runner = Win32TestRunner(
-        webhook_url=webhook_url, language=args.language, quiet=args.quiet
+        webhook_url=webhook_url,
+        language=args.language,
+        quiet=args.quiet,
+        offline=args.offline,
     )
 
     try:
