@@ -1191,16 +1191,22 @@ class Win32PageParser:
                     # Description should be longer than member name
                     if len(desc_text) > len(member_name) + 10:
                         description = desc_text
-                        
+
                         # If description is cut off, try to get more from subsequent paragraphs
-                        if len(desc_text) > 400 and not desc_text.endswith('.'):
+                        if len(desc_text) > 400 and not desc_text.endswith("."):
                             next_next_p = next_p.find_next_sibling("p")
                             if next_next_p:
                                 next_desc = next_next_p.get_text().strip()
                                 # Only add if it seems like a continuation (long text, not another member name)
-                                if len(next_desc) > 50 and not next_desc.replace('_', '').replace('[', '').replace(']', '').isalnum():
+                                if (
+                                    len(next_desc) > 50
+                                    and not next_desc.replace("_", "")
+                                    .replace("[", "")
+                                    .replace("]", "")
+                                    .isalnum()
+                                ):
                                     description += " " + next_desc
-                        
+
                         # Limit final description length
                         description = description[:800]
 
