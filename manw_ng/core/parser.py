@@ -92,6 +92,8 @@ class Win32PageParser:
             function_info["parameter_count"] = 0
             function_info["calling_convention"] = "N/A"  # Não aplicável a estruturas
             function_info["return_type"] = "N/A"
+            # Extrair remarks/observações para structures também
+            function_info["remarks"] = self._extract_remarks(soup)
 
         function_info["architectures"] = self._extract_architectures(soup)
         function_info["description"] = self._extract_complete_description(
@@ -1096,14 +1098,29 @@ class Win32PageParser:
                 and "}" in code_text
             ):
 
-                # Clean and format the struct definition
+                # Clean and format the struct definition with proper indentation
                 lines = code_text.split("\n")
                 formatted_lines = []
 
+                # Find minimum indentation to preserve structure
+                non_empty_lines = [line for line in lines if line.strip()]
+                if non_empty_lines:
+                    min_indent = min(
+                        len(line) - len(line.lstrip())
+                        for line in non_empty_lines
+                        if line.strip()
+                    )
+                else:
+                    min_indent = 0
+
                 for line in lines:
-                    line = line.strip()
-                    if line and not line.startswith("//"):
-                        formatted_lines.append(line)
+                    # Remove minimum indentation but preserve relative structure
+                    if line.strip() and not line.strip().startswith("//"):
+                        if len(line) >= min_indent:
+                            formatted_line = line[min_indent:]
+                        else:
+                            formatted_line = line.strip()
+                        formatted_lines.append(formatted_line)
 
                 if formatted_lines:
                     return "\n".join(formatted_lines)
@@ -1145,19 +1162,38 @@ class Win32PageParser:
         elif element.name == "p":
             # Paragraph format - parse structured text (PEB style)
             text = element.get_text().strip()
-            # PEB style: "Reserved1[2]", "BeingDebugged", etc.
+
+            # Check if this paragraph contains a member name (short line with member identifier)
             lines = text.split("\n")
-            for line in lines[:20]:  # Limite de 20 linhas por parágrafo
-                line = line.strip()
-                if line and not line.startswith("//") and len(line) > 2:
-                    # Try to extract member info from line
-                    if "[" in line or line.replace(".", "").replace("_", "").isalnum():
-                        members.append(
-                            {
-                                "name": line.split()[0] if line.split() else line,
-                                "type": "Unknown",
-                                "description": line,
-                            }
-                        )
+            first_line = lines[0].strip() if lines else text
+
+            # Member name pattern: short line, contains alphanumeric/underscore/brackets
+            is_member_name = len(first_line) < 50 and (  # Short line
+                ("[" in first_line and "]" in first_line)  # Array notation
+                or (
+                    first_line.replace("_", "")
+                    .replace("[", "")
+                    .replace("]", "")
+                    .isalnum()
+                    and len(first_line) > 2
+                )
+            )  # Simple identifier
+
+            if is_member_name:
+                # This is a member name, look for description in next paragraph
+                member_name = first_line
+                description = "Membro da estrutura"
+
+                # Try to find description in next sibling paragraph
+                next_p = element.find_next_sibling("p")
+                if next_p:
+                    desc_text = next_p.get_text().strip()
+                    # Description should be longer than member name
+                    if len(desc_text) > len(member_name) + 10:
+                        description = desc_text[:500]  # Limit description length
+
+                members.append(
+                    {"name": member_name, "type": "Unknown", "description": description}
+                )
 
         return members
