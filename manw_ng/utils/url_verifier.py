@@ -194,19 +194,24 @@ class SmartURLDiscovery:
         if working_url:
             return working_url, "brute_force"
 
-        # 4. Tentar sem sufixos A/W
-        base_function = self._strip_aw_suffix(function_name)
-        if base_function != function_name:
-            return self.discover_function_url(base_function, locale, _visited)
+        # 4. Tentar sem sufixos A/W (evitar recursão infinita)
+        if len(_visited) < 5:  # Limite de recursão
+            base_function = self._strip_aw_suffix(function_name)
+            if base_function != function_name and base_function not in _visited:
+                _visited.add(base_function)
+                return self.discover_function_url(base_function, locale, _visited)
 
-        # 5. Tentar com sufixos A/W se não tiver
-        if not function_name.lower().endswith(("a", "w")):
-            for suffix in ["A", "W"]:
-                url, method = self.discover_function_url(
-                    function_name + suffix, locale, _visited
-                )
-                if url:
-                    return url, f"suffix_{suffix.lower()}"
+            # 5. Tentar com sufixos A/W se não tiver
+            if not function_name.lower().endswith(("a", "w")):
+                for suffix in ["A", "W"]:
+                    suffix_name = function_name + suffix
+                    if suffix_name not in _visited:
+                        _visited.add(suffix_name)
+                        url, method = self.discover_function_url(
+                            suffix_name, locale, _visited
+                        )
+                        if url:
+                            return url, f"suffix_{suffix.lower()}"
 
         return None, "not_found"
 

@@ -900,12 +900,18 @@ class Win32PageParser:
         for header in member_headers:
             next_elem = header.find_next_sibling()
 
-            while next_elem:
+            # Limite para evitar loop infinito
+            max_iterations = 50
+            iteration_count = 0
+
+            while next_elem and iteration_count < max_iterations:
+                iteration_count += 1
+
                 if next_elem.name in ["h1", "h2", "h3"]:
                     break
 
                 # Look for member definitions in various formats
-                if next_elem.name in ["dl", "table", "div"]:
+                if next_elem.name in ["dl", "table", "div", "p"]:
                     struct_members = self._parse_struct_members_from_element(next_elem)
                     members.extend(struct_members)
 
@@ -1083,12 +1089,11 @@ class Win32PageParser:
         for block in code_blocks:
             code_text = block.get_text().strip()
 
-            # Look for typedef struct patterns
+            # Look for typedef struct patterns - be more flexible
             if (
-                "typedef" in code_text
+                ("typedef" in code_text or "struct" in code_text)
                 and "{" in code_text
                 and "}" in code_text
-                and ("PEB" in code_text or "struct" in code_text.lower())
             ):
 
                 # Clean and format the struct definition
@@ -1112,7 +1117,7 @@ class Win32PageParser:
         if element.name == "dl":
             # Definition list format
             dts = element.find_all("dt")
-            for dt in dts:
+            for i, dt in enumerate(dts[:50]):  # Limite de 50 elementos
                 dd = dt.find_next_sibling("dd")
                 if dd:
                     member_name = dt.get_text().strip()
@@ -1128,7 +1133,7 @@ class Win32PageParser:
         elif element.name == "table":
             # Table format
             rows = element.find_all("tr")
-            for row in rows[1:]:  # Skip header row
+            for row in rows[1:50]:  # Skip header row, limite de 50 rows
                 cells = row.find_all(["td", "th"])
                 if len(cells) >= 2:
                     name = cells[0].get_text().strip()
@@ -1136,5 +1141,23 @@ class Win32PageParser:
                     members.append(
                         {"name": name, "type": "Unknown", "description": desc}
                     )
+
+        elif element.name == "p":
+            # Paragraph format - parse structured text (PEB style)
+            text = element.get_text().strip()
+            # PEB style: "Reserved1[2]", "BeingDebugged", etc.
+            lines = text.split("\n")
+            for line in lines[:20]:  # Limite de 20 linhas por parágrafo
+                line = line.strip()
+                if line and not line.startswith("//") and len(line) > 2:
+                    # Try to extract member info from line
+                    if "[" in line or line.replace(".", "").replace("_", "").isalnum():
+                        members.append(
+                            {
+                                "name": line.split()[0] if line.split() else line,
+                                "type": "Unknown",
+                                "description": line,
+                            }
+                        )
 
         return members

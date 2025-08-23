@@ -1055,6 +1055,49 @@ WIN32_FUNCTIONS_DB = {
                 "medium",
             ),
         ],
+        "winternl.h": [
+            # === ESTRUTURAS INTERNAS IMPORTANTES ===
+            Win32Function(
+                "PEB",
+                "winternl.h",
+                "ntdll.dll",
+                "winternl",
+                "Process Environment Block structure",
+                "critical",
+            ),
+            Win32Function(
+                "TEB",
+                "winternl.h",
+                "ntdll.dll",
+                "winternl",
+                "Thread Environment Block structure",
+                "critical",
+            ),
+            Win32Function(
+                "PROCESS_BASIC_INFORMATION",
+                "winternl.h",
+                "ntdll.dll",
+                "winternl",
+                "Basic process information structure",
+                "high",
+            ),
+            Win32Function(
+                "PEB_LDR_DATA",
+                "winternl.h",
+                "ntdll.dll",
+                "winternl",
+                "Process loader data structure",
+                "high",
+            ),
+            Win32Function(
+                "LDR_DATA_TABLE_ENTRY",
+                "winternl.h",
+                "ntdll.dll",
+                "winternl",
+                "Module data table entry structure",
+                "high",
+            ),
+        ],
         "winsvc.h": [
             Win32Function(
                 "OpenSCManagerA",
