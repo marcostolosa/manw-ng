@@ -7,6 +7,8 @@ Main scraper class that orchestrates the discovery and parsing process.
 from typing import Dict, Optional, List
 import requests
 import random
+import os
+import time
 from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
@@ -239,33 +241,67 @@ class Win32APIScraper:
 
     def _parse_function_page(self, url: str, status: Optional[Status] = None) -> Dict:
         """
-        Parse Microsoft documentation page with fallback support
+        Parse Microsoft documentation page with fallback support with retry logic
         """
-        try:
-            response = self.session.get(url, timeout=15)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, "html.parser")
-        except Exception as e:
-            # Fallback pt-br → en-us
-            if self.language == "br" and "404" in str(e) and "pt-br" in url:
-                fallback_url = url.replace(
-                    "learn.microsoft.com/pt-br", "learn.microsoft.com/en-us"
-                )
-                if not self.quiet and status:
-                    status.update(
-                        f"[yellow]{self.get_string('fallback_to_english')}:[/yellow] {self._format_url_display(fallback_url)}"
+        timeout = 30 if os.getenv("CI") or os.getenv("GITHUB_ACTIONS") else 15
+        max_retries = 3
+        base_delay = 1
+
+        for attempt in range(max_retries):
+            try:
+                response = self.session.get(url, timeout=timeout)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.content, "html.parser")
+                break  # Success - exit retry loop
+
+            except Exception as e:
+                # Debug apenas em ambiente CI/CD para reduzir noise
+                if (os.getenv("CI") or os.getenv("GITHUB_ACTIONS")) and not self.quiet:
+                    print(
+                        f"🌐 Tentativa {attempt + 1}/{max_retries} - Erro: {str(e)[:80]}"
                     )
-                try:
-                    response = self.session.get(fallback_url, timeout=15)
-                    response.raise_for_status()
-                    soup = BeautifulSoup(response.content, "html.parser")
-                    url = fallback_url
-                except Exception as fallback_e:
-                    # Em vez de raise, retornar None para indicar falha
+
+                # Se não é a última tentativa, aguardar antes de tentar novamente
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2**attempt)  # Exponential backoff
+                    time.sleep(delay)
+                    continue
+
+                # Última tentativa falhou - tentar fallback pt-br → en-us
+                if self.language == "br" and "404" in str(e) and "pt-br" in url:
+                    fallback_url = url.replace(
+                        "learn.microsoft.com/pt-br", "learn.microsoft.com/en-us"
+                    )
+                    if not self.quiet and status:
+                        status.update(
+                            f"[yellow]{self.get_string('fallback_to_english')}:[/yellow] {self._format_url_display(fallback_url)}"
+                        )
+
+                    # Retry no fallback URL também
+                    for fb_attempt in range(max_retries):
+                        try:
+                            response = self.session.get(fallback_url, timeout=timeout)
+                            response.raise_for_status()
+                            soup = BeautifulSoup(response.content, "html.parser")
+                            url = fallback_url
+                            break
+                        except Exception as fallback_e:
+                            if fb_attempt < max_retries - 1:
+                                fb_delay = base_delay * (2**fb_attempt)
+                                time.sleep(fb_delay)
+                                continue
+                            # Debug: Log erro de fallback
+                            if not self.quiet:
+                                print(
+                                    f"🌐 Fallback falhou após {max_retries} tentativas: {str(fallback_e)[:100]}"
+                                )
+                            return None
+                    else:
+                        # Fallback também falhou em todas as tentativas
+                        return None
+                else:
+                    # Não é fallback pt-br e todas as tentativas falharam
                     return None
-            else:
-                # Em vez de raise, retornar None para indicar falha
-                return None
 
         result = self.parser.parse_function_page(soup, url)
         # Adicionar classificação do símbolo após o parsing

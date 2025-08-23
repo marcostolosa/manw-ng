@@ -267,6 +267,14 @@ class Win32TestRunner:
 
             duration = time.time() - start_time
 
+            # Debug apenas em caso de falha e em ambiente CI/CD
+            if not result.get("documentation_found", False) and (
+                os.getenv("CI") or os.getenv("GITHUB_ACTIONS")
+            ):
+                print(f"❌ {function.name}: documentação não encontrada")
+                if result.get("url"):
+                    print(f"   URL: {result.get('url')}")
+
             # Determinar status do teste
             if result.get("documentation_found", False):
                 if self._validate_function_result(result, function):
