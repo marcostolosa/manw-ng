@@ -257,6 +257,10 @@ class Win32URLPatterns:
         "getmodulefilename": "winbase",
         "gettemppath": "winbase",
         "getcomputername": "winbase",
+        # Process environment
+        "getcommandline": "processenv",
+        "getcommandlinea": "processenv",
+        "getcommandlinew": "processenv",
         # RTL functions
         "rtlallocateheap": "ntifs",
         "rtlfreeheap": "ntifs",
@@ -635,6 +639,7 @@ class Win32URLPatterns:
         """
         return [
             "processthreadsapi",
+            "processenv",
             "fileapi",
             "memoryapi",
             "heapapi",
