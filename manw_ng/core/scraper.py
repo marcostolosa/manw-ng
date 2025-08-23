@@ -138,6 +138,18 @@ class Win32APIScraper:
                 except Exception as e:
                     continue
 
+        # Check if function might need A/W suffix before giving up
+        if not function_name.endswith(("A", "W")):
+            # Try with A suffix first (most common)
+            a_suffix_result = self._try_with_suffix(function_name, "A")
+            if a_suffix_result:
+                return a_suffix_result
+
+            # Try with W suffix
+            w_suffix_result = self._try_with_suffix(function_name, "W")
+            if w_suffix_result:
+                return w_suffix_result
+
         # Retornar mensagem de erro quando não encontrar documentação
         if not self.quiet:
             error_msg = self.get_string("function_not_found").format(
@@ -255,6 +267,37 @@ class Win32APIScraper:
         if result:
             result["symbol_type"] = self._classify_symbol_type(result["name"])
         return result
+
+    def _try_with_suffix(self, function_name: str, suffix: str) -> Optional[Dict]:
+        """Try to find function with A or W suffix"""
+        suffixed_name = function_name + suffix
+
+        # Try direct URL first
+        direct_url = self._try_direct_url(suffixed_name)
+        if direct_url:
+            result = self._parse_function_page(direct_url)
+            if result:
+                if not self.quiet:
+                    self.console.print(
+                        f"[green]✓ Found with '{suffix}' suffix:[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
+                    )
+                return result
+
+        # Try discovery system
+        search_results = self.discovery_engine.discover_function_urls(suffixed_name)
+        for url in search_results:
+            try:
+                result = self._parse_function_page(url)
+                if result:
+                    if not self.quiet:
+                        self.console.print(
+                            f"[green]✓ Found with '{suffix}' suffix:[/green] [dim]{self._format_url_display(url)}[/dim]"
+                        )
+                    return result
+            except Exception:
+                continue
+
+        return None
 
     def _format_url_display(self, url: str) -> str:
         """Format URL for clean display"""

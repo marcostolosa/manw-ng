@@ -437,7 +437,10 @@ class Win32PageParser:
                     }
 
                 elif next_elem.name == "dd" and current_param.get("name"):
-                    current_param["description"] = next_elem.get_text().strip()
+                    desc_text = next_elem.get_text().strip()
+                    current_param["description"] = self._clean_description_text(
+                        desc_text
+                    )
 
                 next_elem = next_elem.find_next_sibling()
 
@@ -549,7 +552,7 @@ class Win32PageParser:
                     else ""
                 )
                 meaning = (
-                    cells[meaning_idx].get_text().strip()
+                    self._clean_description_text(cells[meaning_idx].get_text().strip())
                     if meaning_idx < len(cells)
                     else ""
                 )
@@ -875,7 +878,8 @@ class Win32PageParser:
 
         if description_parts:
             # Join with proper spacing, preserving paragraph breaks
-            return " ".join(description_parts)
+            full_description = " ".join(description_parts)
+            return self._clean_description_text(full_description)
 
         # Fallback: try to get any content near the title
         return self._extract_description_fallback(soup)
@@ -1215,3 +1219,17 @@ class Win32PageParser:
                 )
 
         return members
+
+    def _clean_description_text(self, text: str) -> str:
+        """
+        Clean description text by removing excessive whitespace and newlines
+        """
+        if not text:
+            return ""
+
+        # Remove excessive newlines and whitespace
+        text = re.sub(r"\n\s*\n", " ", text)  # Replace \n\n with single space
+        text = re.sub(r"\s+", " ", text)  # Replace multiple spaces with single space
+        text = text.strip()
+
+        return text

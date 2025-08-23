@@ -82,6 +82,15 @@ class RichFormatter:
 
     def format_output(self, function_info: Dict) -> None:
         """Format and display symbol information using Rich (adaptado para diferentes tipos)"""
+
+        # Check if function was found
+        if (
+            not function_info.get("documentation_found")
+            or function_info.get("documentation_found") == "False"
+        ):
+            self._show_not_found_error(function_info["name"])
+            return
+
         # Get symbol classification info
         symbol_info = function_info.get("symbol_info")
         if symbol_info:
@@ -461,6 +470,60 @@ class RichFormatter:
         )
 
         return highlighted
+
+    def _show_not_found_error(self, function_name: str) -> None:
+        """Show elegant error message when function is not found"""
+        error_messages = {
+            "us": {
+                "title": "Function Not Found",
+                "message": f"The Win32 API function [bold red]'{function_name}'[/bold red] could not be found in Microsoft documentation.",
+                "suggestions": [
+                    "• Verify the function name spelling",
+                    "• Check if the function requires A/W suffix (e.g., CreateFileA/CreateFileW)",
+                    "• Some deprecated functions may not be documented",
+                    "• Try searching for similar function names",
+                ],
+            },
+            "br": {
+                "title": "Função Não Encontrada",
+                "message": f"A função Win32 API [bold red]'{function_name}'[/bold red] não foi encontrada na documentação da Microsoft.",
+                "suggestions": [
+                    "• Verifique a ortografia do nome da função",
+                    "• Verifique se a função requer sufixo A/W (ex: CreateFileA/CreateFileW)",
+                    "• Algumas funções obsoletas podem não estar documentadas",
+                    "• Tente buscar por nomes de funções similares",
+                ],
+            },
+        }
+
+        lang_messages = error_messages.get(self.language, error_messages["us"])
+
+        # Main error panel
+        self.console.print()
+        self.console.print(
+            Panel(
+                lang_messages["message"],
+                title=f"[bold red]❌ {lang_messages['title']}[/bold red]",
+                border_style="red",
+                padding=(1, 2),
+            )
+        )
+
+        # Suggestions panel
+        suggestions_text = "\n".join(lang_messages["suggestions"])
+        self.console.print(
+            Panel(
+                suggestions_text,
+                title=(
+                    "[bold yellow]💡 Suggestions[/bold yellow]"
+                    if self.language == "us"
+                    else "[bold yellow]💡 Sugestões[/bold yellow]"
+                ),
+                border_style="yellow",
+                padding=(1, 2),
+            )
+        )
+        self.console.print()
 
 
 class JSONFormatter:
