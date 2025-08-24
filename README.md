@@ -24,12 +24,6 @@ cd manw-ng
 pip install -r requirements.txt
 ```
 
-### Dependencies
-
-```bash
-pip install requests beautifulsoup4 rich lxml
-```
-
 ## Usage
 
 ### Basic Examples
@@ -79,28 +73,6 @@ options:
   --version            show version number and exit
 ```
 
-## Supported APIs
-
-### Win32 API Functions
-- Process Management: `CreateProcess`, `OpenProcess`, `TerminateProcess`
-- Memory Management: `VirtualAlloc`, `VirtualFree`, `HeapAlloc`
-- File Operations: `CreateFile`, `ReadFile`, `WriteFile`
-- Registry: `RegOpenKeyEx`, `RegCreateKey`, `RegSetValueEx`
-- Networking: `WSAStartup`, `socket`, `connect`
-- Window Management: `CreateWindow`, `FindWindow`, `MessageBox`
-
-### Native API Functions
-- Memory Management: `NtAllocateVirtualMemory`, `NtFreeVirtualMemory`
-- Process/Thread: `NtCreateProcess`, `NtOpenProcess`
-- File System: `NtCreateFile`, `NtReadFile`, `NtWriteFile`
-- Registry: `NtCreateKey`, `NtOpenKey`, `NtSetValueKey`
-- RTL Functions: `RtlAllocateHeap`, `RtlInitUnicodeString`
-
-### UI & Graphics Functions
-- GDI: `GetStockObject`, `DeleteDC`, `BitBlt`, `TextOut`
-- Controls: `CreateToolbarEx`, `ListView_*`, `TreeView_*`
-- Drawing: `DrawText`, `Rectangle`, `CreatePen`
-
 ## Architecture
 
 ```
@@ -111,39 +83,6 @@ manw-ng/
 │   └── utils/          # URL generation and HTTP handling
 ├── tests/              # Test suite
 └── .github/workflows/  # CI/CD pipelines
-```
-
-## Technical Details
-
-### URL Discovery System
-- **Pattern Matching**: Regex-based function-to-header mapping
-- **DDI Priority**: Native API functions prioritize WDK/DDI documentation
-- **Fallback Mechanism**: Multiple URL patterns tested sequentially
-
-### Rate Limiting
-- **User Agent Rotation**: 22 different user agents across platforms
-- **Request Delays**: Randomized 0.3-0.8s delays between requests
-- **Exponential Backoff**: Smart handling of HTTP 429 responses
-
-### Error Handling
-- **Graceful Degradation**: Rich → Markdown → JSON output fallbacks
-- **URL-based Parsing**: Function name extraction from URLs when HTML fails
-- **Empty Content Detection**: Robust handling of blocked or empty pages
-
-## Development
-
-### Running Tests
-```bash
-python -m pytest tests/
-```
-
-### Code Style
-```bash
-# Format code
-black manw_ng/
-
-# Lint
-flake8 manw_ng/
 ```
 
 ## Contributing
@@ -160,7 +99,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Related Projects
 
-- [manw](https://github.com/leandrofroes/manw) - Original MANW tool
 - [WinAPIOverride](http://jacquelin.potier.free.fr/winapioverride32/) - API monitoring
 - [API Monitor](http://www.rohitab.com/apimonitor) - API hooking tool
 
