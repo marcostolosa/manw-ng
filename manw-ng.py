@@ -33,7 +33,7 @@ from rich.console import Console
 from manw_ng.utils.dll_map import detect_dll
 
 # Configure console for Windows compatibility
-console = Console(force_terminal=True, legacy_windows=False, width=100)
+console = Console(force_terminal=True, legacy_windows=True, width=100)
 
 
 def validate_function_name(value: str) -> str:
@@ -127,11 +127,16 @@ Examples:
             try:
                 formatter = RichFormatter(language=args.language, show_remarks=args.obs)
                 formatter.format_output(function_info)
-            except Exception as e:
-                # Fallback para markdown se Rich falhar no Windows
-                print("Rich output failed, using markdown fallback:")
+            except (UnicodeEncodeError, UnicodeError) as e:
+                # Fallback específico para problemas de Unicode no Windows
+                print("Unicode encoding error, using markdown fallback:")
                 formatter = MarkdownFormatter()
-                print(formatter.format_output(function_info))
+                print(formatter.format_output(function_info, language=args.language))
+            except Exception as e:
+                # Outros erros - debug
+                console.print(f"[red]Rich formatter error: {e}[/red]")
+                formatter = MarkdownFormatter()
+                print(formatter.format_output(function_info, language=args.language))
         elif args.output == "json":
             formatter = JSONFormatter()
             print(formatter.format_output(function_info, show_remarks=args.obs))

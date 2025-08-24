@@ -18,15 +18,29 @@ class RichFormatter:
     """Rich console formatter for beautiful terminal output"""
 
     def __init__(self, language="us", show_remarks=False):
-        self.console = Console(
-            force_terminal=True,
-            legacy_windows=True,  # Enable Windows compatibility
-            # Remove width fixo para se adaptar ao terminal
-            color_system="truecolor",  # Force true color support
-        )
+        import sys
+
+        # Configure console for maximum Windows compatibility
+        console_config = {
+            "force_terminal": True,
+            "legacy_windows": True,
+            "color_system": "auto",  # Let Rich auto-detect
+        }
+
+        # Add Windows-specific safe encoding
+        if sys.platform.startswith("win"):
+            console_config.update(
+                {"file": sys.stdout, "stderr": False, "force_jupyter": False}
+            )
+
+        self.console = Console(**console_config)
         self.language = language
         self.show_remarks = show_remarks
         self.classifier = Win32SymbolClassifier()
+
+        # Elegant Unicode symbols
+        self.cross_mark = "❌"
+        self.lightbulb = "💡"
 
         # Localized strings
         self.strings = {
@@ -88,7 +102,7 @@ class RichFormatter:
             not function_info.get("documentation_found")
             or function_info.get("documentation_found") == "False"
         ):
-            self._show_not_found_error(function_info["name"])
+            self._show_not_found_error(function_info.get("function_name", "Unknown"))
             return
 
         # Get symbol classification info
@@ -503,7 +517,7 @@ class RichFormatter:
         self.console.print(
             Panel(
                 lang_messages["message"],
-                title=f"[bold red]❌ {lang_messages['title']}[/bold red]",
+                title=f"[bold red]{self.cross_mark} {lang_messages['title']}[/bold red]",
                 border_style="red",
                 padding=(1, 2),
             )
@@ -515,9 +529,9 @@ class RichFormatter:
             Panel(
                 suggestions_text,
                 title=(
-                    "[bold yellow]💡 Suggestions[/bold yellow]"
+                    f"[bold yellow]{self.lightbulb} Suggestions[/bold yellow]"
                     if self.language == "us"
-                    else "[bold yellow]💡 Sugestões[/bold yellow]"
+                    else f"[bold yellow]{self.lightbulb} Sugestões[/bold yellow]"
                 ),
                 border_style="yellow",
                 padding=(1, 2),
@@ -570,6 +584,34 @@ class MarkdownFormatter:
         function_info: Dict, language: str = "br", show_remarks: bool = False
     ) -> str:
         """Format function information as Markdown"""
+
+        # Check if function was found
+        if (
+            not function_info.get("documentation_found")
+            or function_info.get("documentation_found") == "False"
+        ):
+            function_name = function_info.get("function_name", "Unknown")
+            if language == "br":
+                return f"""# Função Não Encontrada
+
+A função Win32 API '{function_name}' não foi encontrada na documentação da Microsoft.
+
+## Sugestões
+- Verifique a ortografia do nome da função
+- Verifique se a função requer sufixo A/W (ex: CreateFileA/CreateFileW)
+- Algumas funções obsoletas podem não estar documentadas
+- Tente buscar por nomes de funções similares"""
+            else:
+                return f"""# Function Not Found
+
+The Win32 API function '{function_name}' could not be found in Microsoft documentation.
+
+## Suggestions
+- Verify the function name spelling
+- Check if the function requires A/W suffix (e.g., CreateFileA/CreateFileW)
+- Some deprecated functions may not be documented
+- Try searching for similar function names"""
+
         md_content = f"""# {function_info['name']}
 
 ## Informações Básicas

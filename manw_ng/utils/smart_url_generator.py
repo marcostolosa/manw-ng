@@ -174,7 +174,7 @@ class SmartURLGenerator:
             # Network
             r".*socket.*": ["winsock2"],
             r"ws.*": ["winsock2"],
-            r"inet.*": ["wininet"],
+            r"internet.*": ["wininet"],
             r"net.*": ["lmaccess", "lmserver"],
             # Security/Crypto/ACL
             r"cert.*": ["wincrypt"],

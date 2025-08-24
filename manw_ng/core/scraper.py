@@ -58,8 +58,15 @@ class Win32APIScraper:
         # Initialize modules
         # Initialize smart URL generator
         self.parser = Win32PageParser()
-        self.console = Console()
+        # Windows-safe console configuration
+        self.console = Console(
+            force_terminal=True, legacy_windows=True, color_system="truecolor"
+        )
         self.smart_generator = SmartURLGenerator()
+
+        # Elegant Unicode characters
+        self.check_mark = "✓"
+        self.arrow = "→"
         self.catalog = get_catalog()
 
         # Localized strings
@@ -129,7 +136,7 @@ class Win32APIScraper:
                         if result and result.get("documentation_found"):
                             status.stop()
                             self.console.print(
-                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(found_url)}[/green]"
+                                f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(found_url)}[/green]"
                             )
                             return result
 
@@ -158,7 +165,7 @@ class Win32APIScraper:
                     if result:
                         status.stop()
                         self.console.print(
-                            f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(catalog_url)}[/green]"
+                            f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(catalog_url)}[/green]"
                         )
                         return result
                     status.update(
@@ -179,7 +186,7 @@ class Win32APIScraper:
                     if result:
                         status.stop()
                         self.console.print(
-                            f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(direct_url)}[/green]"
+                            f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(direct_url)}[/green]"
                         )
                         return result
                     status.update(
@@ -217,14 +224,14 @@ class Win32APIScraper:
                 for i, url in enumerate(search_results, 1):
                     try:
                         status.update(
-                            f"[cyan]•[/cyan] [bold]{function_name}[/bold] [dim]({i}/{len(search_results)})[/dim] → [blue]{self._format_url_display(url)}[/blue]"
+                            f"[cyan]•[/cyan] [bold]{function_name}[/bold] [dim]({i}/{len(search_results)})[/dim] {self.arrow} [blue]{self._format_url_display(url)}[/blue]"
                         )
                         result = self._parse_function_page(url, status)
 
                         if result:  # Se resultado válido
                             status.stop()
                             self.console.print(
-                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(url)}[/green]"
+                                f"[green]OK[/green] [bold]{function_name}[/bold] -> [green]{self._format_url_display(url)}[/green]"
                             )
                             return result
 
@@ -240,7 +247,7 @@ class Win32APIScraper:
                     if result:  # Se resultado válido
                         if not self.quiet:
                             self.console.print(
-                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(url)}[/green]"
+                                f"[green]OK[/green] [bold]{function_name}[/bold] -> [green]{self._format_url_display(url)}[/green]"
                             )
                         return result
                 except Exception as e:
@@ -289,7 +296,7 @@ class Win32APIScraper:
             if base_result and base_result.get("documentation_found"):
                 if not self.quiet:
                     self.console.print(
-                        f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(base_result['url'])}[/green]"
+                        f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(base_result['url'])}[/green]"
                     )
                 return base_result
 
@@ -439,7 +446,7 @@ class Win32APIScraper:
             if result:
                 if not self.quiet:
                     self.console.print(
-                        f"[green]✓ Found with '{suffix}' suffix:[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
+                        f"[green]{self.check_mark} Found with '{suffix}' suffix:[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
                     )
                 return result
 
