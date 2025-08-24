@@ -1,4 +1,5 @@
 """Asynchronous HTTP client with caching, proxy and user-agent rotation support."""
+
 from __future__ import annotations
 
 import aiohttp
@@ -8,7 +9,7 @@ import random
 from pathlib import Path
 from typing import Iterable, Optional
 
-from .url_verifier import USER_AGENTS
+from .smart_url_generator import SmartURLGenerator
 
 
 class HTTPClient:
@@ -23,7 +24,11 @@ class HTTPClient:
     ) -> None:
         self.proxies = list(proxies) if proxies else []
         self.rotate_user_agent = rotate_user_agent
-        self.user_agent = user_agent or random.choice(USER_AGENTS)
+        if user_agent is None:
+            temp_generator = SmartURLGenerator()
+            self.user_agent = temp_generator.user_agents[0]
+        else:
+            self.user_agent = user_agent
         self.semaphore = asyncio.Semaphore(rate_limit)
         self.cache_dir = Path(".cache")
         self.cache_dir.mkdir(exist_ok=True)
@@ -47,7 +52,9 @@ class HTTPClient:
 
         async with self.semaphore:
             async with aiohttp.ClientSession() as session:
-                async with session.request(method, url, params=params, proxy=proxy, headers=headers) as resp:
+                async with session.request(
+                    method, url, params=params, proxy=proxy, headers=headers
+                ) as resp:
                     resp.raise_for_status()
                     if return_json:
                         return await resp.json()
@@ -62,4 +69,3 @@ class HTTPClient:
 
     def post(self, url: str, **kwargs):
         return asyncio.run(self._request("POST", url, **kwargs))
-

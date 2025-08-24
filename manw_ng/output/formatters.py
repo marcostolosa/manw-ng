@@ -530,7 +530,7 @@ class JSONFormatter:
     """JSON formatter for machine-readable output"""
 
     @staticmethod
-    def format_output(function_info: Dict) -> str:
+    def format_output(function_info: Dict, show_remarks: bool = False) -> str:
         """Format function information as JSON"""
         # Convert SymbolInfo objects to dict for JSON serialization
         json_compatible = JSONFormatter._make_json_serializable(function_info)

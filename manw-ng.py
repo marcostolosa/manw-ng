@@ -90,7 +90,7 @@ Examples:
         dest="user_agent",
         help="User-Agent personalizado para as requisições (padrão: aleatório)",
     )
-    parser.add_argument("--version", action="version", version="MANW-NG 3.1")
+    parser.add_argument("--version", action="version", version="MANW-NG 3.2.0")
 
     args = parser.parse_args()
 
@@ -134,7 +134,7 @@ Examples:
                 print(formatter.format_output(function_info))
         elif args.output == "json":
             formatter = JSONFormatter()
-            print(formatter.format_output(function_info))
+            print(formatter.format_output(function_info, show_remarks=args.obs))
         elif args.output == "markdown":
             formatter = MarkdownFormatter()
             print(

@@ -12,10 +12,8 @@ from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
 
-from ..discovery.engine import Win32DiscoveryEngine
 from ..core.parser import Win32PageParser
 from ..utils.complete_win32_api_mapping import get_function_url_fast
-from ..utils.url_verifier import USER_AGENTS
 from ..utils.smart_url_generator import SmartURLGenerator
 from ..utils.catalog_integration import get_catalog
 from ..utils.http_client import HTTPClient
@@ -44,7 +42,9 @@ class Win32APIScraper:
             self.base_url = "https://learn.microsoft.com/en-us"
 
         if user_agent is None:
-            user_agent = random.choice(USER_AGENTS)
+            # Use the smart generator's user agent system
+            temp_generator = SmartURLGenerator()
+            user_agent = temp_generator.user_agents[0]
 
         # Async HTTP client with caching and rotation support
         self.http = HTTPClient(
@@ -56,9 +56,7 @@ class Win32APIScraper:
         self.user_agent = user_agent
 
         # Initialize modules
-        self.discovery_engine = Win32DiscoveryEngine(
-            self.base_url, self.http, quiet, user_agent
-        )
+        # Initialize smart URL generator
         self.parser = Win32PageParser()
         self.console = Console()
         self.smart_generator = SmartURLGenerator()
@@ -100,9 +98,53 @@ class Win32APIScraper:
         """
 
         if not self.quiet:
-            # PRIORITY 1: Try catalog lookup first (fastest)
+            # PRIORITY 1: Smart URL Testing with intelligent patterns
+            try:
+                with Status(
+                    f"[cyan]1/3[/cyan] Testando padrões inteligentes para [bold]{function_name}[/bold]...",
+                    console=self.console,
+                ) as status:
+                    # Use the SMART synchronous method with maximum concurrency
+                    dll_name = getattr(self, "_current_function_dll", None)
+
+                    def progress(done: int, total: int) -> None:
+                        status.update(
+                            f"[cyan]1/3[/cyan] Testando URLs ({done}/{total})..."
+                        )
+
+                    found_url = asyncio.run(
+                        self.smart_generator.find_valid_url_async(
+                            function_name,
+                            dll_name,
+                            self.base_url,
+                            progress_callback=progress,
+                        )
+                    )
+
+                    if found_url:
+                        status.update(
+                            f"[green]1/3[/green] URL encontrada: [blue]{self._format_url_display(found_url)}[/blue]"
+                        )
+                        result = self._parse_function_page(found_url)
+                        if result and result.get("documentation_found"):
+                            status.stop()
+                            self.console.print(
+                                f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(found_url)}[/green]"
+                            )
+                            return result
+
+                    status.update(
+                        f"[yellow]1/3[/yellow] ULTRA-FAST: Nenhuma URL encontrada nos padrões conhecidos"
+                    )
+            except Exception as e:
+                pass  # Silently continue to next priority
+                import traceback
+
+                traceback.print_exc()
+
+            # PRIORITY 2: Try catalog lookup (backup)
             with Status(
-                f"[cyan]1/4[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
+                f"[cyan]2/3[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
                 console=self.console,
             ) as status:
                 catalog_url = self.catalog.get_function_url(
@@ -110,7 +152,7 @@ class Win32APIScraper:
                 )
                 if catalog_url:
                     status.update(
-                        f"[cyan]1/4[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
+                        f"[cyan]2/3[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
                     )
                     result = self._parse_function_page(catalog_url)
                     if result:
@@ -120,18 +162,18 @@ class Win32APIScraper:
                         )
                         return result
                     status.update(
-                        f"[yellow]1/4[/yellow] Catálogo não retornou resultado válido"
+                        f"[yellow]2/3[/yellow] Catálogo não retornou resultado válido"
                     )
 
-            # PRIORITY 2: Use direct mapping
+            # PRIORITY 3: Use direct mapping (final backup)
             with Status(
-                f"[cyan]2/4[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
+                f"[cyan]3/3[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
                 console=self.console,
             ) as status:
                 direct_url = self._try_direct_url(function_name)
                 if direct_url:
                     status.update(
-                        f"[cyan]2/4[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
+                        f"[cyan]3/3[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
                     )
                     result = self._parse_function_page(direct_url)
                     if result:
@@ -141,46 +183,8 @@ class Win32APIScraper:
                         )
                         return result
                     status.update(
-                        f"[yellow]2/4[/yellow] Mapeamento direto não funcionou"
+                        f"[yellow]3/3[/yellow] Mapeamento direto não funcionou"
                     )
-
-            # PRIORITY 3: ULTRA-FAST Smart URL Testing (ALL patterns simultaneously!)
-            with Status(
-                f"[cyan]3/4[/cyan] Testando TODAS as URLs possíveis para [bold]{function_name}[/bold]...",
-                console=self.console,
-            ) as status:
-                # Use the SMART synchronous method with maximum concurrency
-                dll_name = getattr(self, "_current_function_dll", None)
-
-                def progress(done: int, total: int) -> None:
-                    status.update(
-                        f"[cyan]3/4[/cyan] Testando URLs ({done}/{total})..."
-                    )
-
-                found_url = asyncio.run(
-                    self.smart_generator.find_valid_url_async(
-                        function_name,
-                        dll_name,
-                        self.base_url,
-                        progress_callback=progress,
-                    )
-                )
-
-                if found_url:
-                    status.update(
-                        f"[green]3/4[/green] URL encontrada: [blue]{self._format_url_display(found_url)}[/blue]"
-                    )
-                    result = self._parse_function_page(found_url)
-                    if result and result.get("documentation_found"):
-                        status.stop()
-                        self.console.print(
-                            f"[green]✓[/green] [bold]{function_name}[/bold] → [green]{self._format_url_display(found_url)}[/green]"
-                        )
-                        return result
-
-                status.update(
-                    f"[yellow]3/4[/yellow] Nenhuma URL encontrada nos padrões conhecidos"
-                )
 
             search_results = []  # No discovery engine
         else:
@@ -242,16 +246,16 @@ class Win32APIScraper:
                 except Exception as e:
                     continue
 
-        # PRIORITY 4: Handle A/W suffix variations before giving up
+        # FINAL: Handle A/W suffix variations before giving up
         if not function_name.endswith(("A", "W")):
             if not self.quiet:
                 with Status(
-                    f"[cyan]4/4[/cyan] Testando sufixos A/W para [bold]{function_name}[/bold]...",
+                    f"[cyan]FINAL[/cyan] Testando sufixos A/W para [bold]{function_name}[/bold]...",
                     console=self.console,
                 ) as status:
                     # Try with A suffix first (most common)
                     status.update(
-                        f"[cyan]4/4[/cyan] Tentando [bold]{function_name}A[/bold]..."
+                        f"[cyan]FINAL[/cyan] Tentando [bold]{function_name}A[/bold]..."
                     )
                     a_suffix_result = self._try_with_suffix(function_name, "A")
                     if a_suffix_result:
@@ -260,15 +264,13 @@ class Win32APIScraper:
 
                     # Try with W suffix
                     status.update(
-                        f"[cyan]4/4[/cyan] Tentando [bold]{function_name}W[/bold]..."
+                        f"[cyan]FINAL[/cyan] Tentando [bold]{function_name}W[/bold]..."
                     )
                     w_suffix_result = self._try_with_suffix(function_name, "W")
                     if w_suffix_result:
                         status.stop()
                         return w_suffix_result
-                    status.update(
-                        f"[red]4/4[/red] Sufixos A/W também falharam"
-                    )
+                    status.update(f"[red]FINAL[/red] Sufixos A/W também falharam")
             else:
                 # Silent mode
                 a_suffix_result = self._try_with_suffix(function_name, "A")
@@ -296,7 +298,7 @@ class Win32APIScraper:
             error_msg = self.get_string("function_not_found").format(
                 function_name=function_name
             )
-            self.console.print(f"[red]✗ {error_msg}[/red]")
+            self.console.print(f"[red]X {error_msg}[/red]")
             if search_results:
                 self.console.print(f"[dim]URLs testados:[/dim]")
                 for i, url in enumerate(search_results, 1):
@@ -441,21 +443,12 @@ class Win32APIScraper:
                     )
                 return result
 
-        # Try discovery system
-        search_results = self.discovery_engine.discover_function_urls(suffixed_name)
-        for url in search_results:
-            try:
-                result = self._parse_function_page(url)
-                if result:
-                    if not self.quiet:
-                        self.console.print(
-                            f"[green]✓ Found with '{suffix}' suffix:[/green] [dim]{self._format_url_display(url)}[/dim]"
-                        )
-                    return result
-            except Exception:
-                continue
-
-        return None
+        # Suffixed functions should be caught by smart pattern system
+        # Return empty result since all patterns are already tested
+        return {
+            "documentation_found": False,
+            "function_name": suffixed_name,
+        }
 
     def _format_url_display(self, url: str) -> str:
         """Format URL for clean display"""
@@ -470,10 +463,8 @@ class Win32APIScraper:
 
     def close(self):
         """Close the underlying HTTP session and related resources."""
-        try:
-            self.discovery_engine.close()
-        finally:
-            self.session.close()
+        # Close HTTP session
+        self.http.close() if hasattr(self.http, "close") else None
 
     def __enter__(self):
         return self

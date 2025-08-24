@@ -11,6 +11,7 @@ import asyncio
 import aiohttp
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+import random
 
 
 class SmartURLGenerator:
@@ -19,6 +20,58 @@ class SmartURLGenerator:
     """
 
     def __init__(self):
+        # Pool of diverse user agents for rate limiting bypass
+        self.user_agents = [
+            # Chrome on Windows 10/11
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+            # Firefox on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:118.0) Gecko/20100101 Firefox/118.0",
+            # Edge on Windows
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0",
+            # Chrome on macOS
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            # Safari on macOS
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
+            # Firefox on macOS
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0",
+            # Chrome on Linux
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            # Firefox on Linux
+            "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
+            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
+            # Mobile Chrome (Android)
+            "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
+            "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
+            # Mobile Safari (iOS)
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+            "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+        ]
+
+        # Additional headers to make requests more realistic
+        self.additional_headers = [
+            {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+            },
+            {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+            },
+            {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+            },
+        ]
+
+        # Request counter for user agent rotation
+        self._request_counter = 0
+
         # Mapeamento DLL -> Headers mais prováveis (baseado na análise)
         self.dll_to_headers = {
             "kernel32.dll": [
@@ -39,6 +92,8 @@ class SmartURLGenerator:
             ],
             "user32.dll": ["winuser"],
             "gdi32.dll": ["wingdi"],
+            "comctl32.dll": ["commctrl"],
+            "uxtheme.dll": ["uxtheme"],
             "advapi32.dll": [
                 "aclapi",
                 "securitybaseapi",
@@ -99,6 +154,7 @@ class SmartURLGenerator:
             r"write.*file": ["fileapi", "ioapiset"],
             r"get.*drives.*": ["fileapi"],
             r"get.*logical.*drives": ["fileapi"],
+            r"get.*command.*line": ["processenv"],
             # Memory operations
             r"virtual.*": ["memoryapi"],
             r"heap.*": ["heapapi"],
@@ -136,6 +192,21 @@ class SmartURLGenerator:
             r"load.*": ["libloaderapi"],
             r"get.*module.*": ["libloaderapi"],
             r".*library.*": ["libloaderapi"],
+            # UI Controls (CommCtrl)
+            r".*toolbar.*": ["commctrl"],
+            r".*listview.*": ["commctrl"],
+            r".*treeview.*": ["commctrl"],
+            r".*tab.*": ["commctrl"],
+            r".*button.*": ["commctrl"],
+            r".*edit.*": ["commctrl"],
+            r".*combo.*": ["commctrl"],
+            r"create.*window.*": ["winuser"],
+            # More GDI functions
+            r".*stock.*": ["wingdi"],
+            r"delete.*": ["wingdi", "fileapi"],
+            r".*dc.*": ["wingdi"],
+            r".*brush.*": ["wingdi"],
+            r".*font.*": ["wingdi"],
         }
 
     def generate_possible_urls(
@@ -249,6 +320,147 @@ class SmartURLGenerator:
 
         return unique_urls
 
+    def generate_all_possible_urls(
+        self, function_name: str, base_url: str = "https://learn.microsoft.com/en-us"
+    ) -> List[Tuple[str, str, str]]:
+        """Generate ALL possible URLs for Elite coverage (URL, locale, area)"""
+        urls = []
+        symbol_lower = function_name.lower()
+
+        # INTELLIGENT HEADER PRIORITY: Use patterns first, then fallback to common headers
+        pattern_headers = []
+        for pattern, pattern_header_list in self.function_patterns.items():
+            if re.match(pattern, symbol_lower):
+                pattern_headers.extend(pattern_header_list)
+
+        # Remove duplicates while preserving order
+        intelligent_headers = []
+        seen = set()
+        for header in pattern_headers:
+            if header not in seen:
+                intelligent_headers.append(header)
+                seen.add(header)
+
+        # Common headers to try (PRIORITIZED for better coverage)
+        common_headers = [
+            # HIGH PRIORITY - Most common UI/System functions
+            "wingdi",
+            "winuser",
+            "commctrl",
+            "fileapi",
+            "memoryapi",
+            "processthreadsapi",
+            "processenv",
+            # MEDIUM PRIORITY - Network/Security/Registry
+            "wininet",
+            "winsock2",
+            "winreg",
+            "wincrypt",
+            "shellapi",
+            "aclapi",
+            # LOW PRIORITY - Specialized functions
+            "consoleapi",
+            "libloaderapi",
+            "synchapi",
+            "sysinfoapi",
+            "errhandlingapi",
+            "securitybaseapi",
+            "winsvc",
+            "psapi",
+            "uxtheme",
+            "dwmapi",
+            "powrprof",
+            "setupapi",
+            "cfgmgr32",
+            "heapapi",
+        ]
+
+        # Combine: intelligent headers FIRST, then common headers as fallback
+        all_headers = intelligent_headers + [h for h in common_headers if h not in seen]
+
+        # WDK/DDI headers
+        ddi_headers = ["ntifs", "ntddk", "wdm", "winternl", "ntdef"]
+
+        # Both locales
+        locales = ["pt-br", "en-us"] if "/pt-br" in base_url else ["en-us", "pt-br"]
+
+        for locale in locales:
+            # Try Win32 SDK patterns - INTELLIGENT HEADERS FIRST!
+            for header in all_headers:
+                base_api_url = (
+                    f"https://learn.microsoft.com/{locale}/windows/win32/api/{header}"
+                )
+
+                # Function patterns
+                urls.append(
+                    (f"{base_api_url}/nf-{header}-{symbol_lower}", locale, "SDK")
+                )
+                urls.append(
+                    (f"{base_api_url}/nf-{header}-{symbol_lower}a", locale, "SDK")
+                )
+                urls.append(
+                    (f"{base_api_url}/nf-{header}-{symbol_lower}w", locale, "SDK")
+                )
+
+                # Struct patterns
+                urls.append(
+                    (f"{base_api_url}/ns-{header}-{symbol_lower}", locale, "SDK")
+                )
+
+                # Enum patterns
+                urls.append(
+                    (f"{base_api_url}/ne-{header}-{symbol_lower}", locale, "SDK")
+                )
+
+                # Interface patterns
+                urls.append(
+                    (f"{base_api_url}/nn-{header}-{symbol_lower}", locale, "SDK")
+                )
+
+            # Try WDK/DDI patterns for Native API
+            for header in ddi_headers:
+                base_ddi_url = f"https://learn.microsoft.com/{locale}/windows-hardware/drivers/ddi/{header}"
+
+                urls.append(
+                    (f"{base_ddi_url}/nf-{header}-{symbol_lower}", locale, "DDI")
+                )
+                urls.append(
+                    (f"{base_ddi_url}/ns-{header}-{symbol_lower}", locale, "DDI")
+                )
+                urls.append(
+                    (f"{base_ddi_url}/ne-{header}-{symbol_lower}", locale, "DDI")
+                )
+
+        return urls
+
+    def get_random_headers(self) -> Dict[str, str]:
+        """Get random User-Agent and additional headers to bypass rate limiting"""
+        # Rotate through user agents for each request
+        user_agent = self.user_agents[self._request_counter % len(self.user_agents)]
+        additional = random.choice(self.additional_headers)
+        self._request_counter += 1
+
+        headers = {
+            "User-Agent": user_agent,
+            **additional,
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "DNT": "1",
+            "Connection": "keep-alive",
+            "Upgrade-Insecure-Requests": "1",
+        }
+
+        # Randomly add some optional headers to appear more human
+        if random.random() < 0.5:
+            headers["Sec-Fetch-Dest"] = "document"
+            headers["Sec-Fetch-Mode"] = "navigate"
+            headers["Sec-Fetch-Site"] = "none"
+
+        if random.random() < 0.3:
+            headers["Cache-Control"] = "max-age=0"
+
+        return headers
+
     async def find_valid_url_async(
         self,
         function_name: str,
@@ -258,23 +470,95 @@ class SmartURLGenerator:
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """
-        ULTRA-FAST async method that tests ALL possible URLs simultaneously!
+        SMART async method that tests URLs sequentially to avoid rate limiting
         Returns the FIRST valid URL found or None if function doesn't exist.
         """
-        # Generate ALL possible URLs
-        all_urls = self.generate_possible_urls(function_name, dll_name, base_url)
+        # Generate ALL possible URLs using Elite system
+        all_url_tuples = self.generate_all_possible_urls(function_name, base_url)
 
-        # Test ALL URLs concurrently with maximum speed
+        # Special prioritization for Native API functions (Nt*, Zw*, Rtl*)
+        if function_name.lower().startswith(("nt", "zw", "rtl")):
+            # Prioritize DDI URLs first for Native API functions
+            ddi_urls = [
+                url_tuple for url_tuple in all_url_tuples if url_tuple[2] == "DDI"
+            ]
+            sdk_urls = [
+                url_tuple for url_tuple in all_url_tuples if url_tuple[2] == "SDK"
+            ]
+            prioritized_urls = ddi_urls + sdk_urls
+            all_urls = [
+                url_tuple[0] for url_tuple in prioritized_urls[:50]
+            ]  # More URLs for Nt functions
+        else:
+            all_urls = [
+                url_tuple[0] for url_tuple in all_url_tuples[:30]
+            ]  # Limit to top 30 for speed
+
+        # Test URLs SEQUENTIALLY to avoid rate limiting
         if session:
-            return await self._test_urls_async(all_urls, session, progress_callback)
+            return await self._test_urls_sequential(
+                all_urls, session, progress_callback
+            )
         else:
             # Create temporary session
-            connector = aiohttp.TCPConnector(limit=100, limit_per_host=50)
-            timeout = aiohttp.ClientTimeout(total=5)  # Super fast timeout
+            connector = aiohttp.TCPConnector(limit=1, limit_per_host=1)
+            timeout = aiohttp.ClientTimeout(total=10)
             async with aiohttp.ClientSession(
                 connector=connector, timeout=timeout
             ) as temp_session:
-                return await self._test_urls_async(all_urls, temp_session, progress_callback)
+                return await self._test_urls_sequential(
+                    all_urls, temp_session, progress_callback
+                )
+
+    async def _test_urls_sequential(
+        self,
+        urls: List[str],
+        session: aiohttp.ClientSession,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Optional[str]:
+        """Test URLs sequentially to avoid rate limiting"""
+
+        total = len(urls)
+
+        for i, url in enumerate(urls, 1):
+            try:
+                if progress_callback:
+                    progress_callback(i, total)
+
+                # Use random headers for each request
+                headers = self.get_random_headers()
+
+                # Randomized delay between requests to appear more human
+                if i > 1:
+                    delay = random.uniform(
+                        0.3, 0.8
+                    )  # Random delay between 0.3-0.8 seconds
+                    await asyncio.sleep(delay)
+
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        # Quick content check to ensure it's a valid function page
+                        content = await response.text()
+                        if any(
+                            keyword in content.lower()
+                            for keyword in [
+                                "function",
+                                "routine",
+                                "api",
+                                "syntax",
+                                "parameters",
+                            ]
+                        ):
+                            return url
+                    elif response.status == 429:
+                        # Rate limited - wait longer with exponential backoff
+                        backoff_delay = random.uniform(2, 5)
+                        await asyncio.sleep(backoff_delay)
+
+            except Exception:
+                continue
+
+        return None
 
     async def _test_urls_async(
         self,
@@ -286,9 +570,11 @@ class SmartURLGenerator:
 
         async def test_single_url(url: str) -> Optional[str]:
             try:
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                }
+                # Use random headers for each request
+                headers = self.get_random_headers()
+                # Random delay to avoid rate limiting and appear more human
+                delay = random.uniform(0.1, 0.4)
+                await asyncio.sleep(delay)
                 async with session.get(url, headers=headers) as response:
                     if response.status == 200:
                         # Quick content check to ensure it's a valid function page
@@ -347,13 +633,14 @@ class SmartURLGenerator:
         """
         import requests
 
-        all_urls = self.generate_possible_urls(function_name, dll_name, base_url)
+        # Use Elite system for complete coverage
+        all_url_tuples = self.generate_all_possible_urls(function_name, base_url)
+        all_urls = [url_tuple[0] for url_tuple in all_url_tuples]
 
         def test_url(url: str) -> Optional[str]:
             try:
-                headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                }
+                # Use random headers for each request
+                headers = self.get_random_headers()
                 response = requests.get(url, headers=headers, timeout=3)
                 if response.status_code == 200:
                     # Quick content check

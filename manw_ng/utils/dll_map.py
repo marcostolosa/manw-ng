@@ -1,4 +1,5 @@
 """Mappings of keywords to their likely DLL names."""
+
 from typing import Optional
 
 DLL_MAP = {
@@ -23,6 +24,14 @@ DLL_MAP = {
     "bitblt": "gdi32.dll",
     "stretchblt": "gdi32.dll",
     "drawtext": "gdi32.dll",
+    "getstockobject": "gdi32.dll",
+    "deletedc": "gdi32.dll",
+    "createbrush": "gdi32.dll",
+    # UI Controls
+    "toolbar": "comctl32.dll",
+    "listview": "comctl32.dll",
+    "treeview": "comctl32.dll",
+    "createwindow": "user32.dll",
     # Registry and security
     "regopen": "advapi32.dll",
     "regquery": "advapi32.dll",
@@ -52,4 +61,3 @@ def detect_dll(function_name: str) -> Optional[str]:
         if key in func_lower:
             return dll
     return None
-

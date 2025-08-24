@@ -53,6 +53,10 @@ class Win32PageParser:
         # Extract all information
         function_info["name"] = self._extract_function_name(soup)
 
+        # Fallback: if name extraction failed and we have empty HTML, use URL
+        if function_info["name"] == "FunçãoDesconhecida" and len(soup.find_all()) == 0:
+            function_info["name"] = self._extract_function_name_from_url(url)
+
         # Classificar o símbolo profissionalmente
         symbol_info = self.classifier.classify_symbol(function_info["name"], url)
         function_info["symbol_info"] = symbol_info
@@ -105,6 +109,11 @@ class Win32PageParser:
     def _extract_function_name(self, soup: BeautifulSoup) -> str:
         """Extract function name from page"""
         title = soup.find("h1")
+
+        # Also try other title elements
+        if not title:
+            title = soup.find("title")
+
         if title:
             title_text = title.get_text().strip()
 
@@ -114,7 +123,7 @@ class Win32PageParser:
 
             # Look for pattern: "FunctionName function (header.h)" or "Função FunctionName (header.h)"
             header_match = re.search(
-                r"^(?:Função\s+|Function\s+)?(\w+)\s+(?:function\s+)?\(([^)]+\.h)\)",
+                r"^(?:Função\s+)?(\w+)\s+(?:function|rotina)\s+\(([^)]+\.h)\)",
                 title_text,
                 re.IGNORECASE,
             )
@@ -141,6 +150,20 @@ class Win32PageParser:
             if match and not match.group(1).upper() in ["IF", "FOR", "WHILE", "SWITCH"]:
                 return match.group(1)
 
+        return "FunçãoDesconhecida"
+
+    def _extract_function_name_from_url(self, url: str) -> str:
+        """Extract function name from URL as fallback when HTML is empty"""
+        import re
+
+        # Extract from URLs like: /nf-processenv-getcommandlinea
+        # Use case-sensitive regex on original URL to preserve capitalization
+        url_match = re.search(r"/nf-[^/]+-([^/]+?)/?$", url)
+        if url_match:
+            func_name = url_match.group(1)
+            if func_name:
+                # Convert first letter to uppercase to match Win32 convention
+                return func_name[0].upper() + func_name[1:]
         return "FunçãoDesconhecida"
 
     def _extract_dll(self, soup: BeautifulSoup) -> str:
