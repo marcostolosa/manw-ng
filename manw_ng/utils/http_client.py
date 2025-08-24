@@ -47,7 +47,9 @@ class HTTPClient:
 
         headers = {"User-Agent": self.user_agent}
         if self.rotate_user_agent:
-            headers["User-Agent"] = random.choice(USER_AGENTS)
+            # Use user agents from SmartURLGenerator
+            temp_generator = SmartURLGenerator()
+            headers["User-Agent"] = random.choice(temp_generator.user_agents)
         proxy = random.choice(self.proxies) if self.proxies else None
 
         async with self.semaphore:
