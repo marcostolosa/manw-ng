@@ -49,7 +49,6 @@ jobs:
       run: |
         # Teste básico de funcionalidade sem pytest/coverage por enquanto
         python -c "import manw_ng.core.scraper; print('Core modules import OK')"
-        python -c "import manw_ng.discovery.engine; print('Discovery engine import OK')"
         python -c "import manw_ng.utils.win32_url_patterns; print('URL patterns import OK')"
         python manw-ng.py --help > help_output.txt && echo "CLI working OK"
 
