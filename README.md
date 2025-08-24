@@ -5,6 +5,8 @@
 
 A command-line tool for extracting Windows API documentation from Microsoft Learn. Designed for reverse engineers, malware analysts, and Windows developers who need programmatic access to API documentation.
 
+![](/assets/demo.png)
+
 ## Features
 
 - **Comprehensive API Coverage**: Win32 API, Native API (Nt*/Zw*), WDK/DDI, and UI Controls
