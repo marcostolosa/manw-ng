@@ -117,7 +117,6 @@ class Win32URLPatterns:
         "consoleapi2.h": "consoleapi2",
         "consoleapi3.h": "consoleapi3",
         # Comm/Device APIs
-        "fileapi.h": "fileapi",
         "commapi.h": "winbase",  # Often grouped under winbase
         # Crypto APIs
         "wincrypt.h": "wincrypt",
@@ -257,6 +256,10 @@ class Win32URLPatterns:
         "getmodulefilename": "winbase",
         "gettemppath": "winbase",
         "getcomputername": "winbase",
+        # Process environment
+        "getcommandline": "processenv",
+        "getcommandlinea": "processenv",
+        "getcommandlinew": "processenv",
         # RTL functions
         "rtlallocateheap": "ntifs",
         "rtlfreeheap": "ntifs",
@@ -635,6 +638,7 @@ class Win32URLPatterns:
         """
         return [
             "processthreadsapi",
+            "processenv",
             "fileapi",
             "memoryapi",
             "heapapi",
@@ -725,10 +729,8 @@ class Win32URLPatterns:
             "sensapi",
             "setupapi",
             "sfc",
-            "shdocvw",
             "shell32",
             "shfolder",
-            "shlwapi",
             "snmpapi",
             "spoolss",
             "sti",

@@ -10,7 +10,6 @@ Part of MANW-NG utils package.
 """
 
 import asyncio
-import aiohttp
 import re
 from typing import Dict, List, Set, Tuple, Optional
 from urllib.parse import urljoin, urlparse
@@ -21,6 +20,11 @@ from pathlib import Path
 import time
 from bs4 import BeautifulSoup
 import logging
+
+try:  # aiohttp is optional in some environments
+    import aiohttp  # type: ignore
+except Exception:  # pragma: no cover
+    aiohttp = None
 
 
 # Configure logging

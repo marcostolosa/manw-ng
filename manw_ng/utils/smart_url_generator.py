@@ -5,12 +5,16 @@ Ultra-fast asynchronous URL generator that tests ALL known patterns simultaneous
 This system ensures 100% coverage with maximum speed using concurrent requests.
 """
 
-from typing import List, Dict, Set, Optional, Tuple
+from typing import List, Dict, Set, Optional, Tuple, Callable
 import re
 import asyncio
-import aiohttp
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
+
+try:  # aiohttp is optional
+    import aiohttp  # type: ignore
+except Exception:  # pragma: no cover - handled gracefully when missing
+    aiohttp = None
 
 
 class SmartURLGenerator:
@@ -249,34 +253,66 @@ class SmartURLGenerator:
 
         return unique_urls
 
+    def find_valid_url(
+        self,
+        function_name: str,
+        dll_name: str = None,
+        base_url: str = "https://learn.microsoft.com/en-us",
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Optional[str]:
+        """Resolve ``function_name`` to the first valid documentation URL.
+
+        If ``aiohttp`` is available an asynchronous implementation is used
+        for maximum speed; otherwise a synchronous fallback based on
+        :mod:`requests` is employed.  A ``progress_callback`` can be
+        provided to receive real-time updates of the number of tested URLs.
+        """
+        if aiohttp is None:
+            return self.find_valid_url_sync(
+                function_name, dll_name, base_url, progress_callback=progress_callback
+            )
+        return asyncio.run(
+            self.find_valid_url_async(
+                function_name,
+                dll_name,
+                base_url,
+                progress_callback=progress_callback,
+            )
+        )
+
     async def find_valid_url_async(
         self,
         function_name: str,
         dll_name: str = None,
         base_url: str = "https://learn.microsoft.com/en-us",
-        session: aiohttp.ClientSession = None,
+        session: "aiohttp.ClientSession" = None,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
-        """
-        ULTRA-FAST async method that tests ALL possible URLs simultaneously!
-        Returns the FIRST valid URL found or None if function doesn't exist.
-        """
+        if aiohttp is None:
+            # Fallback to synchronous version when aiohttp isn't installed
+            return self.find_valid_url_sync(
+                function_name, dll_name, base_url, progress_callback=progress_callback
+            )
+
         # Generate ALL possible URLs
         all_urls = self.generate_possible_urls(function_name, dll_name, base_url)
 
         # Test ALL URLs concurrently with maximum speed
         if session:
-            return await self._test_urls_async(all_urls, session)
-        else:
-            # Create temporary session
-            connector = aiohttp.TCPConnector(limit=100, limit_per_host=50)
-            timeout = aiohttp.ClientTimeout(total=5)  # Super fast timeout
-            async with aiohttp.ClientSession(
-                connector=connector, timeout=timeout
-            ) as temp_session:
-                return await self._test_urls_async(all_urls, temp_session)
+            return await self._test_urls_async(all_urls, session, progress_callback)
+        # Create temporary session
+        connector = aiohttp.TCPConnector(limit=100, limit_per_host=50)
+        timeout = aiohttp.ClientTimeout(total=5)  # Super fast timeout
+        async with aiohttp.ClientSession(
+            connector=connector, timeout=timeout
+        ) as temp_session:
+            return await self._test_urls_async(all_urls, temp_session, progress_callback)
 
     async def _test_urls_async(
-        self, urls: List[str], session: aiohttp.ClientSession
+        self,
+        urls: List[str],
+        session: "aiohttp.ClientSession",
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """Test multiple URLs concurrently and return first valid one"""
 
@@ -306,11 +342,16 @@ class SmartURLGenerator:
 
         # Create tasks for ALL URLs simultaneously
         tasks = [test_single_url(url) for url in urls]
+        total = len(tasks)
+        completed = 0
 
         # Use as_completed to get the FIRST successful result
         for completed_task in asyncio.as_completed(tasks):
             try:
                 result = await completed_task
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total)
                 if result:  # Found valid URL!
                     # Cancel remaining tasks for speed
                     for task in tasks:
@@ -318,6 +359,9 @@ class SmartURLGenerator:
                             task.cancel()
                     return result
             except:
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total)
                 continue
 
         return None  # No valid URL found
@@ -328,10 +372,13 @@ class SmartURLGenerator:
         dll_name: str = None,
         base_url: str = "https://learn.microsoft.com/en-us",
         max_workers: int = 20,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """
-        Synchronous version using ThreadPoolExecutor for maximum concurrency
-        Tests ALL URLs simultaneously with multiple threads
+        Synchronous version using :class:`ThreadPoolExecutor` for maximum
+        concurrency.  Tests **all** candidate URLs and returns the first
+        valid one.  ``progress_callback`` is invoked with ``(done, total)``
+        counters to mimic the async progress updates.
         """
         import requests
 
@@ -358,25 +405,27 @@ class SmartURLGenerator:
                     ):
                         return url
                 return None
-            except:
+            except Exception:
                 return None
 
         # Use ThreadPoolExecutor for maximum concurrency
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit ALL URLs for testing simultaneously
             future_to_url = {executor.submit(test_url, url): url for url in all_urls}
+            total = len(future_to_url)
+            completed = 0
 
-            # Return FIRST successful result
             for future in as_completed(future_to_url):
+                completed += 1
+                if progress_callback:
+                    progress_callback(completed, total)
                 try:
                     result = future.result()
                     if result:
-                        # Cancel remaining futures
                         for remaining_future in future_to_url:
                             if not remaining_future.done():
                                 remaining_future.cancel()
                         return result
-                except:
+                except Exception:
                     continue
 
         return None

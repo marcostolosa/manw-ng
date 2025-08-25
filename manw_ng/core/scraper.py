@@ -6,9 +6,7 @@ Main scraper class that orchestrates the discovery and parsing process.
 
 from typing import Dict, Optional, List
 import random
-import os
 import time
-import asyncio
 from bs4 import BeautifulSoup
 from rich.console import Console
 from rich.status import Status
@@ -150,16 +148,19 @@ class Win32APIScraper:
                 f"[cyan]3/4[/cyan] Testando TODAS as URLs possíveis para [bold]{function_name}[/bold]...",
                 console=self.console,
             ) as status:
-                status.update(
-                    f"[cyan]3/4[/cyan] Executando busca assíncrona em paralelo..."
-                )
-
                 # Use the SMART synchronous method with maximum concurrency
                 dll_name = getattr(self, "_current_function_dll", None)
-                found_url = asyncio.run(
-                    self.smart_generator.find_valid_url_async(
-                        function_name, dll_name, self.base_url
+
+                def progress(done: int, total: int) -> None:
+                    status.update(
+                        f"[cyan]3/4[/cyan] Testando URLs ({done}/{total})..."
                     )
+
+                found_url = self.smart_generator.find_valid_url(
+                    function_name,
+                    dll_name,
+                    self.base_url,
+                    progress_callback=progress,
                 )
 
                 if found_url:
@@ -189,10 +190,8 @@ class Win32APIScraper:
 
             # PRIORITY: ULTRA-FAST Smart generator with ALL patterns
             dll_name = getattr(self, "_current_function_dll", None)
-            found_url = asyncio.run(
-                self.smart_generator.find_valid_url_async(
-                    function_name, dll_name, self.base_url
-                )
+            found_url = self.smart_generator.find_valid_url(
+                function_name, dll_name, self.base_url
             )
 
             if found_url:
