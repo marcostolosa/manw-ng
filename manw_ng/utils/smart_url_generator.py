@@ -20,59 +20,89 @@ class SmartURLGenerator:
     """
 
     def __init__(self):
-        # Pool of diverse user agents for rate limiting bypass
-        self.user_agents = [
-            # Chrome on Windows 10/11
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
-            # Firefox on Windows
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:118.0) Gecko/20100101 Firefox/118.0",
-            # Edge on Windows
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0",
-            # Chrome on macOS
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-            # Safari on macOS
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
-            # Firefox on macOS
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:120.0) Gecko/20100101 Firefox/120.0",
-            # Chrome on Linux
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-            "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-            # Firefox on Linux
-            "Mozilla/5.0 (X11; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
-            "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:120.0) Gecko/20100101 Firefox/120.0",
-            # Mobile Chrome (Android)
-            "Mozilla/5.0 (Linux; Android 10; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36",
-            "Mozilla/5.0 (Linux; Android 11; Pixel 5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36",
-            # Mobile Safari (iOS)
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-            "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
-        ]
+        # Intelligent user agent pool with success tracking
+        self.user_agents = {
+            # High-success desktop browsers (prioritized)
+            "chrome_win": [
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
+            ],
+            "firefox_win": [
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:119.0) Gecko/20100101 Firefox/119.0",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:118.0) Gecko/20100101 Firefox/118.0",
+            ],
+            "edge_win": [
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 Edg/120.0.0.0",
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0",
+            ],
+            "chrome_mac": [
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            ],
+            "safari_mac": [
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15",
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
+            ],
+            "chrome_linux": [
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+            ],
+        }
 
-        # Additional headers to make requests more realistic
+        # Flattened list for backward compatibility
+        self.user_agents_flat = []
+        for category_agents in self.user_agents.values():
+            self.user_agents_flat.extend(category_agents)
+
+        # Success tracking for intelligent rotation
+        self.user_agent_stats = {}
+        self._current_rotation_index = 0
+        self._requests_with_current_agent = 0
+        self._max_requests_per_agent = 5  # Switch agent after 5 requests
+
+        # Optimized headers for Microsoft Learn documentation
         self.additional_headers = [
             {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
             },
             {
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8"
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9"
             },
             {
                 "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
             },
+            {
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8"
+            },
         ]
 
-        # Request counter for user agent rotation
+        # Enhanced request tracking
         self._request_counter = 0
+        self._last_successful_agent = None
+        self._agent_failure_count = {}
 
-        # Mapeamento DLL -> Headers mais prováveis (baseado na análise)
+        # Circuit breaker for intelligent retry
+        self._circuit_breaker = {
+            "failure_count": 0,
+            "last_failure_time": 0,
+            "state": "CLOSED",  # CLOSED, OPEN, HALF_OPEN
+            "failure_threshold": 5,
+            "recovery_timeout": 30,  # seconds
+            "consecutive_successes_needed": 2,
+        }
+
+        # Adaptive retry configuration
+        self._retry_config = {
+            "max_retries": 3,
+            "base_delay": 1.0,
+            "max_delay": 10.0,
+            "backoff_factor": 2.0,
+            "jitter": True,
+        }
+
+        # Mapeamento DLL -> Headers COMPLETO (TODOS os headers possíveis)
         self.dll_to_headers = {
             "kernel32.dll": [
                 "fileapi",
@@ -89,11 +119,24 @@ class SmartURLGenerator:
                 "namedpipeapi",
                 "timezoneapi",
                 "winbase",
+                "handleapi",
+                "threadpoollegacyapiset",
+                "wow64apiset",
+                "debugapi",
+                "fibersapi",
+                "interlockedapi",
+                "profileapi",
+                "realtimeapiset",
+                "securityappcontainer",
+                "systemtopologyapi",
+                "utilapiset",
+                "jobapi",
+                "jobapi2",
             ],
-            "user32.dll": ["winuser"],
-            "gdi32.dll": ["wingdi"],
-            "comctl32.dll": ["commctrl"],
-            "uxtheme.dll": ["uxtheme"],
+            "user32.dll": ["winuser", "windowsandmessaging", "menurc", "winstation"],
+            "gdi32.dll": ["wingdi", "wingdiapi", "gdiplusheaders"],
+            "comctl32.dll": ["commctrl", "commdlg", "prsht"],
+            "uxtheme.dll": ["uxtheme", "vsstyle", "vssym32"],
             "advapi32.dll": [
                 "aclapi",
                 "securitybaseapi",
@@ -101,18 +144,82 @@ class SmartURLGenerator:
                 "winsvc",
                 "processthreadsapi",
                 "wincrypt",
+                "winbase",
+                "accctrl",
+                "authz",
+                "lmaccess",
+                "lmapibuf",
+                "lmconfig",
+                "lmerr",
+                "lmserver",
+                "lmshare",
+                "lmuse",
+                "lmwksta",
+                "ntsecapi",
+                "sspi",
+                "schannel",
+                "wincred",
+                "winefs",
+                "winsafer",
+                "wintrust",
+                "evntprov",
+                "evntrace",
+                "perflib",
+                "pdh",
+                "loadperf",
             ],
-            "ws2_32.dll": ["winsock2", "winsock"],
-            "wininet.dll": ["wininet"],
-            "ntdll.dll": ["winternl", "winbase"],
-            "psapi.dll": ["psapi"],
+            "ws2_32.dll": [
+                "winsock2",
+                "winsock",
+                "ws2tcpip",
+                "wsipx",
+                "mswsock",
+                "ws2spi",
+            ],
+            "wininet.dll": ["wininet", "urlmon", "winhttp"],
+            "ntdll.dll": ["winternl", "winbase", "ntstatus", "subauth"],
+            "psapi.dll": ["psapi", "toolhelp"],
             "version.dll": ["winver"],
-            "crypt32.dll": ["wincrypt"],
-            "ole32.dll": ["combaseapi", "objbase"],
-            "shell32.dll": ["shellapi"],
-            "msvcrt.dll": ["corecrt"],
-            "bcrypt.dll": ["bcrypt"],
-            "ncrypt.dll": ["ncrypt"],
+            "crypt32.dll": ["wincrypt", "dpapi", "cryptuiapi"],
+            "ole32.dll": [
+                "combaseapi",
+                "objbase",
+                "objidl",
+                "unknwn",
+                "wtypes",
+                "oaidl",
+            ],
+            "shell32.dll": ["shellapi", "shlobj", "shlwapi", "shobjidl"],
+            "msvcrt.dll": [
+                "corecrt",
+                "crtdbg",
+                "malloc",
+                "stdio",
+                "stdlib",
+                "string",
+                "time",
+            ],
+            "bcrypt.dll": ["bcrypt", "ncrypt", "wincrypt"],
+            "ncrypt.dll": ["ncrypt", "bcrypt", "wincrypt"],
+            "netapi32.dll": [
+                "lmaccess",
+                "lmapibuf",
+                "lmconfig",
+                "lmerr",
+                "lmserver",
+                "lmshare",
+                "lmuse",
+                "lmwksta",
+            ],
+            "imagehlp.dll": ["imagehlp", "dbghelp", "winnt"],
+            "dbghelp.dll": ["dbghelp", "imagehlp", "winnt"],
+            "setupapi.dll": ["setupapi", "cfgmgr32", "devguid", "regstr"],
+            "winspool.drv": ["winspool", "wingdi"],
+            "winmm.dll": ["mmsystem", "mmreg", "timeapi", "playsoundapi"],
+            "rpcrt4.dll": ["rpc", "rpcdce", "rpcndr", "rpcproxy"],
+            "secur32.dll": ["sspi", "schannel", "ntsecapi", "security"],
+            "mpr.dll": ["winnetwk", "npapi"],
+            "cabinet.dll": ["fci", "fdi"],
         }
 
         # Mapeamento específico baseado nos padrões descobertos
@@ -341,38 +448,408 @@ class SmartURLGenerator:
                 intelligent_headers.append(header)
                 seen.add(header)
 
-        # Common headers to try (PRIORITIZED for better coverage)
+        # Headers COMPLETOS - TODOS os headers do Windows SDK DRASTICAMENTE EXPANDIDOS
         common_headers = [
-            # HIGH PRIORITY - Most common UI/System functions
-            "wingdi",
+            # CORE SYSTEM APIs (MÁXIMA prioridade)
             "winuser",
-            "commctrl",
+            "wingdi",
+            "winbase",
             "fileapi",
             "memoryapi",
             "processthreadsapi",
-            "processenv",
-            # MEDIUM PRIORITY - Network/Security/Registry
-            "wininet",
-            "winsock2",
-            "winreg",
-            "wincrypt",
-            "shellapi",
-            "aclapi",
-            # LOW PRIORITY - Specialized functions
-            "consoleapi",
-            "libloaderapi",
+            "handleapi",
             "synchapi",
-            "sysinfoapi",
             "errhandlingapi",
+            "debugapi",
+            "libloaderapi",
+            "heapapi",
+            "processenv",
+            "sysinfoapi",
+            "consoleapi",
+            "profileapi",
+            # PROCESS & THREAD APIs EXPANDIDOS
+            "processthreadsapi",
             "securitybaseapi",
-            "winsvc",
+            "userenv",
             "psapi",
+            "toolhelp",
+            "tlhelp32",
+            "jobapi",
+            "jobapi2",
+            "threadpoollegacyapiset",
+            "fibersapi",
+            "processenv",
+            "wow64apiset",
+            "processthreadsapi",
+            "handleapi",
+            # ADVANCED SYSTEM APIs EXPANDIDOS
+            "realtimeapiset",
+            "interlockedapi",
+            "securityappcontainer",
+            "systemtopologyapi",
+            "utilapiset",
+            "ioapiset",
+            "namedpipeapi",
+            "namespaceapi",
+            "winsafer",
+            "securitybaseapi",
+            "authz",
+            "accctrl",
+            "errhandlingapi",
+            "debugapi",
+            # SECURITY & CRYPTO COMPLETE
+            "aclapi",
+            "wincrypt",
+            "bcrypt",
+            "ncrypt",
+            "wincred",
+            "winefs",
+            "wintrust",
+            "sspi",
+            "schannel",
+            "ntsecapi",
+            "dpapi",
+            "cryptuiapi",
+            "credui",
+            "lsalookup",
+            "secext",
+            "secedit",
+            "winscard",
+            "wintrust",
+            "certadm",
+            "certcli",
+            "certenc",
+            "certenroll",
+            "certpol",
+            "certsrv",
+            "certview",
+            "xenroll",
+            # REGISTRY & SERVICES COMPLETE
+            "winreg",
+            "winsvc",
+            "evntprov",
+            "evntrace",
+            "perflib",
+            "pdh",
+            "loadperf",
+            "winperf",
+            "evntcons",
+            "evntrace",
+            "tdh",
+            "wmistr",
+            "wmium",
+            # NETWORKING COMPLETE
+            "winsock2",
+            "winsock",
+            "ws2tcpip",
+            "wsipx",
+            "mswsock",
+            "ws2spi",
+            "wininet",
+            "urlmon",
+            "winhttp",
+            "winnetwk",
+            "npapi",
+            "snmp",
+            "winsnmp",
+            "iphlpapi",
+            "iprtrmib",
+            "iptypes",
+            "icmpapi",
+            "netioapi",
+            "tcpestats",
+            "udpmib",
+            "tcpmib",
+            "ifmib",
+            "ipmib",
+            "dhcpcsdk",
+            "dhcpsapi",
+            # UI & SHELL COMPLETE
+            "commctrl",
+            "commdlg",
+            "shellapi",
+            "shlobj",
+            "shlwapi",
+            "shobjidl",
             "uxtheme",
+            "vsstyle",
+            "vssym32",
             "dwmapi",
-            "powrprof",
+            "windowsandmessaging",
+            "menurc",
+            "winstation",
+            "prsht",
+            "richedit",
+            "richole",
+            "textserv",
+            "dde",
+            "ddeml",
+            "msaatext",
+            "oleacc",
+            "winable",
+            "wincon",
+            # MULTIMEDIA & DEVICES COMPLETE
+            "mmsystem",
+            "mmreg",
+            "timeapi",
+            "playsoundapi",
+            "winspool",
+            "wingdi",
             "setupapi",
             "cfgmgr32",
-            "heapapi",
+            "devguid",
+            "regstr",
+            "powrprof",
+            "batclass",
+            "devpkey",
+            "dbt",
+            "hidclass",
+            "hidpi",
+            "hidsdi",
+            "hidusage",
+            "newdev",
+            "pnputil",
+            "sporder",
+            "spapidef",
+            "sputils",
+            "swdevice",
+            "usbioctl",
+            "usbiodef",
+            "usbuser",
+            "winioctl",
+            "winusb",
+            "devioctl",
+            "poclass",
+            # COM & OLE COMPLETE
+            "combaseapi",
+            "objbase",
+            "objidl",
+            "unknwn",
+            "wtypes",
+            "oaidl",
+            "activation",
+            "callobj",
+            "cguid",
+            "comcat",
+            "comdefsp",
+            "coml2api",
+            "compobj",
+            "comsvcs",
+            "docobj",
+            "dvdmedia",
+            "exdisp",
+            "hlink",
+            "htiface",
+            "htiframe",
+            "htmlhelp",
+            "hyptrk",
+            "iaccessible",
+            "mshtmhst",
+            "mshtml",
+            "mshtmdid",
+            "msxml",
+            "ocidl",
+            "olectl",
+            "oledlg",
+            "oleauto",
+            "oleidl",
+            "propidl",
+            "propsys",
+            "propvarutil",
+            "servprov",
+            "shlguid",
+            "strmif",
+            "structuredquery",
+            "tom",
+            "txfw32",
+            "urlhist",
+            "urlmon",
+            "webservices",
+            "wia",
+            "wincodec",
+            "wincodecsdk",
+            # RPC & IPC COMPLETE
+            "rpc",
+            "rpcdce",
+            "rpcndr",
+            "rpcproxy",
+            "rpcasync",
+            "rpcdcep",
+            "rpcnsi",
+            "rpcnterr",
+            "rpcssl",
+            "midles",
+            "midluser",
+            # NETWORK MANAGEMENT COMPLETE
+            "lmaccess",
+            "lmapibuf",
+            "lmconfig",
+            "lmerr",
+            "lmserver",
+            "lmshare",
+            "lmuse",
+            "lmwksta",
+            "netapi32",
+            "lmat",
+            "lmcons",
+            "lmstats",
+            "lmalert",
+            "lmaudit",
+            "lmmsg",
+            "lmremutl",
+            "lmrepl",
+            "lmsname",
+            # DEBUG & TOOLS COMPLETE
+            "imagehlp",
+            "dbghelp",
+            "fci",
+            "fdi",
+            "dbgeng",
+            "cor",
+            "corsym",
+            "corprof",
+            "cordebug",
+            "metahost",
+            "mscoree",
+            "fusion",
+            "clrdata",
+            "diasdk",
+            "cvconst",
+            "dbgmodel",
+            "engextcpp",
+            "extsfns",
+            "wdbgexts",
+            # NATIVE/INTERNAL COMPLETE
+            "winternl",
+            "ntstatus",
+            "subauth",
+            "winnt",
+            "ntdef",
+            "ntlsa",
+            "ntsecapi",
+            "ntddndis",
+            "ntdddisk",
+            "ntddkbd",
+            "ntddmou",
+            "ntddpar",
+            "ntddscsi",
+            "ntddser",
+            "ntddstor",
+            "ntddtape",
+            "ntddvol",
+            "ntimage",
+            "ntldr",
+            # VERSION & TIME COMPLETE
+            "winver",
+            "timezoneapi",
+            "versionhelpers",
+            "verrsrc",
+            # CRT & STANDARD COMPLETE
+            "corecrt",
+            "crtdbg",
+            "malloc",
+            "stdio",
+            "stdlib",
+            "string",
+            "time",
+            "crtasm",
+            "direct",
+            "dos",
+            "fcntl",
+            "io",
+            "memory",
+            "process",
+            "search",
+            "share",
+            "signal",
+            "sys",
+            "wchar",
+            # WINDOWS RUNTIME & MODERN APIs
+            "roapi",
+            "robuffer",
+            "roerrorapi",
+            "rometadata",
+            "rometadataapi",
+            "rometadataresolution",
+            "roparameterizediid",
+            "roregistrationapi",
+            "winrt",
+            "activation",
+            "asyncinfo",
+            "eventtoken",
+            "hstring",
+            "inspectable",
+            "memorybuffer",
+            "restrictederrorinfo",
+            "shcore",
+            "windows",
+            # AUDIO & VIDEO
+            "audioclient",
+            "audiopolicy",
+            "devicetopology",
+            "endpointvolume",
+            "mmdeviceapi",
+            "mmreg",
+            "dsound",
+            "dshow",
+            "dxva2",
+            "evr",
+            "mfapi",
+            "mferror",
+            "mfidl",
+            "mfobjects",
+            "mfplay",
+            "mfreadwrite",
+            "mftransform",
+            "wmcodecdsp",
+            "wmcontainer",
+            "wmsdkidl",
+            "wmsdk",
+            # GRAPHICS & DIRECTX
+            "d2d1",
+            "d2d1helper",
+            "d3d9",
+            "d3d10",
+            "d3d11",
+            "d3d12",
+            "d3dcompiler",
+            "dwrite",
+            "dxgi",
+            "dxgiformat",
+            "dxgidebug",
+            "dxgitype",
+            "ddraw",
+            "gdiplus",
+            "gdiplusheaders",
+            "gdiplusimaging",
+            "gdipluslinecaps",
+            "gdipluspixelformats",
+            "gdiplustypes",
+            "uianimation",
+            "wincodec",
+            "wincodecsdk",
+            "d2d1effects",
+            "d2d1svg",
+            "d3d11on12",
+            "d3d12sdklayers",
+            # GAME DEVELOPMENT
+            "xinput",
+            "xaudio2",
+            "x3daudio",
+            "xapofx",
+            "gamemode",
+            # PRINTING
+            "winspool",
+            "compstui",
+            "winddiui",
+            "printoem",
+            "prcomoem",
+            # ACCESSIBILITY
+            "oleacc",
+            "uiautomation",
+            "uiautomationcore",
+            "uiautomationcoreapi",
+            "winable",
         ]
 
         # Combine: intelligent headers FIRST, then common headers as fallback
@@ -434,32 +911,262 @@ class SmartURLGenerator:
         return urls
 
     def get_random_headers(self) -> Dict[str, str]:
-        """Get random User-Agent and additional headers to bypass rate limiting"""
-        # Rotate through user agents for each request
-        user_agent = self.user_agents[self._request_counter % len(self.user_agents)]
+        """Get intelligent User-Agent and headers based on success rates"""
+
+        # Intelligent user agent selection
+        user_agent = self._get_optimal_user_agent()
         additional = random.choice(self.additional_headers)
         self._request_counter += 1
+        self._requests_with_current_agent += 1
 
+        # Base headers optimized for Microsoft Learn
         headers = {
             "User-Agent": user_agent,
             **additional,
-            "Accept-Language": "en-US,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.9,pt-BR;q=0.8,pt;q=0.7",
+            "Accept-Encoding": "gzip, deflate, br, zstd",
+            "Cache-Control": "no-cache",
+            "Pragma": "no-cache",
             "DNT": "1",
             "Connection": "keep-alive",
             "Upgrade-Insecure-Requests": "1",
         }
 
-        # Randomly add some optional headers to appear more human
-        if random.random() < 0.5:
-            headers["Sec-Fetch-Dest"] = "document"
-            headers["Sec-Fetch-Mode"] = "navigate"
-            headers["Sec-Fetch-Site"] = "none"
+        # Add modern browser headers for better success rate
+        headers.update(
+            {
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"Windows"',
+            }
+        )
 
-        if random.random() < 0.3:
+        # Randomly vary some headers to appear more natural
+        if random.random() < 0.4:
             headers["Cache-Control"] = "max-age=0"
 
+        if random.random() < 0.3:
+            headers["Accept-Language"] = "en-US,en;q=0.5"
+
         return headers
+
+    def _get_optimal_user_agent(self) -> str:
+        """Select user agent based on success statistics and rotation strategy"""
+
+        # If we've made too many requests with current agent, rotate
+        if self._requests_with_current_agent >= self._max_requests_per_agent:
+            self._rotate_user_agent()
+
+        # Use last successful agent if available and not overused
+        if (
+            self._last_successful_agent
+            and self._requests_with_current_agent < self._max_requests_per_agent
+        ):
+            return self._last_successful_agent
+
+        # Get highest success rate agents first
+        if self.user_agent_stats:
+            sorted_agents = sorted(
+                self.user_agent_stats.items(),
+                key=lambda x: x[1].get("success_rate", 0.5),
+                reverse=True,
+            )
+
+            # Use top 3 agents and rotate between them
+            top_agents = [agent for agent, _ in sorted_agents[:3]]
+            if top_agents:
+                return top_agents[self._current_rotation_index % len(top_agents)]
+
+        # Fallback to prioritized categories for Microsoft Learn
+        priority_categories = ["chrome_win", "firefox_win", "edge_win", "chrome_mac"]
+
+        for category in priority_categories:
+            if category in self.user_agents:
+                agents = self.user_agents[category]
+                return agents[self._current_rotation_index % len(agents)]
+
+        # Final fallback
+        return self.user_agents_flat[
+            self._current_rotation_index % len(self.user_agents_flat)
+        ]
+
+    def _rotate_user_agent(self):
+        """Rotate to next user agent"""
+        self._current_rotation_index = (self._current_rotation_index + 1) % len(
+            self.user_agents_flat
+        )
+        self._requests_with_current_agent = 0
+
+    def report_user_agent_success(self, user_agent: str, success: bool):
+        """Track user agent success for intelligent rotation"""
+        if user_agent not in self.user_agent_stats:
+            self.user_agent_stats[user_agent] = {
+                "total_requests": 0,
+                "successful_requests": 0,
+                "success_rate": 0.5,
+                "last_used": time.time(),
+            }
+
+        stats = self.user_agent_stats[user_agent]
+        stats["total_requests"] += 1
+        stats["last_used"] = time.time()
+
+        if success:
+            stats["successful_requests"] += 1
+            self._last_successful_agent = user_agent
+            # Reset failure count on success
+            self._agent_failure_count[user_agent] = 0
+        else:
+            # Track failures
+            self._agent_failure_count[user_agent] = (
+                self._agent_failure_count.get(user_agent, 0) + 1
+            )
+
+        # Update success rate
+        stats["success_rate"] = stats["successful_requests"] / stats["total_requests"]
+
+        # If agent fails too much, rotate immediately
+        if self._agent_failure_count.get(user_agent, 0) >= 3:
+            self._rotate_user_agent()
+
+    def _should_attempt_request(self) -> bool:
+        """Check circuit breaker state to determine if request should be attempted"""
+        current_time = time.time()
+        breaker = self._circuit_breaker
+
+        if breaker["state"] == "OPEN":
+            # Check if recovery timeout has passed
+            if (
+                current_time - breaker["last_failure_time"]
+                > breaker["recovery_timeout"]
+            ):
+                breaker["state"] = "HALF_OPEN"
+                return True
+            return False
+
+        return True  # CLOSED or HALF_OPEN
+
+    def _record_success(self):
+        """Record successful request for circuit breaker"""
+        breaker = self._circuit_breaker
+
+        if breaker["state"] == "HALF_OPEN":
+            breaker["consecutive_successes_needed"] -= 1
+            if breaker["consecutive_successes_needed"] <= 0:
+                breaker["state"] = "CLOSED"
+                breaker["failure_count"] = 0
+                breaker["consecutive_successes_needed"] = 2
+        elif breaker["state"] == "CLOSED":
+            breaker["failure_count"] = max(0, breaker["failure_count"] - 1)
+
+    def _record_failure(self):
+        """Record failed request for circuit breaker"""
+        breaker = self._circuit_breaker
+        breaker["failure_count"] += 1
+        breaker["last_failure_time"] = time.time()
+
+        if breaker["failure_count"] >= breaker["failure_threshold"]:
+            breaker["state"] = "OPEN"
+
+    def _record_rate_limit(self):
+        """Record rate limit response"""
+        # Rate limits are treated less severely than failures
+        breaker = self._circuit_breaker
+        breaker["failure_count"] += 0.5  # Half weight for rate limits
+        breaker["last_failure_time"] = time.time()
+
+    def _calculate_retry_delay(self, attempt: int) -> float:
+        """Calculate adaptive retry delay with jitter"""
+        config = self._retry_config
+
+        # Exponential backoff
+        delay = min(
+            config["base_delay"] * (config["backoff_factor"] ** (attempt - 1)),
+            config["max_delay"],
+        )
+
+        # Add jitter to avoid thundering herd
+        if config["jitter"]:
+            jitter = delay * 0.1 * random.random()  # ±10% jitter
+            delay += jitter
+
+        return delay
+
+    async def _request_with_retry(
+        self, session: aiohttp.ClientSession, url: str, base_headers: Dict[str, str]
+    ) -> Optional[str]:
+        """Make request with intelligent retry logic"""
+
+        for attempt in range(self._retry_config["max_retries"] + 1):
+            if not self._should_attempt_request():
+                return None
+
+            try:
+                if attempt > 0:
+                    delay = self._calculate_retry_delay(attempt)
+                    await asyncio.sleep(delay)
+
+                # Refresh headers for each attempt
+                headers = (
+                    base_headers.copy() if attempt == 0 else self.get_random_headers()
+                )
+
+                async with session.get(url, headers=headers) as response:
+                    if response.status == 200:
+                        self._record_success()
+                        self.report_user_agent_success(
+                            headers.get("User-Agent", ""), True
+                        )
+
+                        # Ultra-fast content check
+                        content_chunk = await response.content.read(1024)
+                        content_str = content_chunk.decode(
+                            "utf-8", errors="ignore"
+                        ).lower()
+
+                        if any(
+                            keyword in content_str
+                            for keyword in [
+                                "function",
+                                "routine",
+                                "api",
+                                "syntax",
+                                "parameters",
+                            ]
+                        ):
+                            return url
+
+                    elif response.status == 429:  # Rate limited
+                        self._record_rate_limit()
+                        if attempt < self._retry_config["max_retries"]:
+                            continue
+
+                    elif response.status >= 500:  # Server error
+                        self._record_failure()
+                        if attempt < self._retry_config["max_retries"]:
+                            continue
+
+                    # Non-retryable or final attempt
+                    self.report_user_agent_success(headers.get("User-Agent", ""), False)
+                    return None
+
+            except aiohttp.ClientError:
+                self._record_failure()
+                self.report_user_agent_success(headers.get("User-Agent", ""), False)
+
+                if attempt < self._retry_config["max_retries"]:
+                    continue
+                return None
+
+            except Exception:
+                if attempt < self._retry_config["max_retries"]:
+                    continue
+                return None
+
+        return None
 
     async def find_valid_url_async(
         self,
@@ -470,45 +1177,285 @@ class SmartURLGenerator:
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """
-        SMART async method that tests URLs sequentially to avoid rate limiting
-        Returns the FIRST valid URL found or None if function doesn't exist.
+        ULTRA-FAST async method with intelligent prioritization and early termination.
+        Uses hybrid approach: high-confidence URLs first, then broader search if needed.
         """
-        # Generate ALL possible URLs using Elite system
-        all_url_tuples = self.generate_all_possible_urls(function_name, base_url)
+        # Generate smart prioritized URLs
+        prioritized_urls = self._get_prioritized_urls(function_name, dll_name, base_url)
 
-        # Special prioritization for Native API functions (Nt*, Zw*, Rtl*)
-        if function_name.lower().startswith(("nt", "zw", "rtl")):
-            # Prioritize DDI URLs first for Native API functions
-            ddi_urls = [
-                url_tuple for url_tuple in all_url_tuples if url_tuple[2] == "DDI"
-            ]
-            sdk_urls = [
-                url_tuple for url_tuple in all_url_tuples if url_tuple[2] == "SDK"
-            ]
-            prioritized_urls = ddi_urls + sdk_urls
-            all_urls = [
-                url_tuple[0] for url_tuple in prioritized_urls[:50]
-            ]  # More URLs for Nt functions
-        else:
-            all_urls = [
-                url_tuple[0] for url_tuple in all_url_tuples[:30]
-            ]  # Limit to top 30 for speed
+        # Test high-confidence URLs first (top 8-12)
+        high_confidence_urls = prioritized_urls[:12]
 
-        # Test URLs SEQUENTIALLY to avoid rate limiting
         if session:
-            return await self._test_urls_sequential(
-                all_urls, session, progress_callback
+            # Try high-confidence URLs with faster method
+            result = await self._test_urls_fast_batch(
+                high_confidence_urls, session, progress_callback
             )
-        else:
-            # Create temporary session
-            connector = aiohttp.TCPConnector(limit=1, limit_per_host=1)
-            timeout = aiohttp.ClientTimeout(total=10)
-            async with aiohttp.ClientSession(
-                connector=connector, timeout=timeout
-            ) as temp_session:
-                return await self._test_urls_sequential(
-                    all_urls, temp_session, progress_callback
+
+            # If not found and function is important, try more URLs
+            if not result and (dll_name or self._is_important_function(function_name)):
+                remaining_urls = prioritized_urls[12:25]
+                result = await self._test_urls_sequential(
+                    remaining_urls, session, progress_callback
                 )
+
+            return result
+        else:
+            # Optimized session for maximum speed
+            connector = None
+            temp_session = None
+
+            try:
+                connector = aiohttp.TCPConnector(
+                    limit=8,
+                    limit_per_host=4,
+                    ttl_dns_cache=300,
+                    use_dns_cache=True,
+                    keepalive_timeout=30,
+                )
+                timeout = aiohttp.ClientTimeout(total=8, connect=3)
+                temp_session = aiohttp.ClientSession(
+                    connector=connector, timeout=timeout
+                )
+
+                result = await self._test_urls_fast_batch(
+                    high_confidence_urls, temp_session, progress_callback
+                )
+
+                if not result and (
+                    dll_name or self._is_important_function(function_name)
+                ):
+                    remaining_urls = prioritized_urls[12:25]
+                    result = await self._test_urls_sequential(
+                        remaining_urls, temp_session, progress_callback
+                    )
+
+                return result
+            finally:
+                # Close session first, then connector
+                if temp_session and not temp_session.closed:
+                    await temp_session.close()
+                if connector and not connector.closed:
+                    await connector.close()
+
+    def _get_prioritized_urls(
+        self, function_name: str, dll_name: str, base_url: str
+    ) -> list:
+        """Get URLs in optimal priority order for fastest discovery"""
+        function_lower = function_name.lower()
+        urls = []
+
+        # Phase 1: Highest confidence URLs based on patterns and DLL
+        if dll_name:
+            primary_header = self.dll_to_primary_header.get(dll_name.lower())
+            if primary_header:
+                # Most likely header for this DLL
+                base_api_url = f"{base_url}/windows/win32/api/{primary_header}"
+                urls.extend(
+                    [
+                        f"{base_api_url}/nf-{primary_header}-{function_lower}",
+                        f"{base_api_url}/nf-{primary_header}-{function_lower}a",
+                        f"{base_api_url}/nf-{primary_header}-{function_lower}w",
+                    ]
+                )
+
+        # Phase 2: Pattern-based URLs (high confidence)
+        pattern_headers = []
+        for pattern, headers in self.function_patterns.items():
+            if re.match(pattern, function_lower):
+                pattern_headers.extend(headers[:2])  # Top 2 headers per pattern
+                break  # Use first matching pattern only for speed
+
+        # Add pattern-based URLs
+        for header in pattern_headers[:3]:  # Limit to top 3 for speed
+            if header not in [h.split("/")[-1] for h in urls if h]:  # Avoid duplicates
+                base_api_url = f"{base_url}/windows/win32/api/{header}"
+                new_urls = [f"{base_api_url}/nf-{header}-{function_lower}"]
+                if not function_lower.endswith(("a", "w")):
+                    new_urls.extend(
+                        [
+                            f"{base_api_url}/nf-{header}-{function_lower}a",
+                            f"{base_api_url}/nf-{header}-{function_lower}w",
+                        ]
+                    )
+                urls.extend(new_urls)
+
+        # Phase 3: Native API prioritization
+        if function_lower.startswith(("nt", "zw", "rtl")):
+            for header in ["winternl", "ntifs", "ntddk"]:
+                base_ddi_url = f"{base_url.replace('/pt-br', '').replace('/en-us', '')}/windows-hardware/drivers/ddi/{header}"
+                urls.insert(
+                    0, f"{base_ddi_url}/nf-{header}-{function_lower}"
+                )  # Insert at beginning
+
+        # Phase 4: Common fallback headers (medium confidence)
+        common_headers = ["winbase", "winuser", "fileapi", "memoryapi"]
+        for header in common_headers:
+            if header not in [h.split("/")[-1] for h in urls if h]:  # Avoid duplicates
+                base_api_url = f"{base_url}/windows/win32/api/{header}"
+                new_urls = [f"{base_api_url}/nf-{header}-{function_lower}"]
+                if not function_lower.endswith(("a", "w")):
+                    new_urls.append(f"{base_api_url}/nf-{header}-{function_lower}a")
+                urls.extend(new_urls)
+
+        # Clean up None values and remove duplicates while preserving order
+        clean_urls = []
+        seen = set()
+        for url in urls:
+            if url and url not in seen:
+                clean_urls.append(url)
+                seen.add(url)
+
+        return clean_urls
+
+    def _is_important_function(self, function_name: str) -> bool:
+        """Determine if function is important enough for extended search"""
+        function_lower = function_name.lower()
+        important_patterns = [
+            r"^create.*",
+            r"^get.*",
+            r"^set.*",
+            r"^open.*",
+            r"^close.*",
+            r"^read.*",
+            r"^write.*",
+            r"^nt.*",
+            r"^zw.*",
+        ]
+        return any(re.match(pattern, function_lower) for pattern in important_patterns)
+
+    async def _test_urls_fast_batch(
+        self,
+        urls: List[str],
+        session: aiohttp.ClientSession,
+        progress_callback: Optional[Callable[[int, int], None]] = None,
+    ) -> Optional[str]:
+        """Fast batch testing with optimized concurrency and early termination"""
+
+        async def test_single_url_fast(url: str, delay: float = 0.0) -> Optional[str]:
+            # Check circuit breaker state
+            if not self._should_attempt_request():
+                return None
+
+            headers = None
+            for attempt in range(self._retry_config["max_retries"] + 1):
+                try:
+                    if delay > 0 or attempt > 0:
+                        retry_delay = (
+                            delay
+                            if attempt == 0
+                            else self._calculate_retry_delay(attempt)
+                        )
+                        await asyncio.sleep(retry_delay)
+
+                    headers = self.get_random_headers()
+
+                    async with session.get(url, headers=headers) as response:
+                        if response.status == 200:
+                            # Success - update circuit breaker and user agent stats
+                            self._record_success()
+                            if headers:
+                                self.report_user_agent_success(
+                                    headers.get("User-Agent", ""), True
+                                )
+
+                            # Minimal content check for speed
+                            content_type = response.headers.get(
+                                "Content-Type", ""
+                            ).lower()
+                            if "html" in content_type:
+                                content_chunk = await response.content.read(2048)
+                                content_str = content_chunk.decode(
+                                    "utf-8", errors="ignore"
+                                ).lower()
+                                if any(
+                                    keyword in content_str
+                                    for keyword in [
+                                        "function",
+                                        "syntax",
+                                        "parameters",
+                                        "api",
+                                    ]
+                                ):
+                                    return url
+
+                        elif response.status == 429:  # Rate limited
+                            self._record_rate_limit()
+                            if attempt < self._retry_config["max_retries"]:
+                                continue  # Retry with longer delay
+
+                        elif response.status >= 500:  # Server error
+                            if attempt < self._retry_config["max_retries"]:
+                                continue  # Retry server errors
+
+                        # Non-retryable status or final attempt
+                        if headers:
+                            self.report_user_agent_success(
+                                headers.get("User-Agent", ""), False
+                            )
+                        return None
+
+                except aiohttp.ClientError as e:
+                    self._record_failure()
+                    if headers:
+                        self.report_user_agent_success(
+                            headers.get("User-Agent", ""), False
+                        )
+
+                    if attempt < self._retry_config["max_retries"]:
+                        continue  # Retry on client errors
+                    return None
+
+                except Exception:
+                    if attempt < self._retry_config["max_retries"]:
+                        continue  # Retry on unexpected errors
+                    return None
+
+            return None
+
+        # Create staggered tasks to avoid overwhelming the server
+        tasks = []
+        for i, url in enumerate(urls):
+            delay = i * 0.1  # 100ms delay between requests
+            task = asyncio.create_task(test_single_url_fast(url, delay))
+            tasks.append(task)
+
+        # Use as_completed for early termination
+        total = len(tasks)
+        completed = 0
+
+        try:
+            for completed_task in asyncio.as_completed(tasks):
+                try:
+                    result = await completed_task
+                    completed += 1
+
+                    if progress_callback:
+                        progress_callback(completed, total)
+
+                    if (
+                        result
+                    ):  # Found valid URL - cancel remaining and return immediately
+                        for task in tasks:
+                            if not task.done():
+                                task.cancel()
+                        return result
+
+                except Exception:
+                    completed += 1
+                    if progress_callback:
+                        progress_callback(completed, total)
+                    continue
+        finally:
+            # Clean up any remaining tasks
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            # Wait for cancelled tasks to complete
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+
+        return None
 
     async def _test_urls_sequential(
         self,
@@ -516,46 +1463,33 @@ class SmartURLGenerator:
         session: aiohttp.ClientSession,
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
-        """Test URLs sequentially to avoid rate limiting"""
+        """Test URLs sequentially with optimized speed and smart delays"""
 
         total = len(urls)
+        consecutive_failures = 0
 
         for i, url in enumerate(urls, 1):
             try:
                 if progress_callback:
                     progress_callback(i, total)
 
-                # Use random headers for each request
-                headers = self.get_random_headers()
-
-                # Randomized delay between requests to appear more human
+                # Adaptive delay based on failure rate
                 if i > 1:
-                    delay = random.uniform(
-                        0.3, 0.8
-                    )  # Random delay between 0.3-0.8 seconds
+                    if consecutive_failures > 2:
+                        delay = random.uniform(0.5, 1.0)  # Longer delay after failures
+                    else:
+                        delay = random.uniform(0.1, 0.3)  # Shorter delay for speed
                     await asyncio.sleep(delay)
 
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        # Quick content check to ensure it's a valid function page
-                        content = await response.text()
-                        if any(
-                            keyword in content.lower()
-                            for keyword in [
-                                "function",
-                                "routine",
-                                "api",
-                                "syntax",
-                                "parameters",
-                            ]
-                        ):
-                            return url
-                    elif response.status == 429:
-                        # Rate limited - wait longer with exponential backoff
-                        backoff_delay = random.uniform(2, 5)
-                        await asyncio.sleep(backoff_delay)
+                headers = self.get_random_headers()
+
+                result = await self._request_with_retry(session, url, headers)
+                if result:
+                    return result
+                consecutive_failures += 1
 
             except Exception:
+                consecutive_failures += 1
                 continue
 
         return None
@@ -625,28 +1559,33 @@ class SmartURLGenerator:
         function_name: str,
         dll_name: str = None,
         base_url: str = "https://learn.microsoft.com/en-us",
-        max_workers: int = 20,
+        max_workers: int = 12,  # Reduced for better performance
     ) -> Optional[str]:
         """
-        Synchronous version using ThreadPoolExecutor for maximum concurrency
-        Tests ALL URLs simultaneously with multiple threads
+        Optimized synchronous version with intelligent URL prioritization
+        Tests prioritized URLs first for maximum speed
         """
         import requests
 
-        # Use Elite system for complete coverage
-        all_url_tuples = self.generate_all_possible_urls(function_name, base_url)
-        all_urls = [url_tuple[0] for url_tuple in all_url_tuples]
+        # Get prioritized URLs instead of all URLs
+        prioritized_urls = self._get_prioritized_urls(function_name, dll_name, base_url)
 
-        def test_url(url: str) -> Optional[str]:
+        # Test high-confidence URLs first
+        high_confidence_urls = prioritized_urls[:15]
+
+        def test_url_fast(url: str) -> Optional[str]:
             try:
-                # Use random headers for each request
                 headers = self.get_random_headers()
-                response = requests.get(url, headers=headers, timeout=3)
+                # Reduced timeout for speed
+                response = requests.get(url, headers=headers, timeout=2.5)
+
                 if response.status_code == 200:
-                    # Quick content check
-                    content = response.text.lower()
+                    # Fast content check - only first 1KB
+                    content_chunk = (
+                        response.content[:1024].decode("utf-8", errors="ignore").lower()
+                    )
                     if any(
-                        keyword in content
+                        keyword in content_chunk
                         for keyword in [
                             "function",
                             "routine",
@@ -657,26 +1596,46 @@ class SmartURLGenerator:
                     ):
                         return url
                 return None
-            except:
+            except Exception:
                 return None
 
-        # Use ThreadPoolExecutor for maximum concurrency
+        # First round: Test high-confidence URLs
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            # Submit ALL URLs for testing simultaneously
-            future_to_url = {executor.submit(test_url, url): url for url in all_urls}
+            future_to_url = {
+                executor.submit(test_url_fast, url): url for url in high_confidence_urls
+            }
 
-            # Return FIRST successful result
             for future in as_completed(future_to_url):
                 try:
                     result = future.result()
                     if result:
-                        # Cancel remaining futures
+                        # Cancel remaining futures and return immediately
                         for remaining_future in future_to_url:
                             if not remaining_future.done():
                                 remaining_future.cancel()
                         return result
-                except:
+                except Exception:
                     continue
+
+        # Second round: If not found and function is important, try more URLs
+        if self._is_important_function(function_name) and len(prioritized_urls) > 15:
+            remaining_urls = prioritized_urls[15:25]
+
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_url = {
+                    executor.submit(test_url_fast, url): url for url in remaining_urls
+                }
+
+                for future in as_completed(future_to_url):
+                    try:
+                        result = future.result()
+                        if result:
+                            for remaining_future in future_to_url:
+                                if not remaining_future.done():
+                                    remaining_future.cancel()
+                            return result
+                    except Exception:
+                        continue
 
         return None
 

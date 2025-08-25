@@ -565,6 +565,9 @@ class JSONFormatter:
             return [JSONFormatter._make_json_serializable(item) for item in obj]
         elif isinstance(obj, (set, frozenset)):
             return list(obj)
+        elif isinstance(obj, (bool, int, float, str, type(None))):
+            # JSON-native types, keep as-is
+            return obj
         elif hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes)):
             # Handle other iterables
             return [JSONFormatter._make_json_serializable(item) for item in obj]

@@ -44,14 +44,15 @@ class Win32APIScraper:
         if user_agent is None:
             # Use the smart generator's user agent system
             temp_generator = SmartURLGenerator()
-            user_agent = temp_generator.user_agents[0]
+            user_agent = temp_generator.user_agents_flat[0]
 
-        # Async HTTP client with caching and rotation support
+        # Async HTTP client with intelligent caching and rotation support
         self.http = HTTPClient(
             user_agent=user_agent,
             proxies=proxies,
             rate_limit=rate_limit,
             rotate_user_agent=rotate_user_agent,
+            cache_ttl=7200,  # 2 hours cache for Win32 API docs
         )
         self.user_agent = user_agent
 
@@ -145,9 +146,8 @@ class Win32APIScraper:
                     )
             except Exception as e:
                 pass  # Silently continue to next priority
-                import traceback
-
-                traceback.print_exc()
+                # import traceback
+                # traceback.print_exc()
 
             # PRIORITY 2: Try catalog lookup (backup)
             with Status(

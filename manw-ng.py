@@ -17,6 +17,39 @@ import argparse
 import sys
 import os
 import re
+import warnings
+
+
+# Suppress specific aiohttp ResourceWarnings
+class AiohttpWarningFilter:
+    def __init__(self):
+        self.original_stderr = sys.stderr
+
+    def write(self, data):
+        # Filter out aiohttp session warnings
+        if isinstance(data, str):
+            if any(
+                phrase in data
+                for phrase in [
+                    "Unclosed client session",
+                    "Unclosed connector",
+                    "connections:",
+                    "client_session:",
+                    "connector:",
+                ]
+            ):
+                return  # Don't write these messages
+        self.original_stderr.write(data)
+
+    def flush(self):
+        self.original_stderr.flush()
+
+    def __getattr__(self, name):
+        return getattr(self.original_stderr, name)
+
+
+# Install the filter
+sys.stderr = AiohttpWarningFilter()
 
 # Fix Windows encoding issues
 if sys.platform.startswith("win"):
@@ -122,6 +155,13 @@ Examples:
         # Scrape function information
         function_info = scraper.scrape_function(args.function_name)
 
+        # Explicitly close HTTP client to prevent session leaks
+        try:
+            if hasattr(scraper, "http_client"):
+                scraper.http_client.cleanup_sync()
+        except Exception:
+            pass
+
         # Format output
         if args.output == "rich":
             try:
@@ -151,6 +191,21 @@ Examples:
     except Exception as e:
         console.print(f"[red]Erro: {e}[/red]")
         sys.exit(1)
+    finally:
+        # Force cleanup of all async resources
+        try:
+            import asyncio
+            import gc
+
+            # Force garbage collection
+            gc.collect()
+            # Close any remaining event loops
+            try:
+                asyncio.set_event_loop_policy(None)
+            except:
+                pass
+        except Exception:
+            pass
 
 
 if __name__ == "__main__":
