@@ -5,12 +5,11 @@ Ultra-fast asynchronous URL generator that tests ALL known patterns simultaneous
 This system ensures 100% coverage with maximum speed using concurrent requests.
 """
 
-from typing import List, Dict, Set, Optional, Tuple, Callable
+from typing import List, Dict, Optional, Tuple, Callable
 import re
 import asyncio
 import aiohttp
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import time
 import random
 
 
@@ -127,7 +126,7 @@ class SmartURLGenerator:
         }
 
         # Headers baseados no nome da função (patterns)
-        self.function_patterns = {
+        raw_patterns = {
             # Native API functions (highest priority)
             r"^nt.*": ["winternl", "ntddk", "wdm", "ntifs"],
             r"^zw.*": ["winternl", "ntddk", "wdm", "ntifs"],
@@ -203,10 +202,12 @@ class SmartURLGenerator:
             r"create.*window.*": ["winuser"],
             # More GDI functions
             r".*stock.*": ["wingdi"],
-            r"delete.*": ["wingdi", "fileapi"],
             r".*dc.*": ["wingdi"],
             r".*brush.*": ["wingdi"],
             r".*font.*": ["wingdi"],
+        }
+        self.function_patterns = {
+            re.compile(p): headers for p, headers in raw_patterns.items()
         }
 
     def generate_possible_urls(
@@ -238,7 +239,7 @@ class SmartURLGenerator:
         # 2. Get headers based on function name patterns
         pattern_headers = []
         for pattern, pattern_header_list in self.function_patterns.items():
-            if re.match(pattern, function_lower):
+            if pattern.match(function_lower):
                 pattern_headers.extend(pattern_header_list)
 
         # 3. Get headers based on DLL (secondary priority)
@@ -330,7 +331,7 @@ class SmartURLGenerator:
         # INTELLIGENT HEADER PRIORITY: Use patterns first, then fallback to common headers
         pattern_headers = []
         for pattern, pattern_header_list in self.function_patterns.items():
-            if re.match(pattern, symbol_lower):
+            if pattern.match(symbol_lower):
                 pattern_headers.extend(pattern_header_list)
 
         # Remove duplicates while preserving order
@@ -519,25 +520,24 @@ class SmartURLGenerator:
         """Test URLs sequentially to avoid rate limiting"""
 
         total = len(urls)
+        backoff = 1.0
 
         for i, url in enumerate(urls, 1):
             try:
                 if progress_callback:
                     progress_callback(i, total)
 
-                # Use random headers for each request
                 headers = self.get_random_headers()
 
-                # Randomized delay between requests to appear more human
                 if i > 1:
-                    delay = random.uniform(
-                        0.3, 0.8
-                    )  # Random delay between 0.3-0.8 seconds
+                    delay = random.uniform(0.3, 0.8)
                     await asyncio.sleep(delay)
 
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        # Quick content check to ensure it's a valid function page
+                async with session.head(url, headers=headers) as head_resp:
+                    status = head_resp.status
+
+                if status == 200:
+                    async with session.get(url, headers=headers) as response:
                         content = await response.text()
                         if any(
                             keyword in content.lower()
@@ -550,11 +550,12 @@ class SmartURLGenerator:
                             ]
                         ):
                             return url
-                    elif response.status == 429:
-                        # Rate limited - wait longer with exponential backoff
-                        backoff_delay = random.uniform(2, 5)
-                        await asyncio.sleep(backoff_delay)
-
+                    backoff = 1.0
+                elif status == 429:
+                    await asyncio.sleep(backoff + random.uniform(0, 1))
+                    backoff = min(backoff * 2, 60)
+                else:
+                    backoff = 1.0
             except Exception:
                 continue
 
@@ -570,28 +571,27 @@ class SmartURLGenerator:
 
         async def test_single_url(url: str) -> Optional[str]:
             try:
-                # Use random headers for each request
                 headers = self.get_random_headers()
-                # Random delay to avoid rate limiting and appear more human
                 delay = random.uniform(0.1, 0.4)
                 await asyncio.sleep(delay)
+                async with session.head(url, headers=headers) as head_resp:
+                    if head_resp.status != 200:
+                        return None
                 async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        # Quick content check to ensure it's a valid function page
-                        content = await response.text()
-                        if any(
-                            keyword in content.lower()
-                            for keyword in [
-                                "function",
-                                "routine",
-                                "api",
-                                "syntax",
-                                "parameters",
-                            ]
-                        ):
-                            return url
+                    content = await response.text()
+                    if any(
+                        keyword in content.lower()
+                        for keyword in [
+                            "function",
+                            "routine",
+                            "api",
+                            "syntax",
+                            "parameters",
+                        ]
+                    ):
+                        return url
                     return None
-            except:
+            except Exception:
                 return None
 
         # Create tasks for ALL URLs simultaneously
@@ -612,7 +612,7 @@ class SmartURLGenerator:
                         if not task.done():
                             task.cancel()
                     return result
-            except:
+            except Exception:
                 completed += 1
                 if progress_callback:
                     progress_callback(completed, total)
@@ -657,7 +657,7 @@ class SmartURLGenerator:
                     ):
                         return url
                 return None
-            except:
+            except Exception:
                 return None
 
         # Use ThreadPoolExecutor for maximum concurrency
@@ -675,7 +675,7 @@ class SmartURLGenerator:
                             if not remaining_future.done():
                                 remaining_future.cancel()
                         return result
-                except:
+                except Exception:
                     continue
 
         return None
