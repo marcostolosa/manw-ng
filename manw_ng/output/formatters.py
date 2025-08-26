@@ -11,7 +11,6 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
 from rich.syntax import Syntax
-from ..core.symbol_classifier import Win32SymbolClassifier
 
 
 class RichFormatter:
@@ -36,7 +35,7 @@ class RichFormatter:
         self.console = Console(**console_config)
         self.language = language
         self.show_remarks = show_remarks
-        self.classifier = Win32SymbolClassifier()
+        # Symbol classification removed - using simple classification
 
         # Elegant Unicode symbols
         self.cross_mark = "❌"
@@ -108,7 +107,13 @@ class RichFormatter:
         # Get symbol classification info
         symbol_info = function_info.get("symbol_info")
         if symbol_info:
-            display_info = self.classifier.get_display_info(symbol_info, self.language)
+            # Simple display info without classifier
+            display_info = {
+                "header_title": symbol_info.get("surface", "Win32 API"),
+                "header_file": symbol_info.get("header", "unknown"),
+                "function_type": symbol_info.get("kind", "function"),
+                "type_display": f"{symbol_info.get('kind', 'function').title()} {symbol_info.get('surface', 'Win32 API')}",
+            }
             symbol_title = display_info["type_display"]
         else:
             # Fallback para compatibilidade

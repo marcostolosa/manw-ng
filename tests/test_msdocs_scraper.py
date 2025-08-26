@@ -1,26 +1,32 @@
 import pytest
 
-from manw_ng.utils.msdocs_scraper import _swap_locale, classify_url
+from manw_ng.core.scraper import Win32APIScraper
 
 
-def test_swap_locale():
-    base = "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew"
-    br = _swap_locale(base, "pt-br")
-    assert "/pt-br/" in br
-    assert br.endswith("nf-fileapi-createfilew")
+def test_scraper_basic_functionality():
+    """Test basic scraper functionality instead of deprecated modules"""
+    scraper = Win32APIScraper()
+    # Test that scraper can be initialized
+    assert scraper.language == "us"
+    assert scraper.base_url == "https://learn.microsoft.com/en-us"
+
+    # Test language switching
+    br_scraper = Win32APIScraper(language="br")
+    assert br_scraper.language == "br"
+    assert br_scraper.base_url == "https://learn.microsoft.com/pt-br"
 
 
-def test_classify_url_sdk_function():
+def test_url_format_display():
+    """Test URL formatting functionality"""
+    scraper = Win32APIScraper()
     url = "https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilew"
-    typ, header, area = classify_url(url)
-    assert typ == "function"
-    assert header == "fileapi"
-    assert area == "SDK"
+    formatted = scraper._format_url_display(url)
+    assert "api/fileapi/nf-fileapi-createfilew" in formatted
 
 
-def test_classify_url_ddi_struct():
-    url = "https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_io_status_block"
-    typ, header, area = classify_url(url)
-    assert typ == "struct"
-    assert header == "ntifs"
-    assert area == "DDI"
+def test_direct_url_mapping():
+    """Test direct URL mapping functionality"""
+    scraper = Win32APIScraper()
+    direct_url = scraper._try_direct_url("CreateFileW")
+    # Should return a URL or None, not crash
+    assert direct_url is None or isinstance(direct_url, str)

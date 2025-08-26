@@ -8,10 +8,15 @@ This system ensures 100% coverage with maximum speed using concurrent requests.
 from typing import List, Dict, Set, Optional, Tuple, Callable
 import re
 import asyncio
-import aiohttp
+
+# Lazy import heavy dependencies
+# import aiohttp
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import random
+
+# Lazy import to avoid 3s+ load time
+# from .url_pattern_learner import pattern_learner
 
 
 class SmartURLGenerator:
@@ -83,24 +88,33 @@ class SmartURLGenerator:
         self._last_successful_agent = None
         self._agent_failure_count = {}
 
-        # Circuit breaker for intelligent retry
+        # Circuit breaker for intelligent retry - OPTIMIZED SETTINGS
         self._circuit_breaker = {
             "failure_count": 0,
             "last_failure_time": 0,
             "state": "CLOSED",  # CLOSED, OPEN, HALF_OPEN
-            "failure_threshold": 5,
-            "recovery_timeout": 30,  # seconds
-            "consecutive_successes_needed": 2,
+            "failure_threshold": 100,  # Much higher threshold - allow more failures
+            "recovery_timeout": 1,  # Very fast recovery
+            "consecutive_successes_needed": 1,  # Only need 1 success
         }
 
-        # Adaptive retry configuration
+        # Adaptive retry configuration - ULTRA FAST
         self._retry_config = {
-            "max_retries": 3,
-            "base_delay": 1.0,
-            "max_delay": 10.0,
-            "backoff_factor": 2.0,
+            "max_retries": 2,  # Fewer retries
+            "base_delay": 0.1,  # Much faster base delay
+            "max_delay": 2.0,  # Much lower max delay
+            "backoff_factor": 1.5,  # Less aggressive backoff
             "jitter": True,
         }
+
+        # Try to import ML classifier for intelligent predictions
+        self.ml_classifier = None
+        try:
+            from ..ml.function_classifier import ml_classifier
+
+            self.ml_classifier = ml_classifier
+        except ImportError:
+            pass  # Continue without ML if not available
 
         # Mapeamento DLL -> Headers COMPLETO (TODOS os headers possíveis)
         self.dll_to_headers = {
@@ -140,6 +154,7 @@ class SmartURLGenerator:
             "advapi32.dll": [
                 "aclapi",
                 "securitybaseapi",
+                "secext",
                 "winreg",
                 "winsvc",
                 "processthreadsapi",
@@ -177,8 +192,21 @@ class SmartURLGenerator:
                 "ws2spi",
             ],
             "wininet.dll": ["wininet", "urlmon", "winhttp"],
-            "ntdll.dll": ["winternl", "winbase", "ntstatus", "subauth"],
-            "psapi.dll": ["psapi", "toolhelp"],
+            "ole32.dll": ["objbase", "combaseapi", "ole2", "oleidl", "oleauto"],
+            "oleaut32.dll": ["oleauto", "oaidl"],
+            "shell32.dll": ["shellapi", "shlobj_core", "shlwapi"],
+            "version.dll": ["winver"],
+            "psapi.dll": ["psapi"],
+            "dbghelp.dll": ["dbghelp"],
+            "imagehlp.dll": ["imagehlp"],
+            "rpcrt4.dll": ["rpc"],
+            "secur32.dll": ["sspi", "ntsecapi"],
+            "winspool.drv": ["winspool"],
+            "winmm.dll": ["mmeapi", "timeapi"],
+            "urlmon.dll": ["urlmon", "wininet"],
+            "winhttp.dll": ["winhttp", "wininet"],
+            "ntdll.dll": ["winternl", "winbase", "ntstatus", "subauth", "winnt", "wdm"],
+            "psapi.dll": ["psapi", "toolhelp", "tlhelp32"],
             "version.dll": ["winver"],
             "crypt32.dll": ["wincrypt", "dpapi", "cryptuiapi"],
             "ole32.dll": [
@@ -250,7 +278,18 @@ class SmartURLGenerator:
             r"create.*dc.*": ["wingdi"],
             r"select.*": ["wingdi"],
             r"get.*object.*gdi": ["wingdi"],
-            # File operations
+            # File operations - EXPANDED
+            r"^createfilew$": ["fileapi"],  # CreateFileW specifically
+            r"^createfilea$": ["fileapi"],  # CreateFileA specifically
+            r"^createfile2$": ["fileapi"],  # CreateFile2 specifically
+            r"^readfile$": ["fileapi"],  # ReadFile specifically
+            r"^writefile$": ["fileapi"],  # WriteFile specifically
+            r"^deletefile$": ["fileapi"],  # DeleteFile specifically
+            r"^copyfile$": ["fileapi"],  # CopyFile specifically
+            r"^movefile$": ["fileapi"],  # MoveFile specifically
+            r"^findfirstfile$": ["fileapi"],  # FindFirstFile specifically
+            r"^findnextfile$": ["fileapi"],  # FindNextFile specifically
+            r"^findclose$": ["fileapi"],  # FindClose specifically
             r".*file.*": ["fileapi"],
             r"^create.*file": ["fileapi"],
             r"^create.*process": ["processthreadsapi"],
@@ -261,24 +300,159 @@ class SmartURLGenerator:
             r"write.*file": ["fileapi", "ioapiset"],
             r"get.*drives.*": ["fileapi"],
             r"get.*logical.*drives": ["fileapi"],
+            r"^getcommandlinea$": ["processenv"],  # GetCommandLineA specifically
+            r"^getcommandlinew$": ["processenv"],  # GetCommandLineW specifically
             r"get.*command.*line": ["processenv"],
-            # Memory operations
+            # Memory operations - EXPANDED
+            r"^virtualalloc$": ["memoryapi"],  # VirtualAlloc specifically
+            r"^virtualallocex$": ["memoryapi"],  # VirtualAllocEx specifically
+            r"^virtualfree$": ["memoryapi"],  # VirtualFree specifically
+            r"^virtualfreeex$": ["memoryapi"],  # VirtualFreeEx specifically
+            r"^virtualprotect$": ["memoryapi"],  # VirtualProtect specifically
+            r"^virtualprotectex$": ["memoryapi"],  # VirtualProtectEx specifically
+            r"^virtualquery$": ["memoryapi"],  # VirtualQuery specifically
+            r"^virtualqueryex$": ["memoryapi"],  # VirtualQueryEx specifically
             r"virtual.*": ["memoryapi"],
             r"heap.*": ["heapapi"],
             r".*alloc.*": ["memoryapi", "heapapi"],
             r".*memory.*": ["memoryapi"],
-            # Process/Thread
+            # Handle operations - EXPANDED
+            r"^closehandle$": ["handleapi"],  # CloseHandle specifically
+            r"^duplicatehandle$": ["handleapi"],  # DuplicateHandle specifically
+            r"^compareobjecthandles$": [
+                "handleapi"
+            ],  # CompareObjectHandles specifically
+            r"^gethandleinformation$": [
+                "handleapi"
+            ],  # GetHandleInformation specifically
+            r"^sethandleinformation$": [
+                "handleapi"
+            ],  # SetHandleInformation specifically
+            r".*handle.*": ["handleapi"],
+            # Performance and timing - EXPANDED
+            r"^queryperformancecounter$": [
+                "profileapi"
+            ],  # QueryPerformanceCounter specifically
+            r"^queryperformancefrequency$": [
+                "profileapi"
+            ],  # QueryPerformanceFrequency specifically
+            r"^gettickcount$": ["sysinfoapi"],  # GetTickCount specifically
+            r"^gettickcount64$": ["sysinfoapi"],  # GetTickCount64 specifically
+            r"query.*performance.*": ["profileapi"],
+            r"get.*tick.*": ["sysinfoapi"],
+            # Global memory operations - EXPANDED
+            r"^globalalloc$": ["winbase"],  # GlobalAlloc specifically
+            r"^globalfree$": ["winbase"],  # GlobalFree specifically
+            r"^globallock$": ["winbase"],  # GlobalLock specifically
+            r"^globalunlock$": ["winbase"],  # GlobalUnlock specifically
+            r"^globalrealloc$": ["winbase"],  # GlobalReAlloc specifically
+            r"global.*": ["winbase"],
+            # SList operations - EXPANDED
+            r"^initializeslisthead$": [
+                "interlockedapi"
+            ],  # InitializeSListHead specifically
+            r"^interlockedpushslistentry$": [
+                "interlockedapi"
+            ],  # InterlockedPushSListEntry specifically
+            r"^interlockedpopslistentry$": [
+                "interlockedapi"
+            ],  # InterlockedPopSListEntry specifically
+            r"^interlockedflushslist$": [
+                "interlockedapi"
+            ],  # InterlockedFlushSList specifically
+            r"^querydepthslist$": ["interlockedapi"],  # QueryDepthSList specifically
+            r".*slist.*": ["interlockedapi"],
+            # Exception handling - EXPANDED
+            r"^setunhandledexceptionfilter$": [
+                "errhandlingapi"
+            ],  # SetUnhandledExceptionFilter specifically
+            r"^unhandledexceptionfilter$": [
+                "errhandlingapi"
+            ],  # UnhandledExceptionFilter specifically
+            r"^addvectoredexceptionhandler$": [
+                "errhandlingapi"
+            ],  # AddVectoredExceptionHandler specifically
+            r"^removevectoredexceptionhandler$": [
+                "errhandlingapi"
+            ],  # RemoveVectoredExceptionHandler specifically
+            r".*exception.*": ["errhandlingapi"],
+            # User name operations - EXPANDED
+            r"^getusernameexw$": ["secext"],  # GetUserNameExW specifically
+            r"^getusernameexa$": ["secext"],  # GetUserNameExA specifically
+            r"^getusernamew$": ["advapi32"],  # GetUserNameW specifically
+            r"^getusernamea$": ["advapi32"],  # GetUserNameA specifically
+            r"get.*user.*name.*": ["secext", "advapi32"],
+            # COM operations - EXPANDED
+            r"^coinitialize$": ["objbase"],  # CoInitialize specifically
+            r"^coinitializeex$": ["objbase"],  # CoInitializeEx specifically
+            r"^couninitialize$": ["objbase"],  # CoUninitialize specifically
+            r"^cocreateinstance$": ["objbase"],  # CoCreateInstance specifically
+            r"^cogetclassobject$": ["objbase"],  # CoGetClassObject specifically
+            r"^coclassfactory$": ["objbase"],  # CoClassFactory specifically
+            r"^coregisterclassobject$": [
+                "objbase"
+            ],  # CoRegisterClassObject specifically
+            r"^corevokeclassobject$": ["objbase"],  # CoRevokeClassObject specifically
+            r"^cotaskmemalloc$": ["objbase"],  # CoTaskMemAlloc specifically
+            r"^cotaskmemfree$": ["objbase"],  # CoTaskMemFree specifically
+            r"co.*": ["objbase", "combaseapi"],
+            # Shell operations - EXPANDED
+            r"^shellexecutew$": ["shellapi"],  # ShellExecuteW specifically
+            r"^shellexecutea$": ["shellapi"],  # ShellExecuteA specifically
+            r"^shellexecuteexw$": ["shellapi"],  # ShellExecuteExW specifically
+            r"^shellexecuteexa$": ["shellapi"],  # ShellExecuteExA specifically
+            r"^shgetfolderpath$": ["shlobj_core"],  # SHGetFolderPath specifically
+            r"^shgetspecialfolderlocation$": [
+                "shlobj_core"
+            ],  # SHGetSpecialFolderLocation specifically
+            r"shell.*": ["shellapi", "shlobj_core"],
+            r"sh.*": ["shlobj_core", "shlwapi"],
+            # Process/Thread - EXPANDED
+            r"^createprocessw$": ["processthreadsapi"],  # CreateProcessW specifically
+            r"^createprocessa$": ["processthreadsapi"],  # CreateProcessA specifically
+            r"^openprocess$": ["processthreadsapi"],  # OpenProcess specifically
+            r"^terminateprocess$": [
+                "processthreadsapi"
+            ],  # TerminateProcess specifically
+            r"^createthread$": ["processthreadsapi"],  # CreateThread specifically
+            r"^createremotethread$": [
+                "processthreadsapi"
+            ],  # CreateRemoteThread specifically
+            r"^openthread$": ["processthreadsapi"],  # OpenThread specifically
+            r"^suspendthread$": ["processthreadsapi"],  # SuspendThread specifically
+            r"^resumethread$": ["processthreadsapi"],  # ResumeThread specifically
+            r"^terminatethread$": ["processthreadsapi"],  # TerminateThread specifically
             r".*process.*": ["processthreadsapi"],
             r".*thread.*": ["processthreadsapi"],
             r"terminate.*": ["processthreadsapi"],
             r"suspend.*": ["processthreadsapi"],
             r"resume.*": ["processthreadsapi"],
-            # Registry
+            # Registry - EXPANDED
+            r"^regopenkeyexw$": ["winreg"],  # RegOpenKeyExW specifically
+            r"^regopenkeyexa$": ["winreg"],  # RegOpenKeyExA specifically
+            r"^regopenkeyex$": ["winreg"],  # RegOpenKeyEx generic
+            r"^regopenkeyw$": ["winreg"],  # RegOpenKeyW specifically
+            r"^regopenkeya$": ["winreg"],  # RegOpenKeyA specifically
+            r"^regopenkey$": ["winreg"],  # RegOpenKey generic
+            r"^regcreatekeyexw$": ["winreg"],  # RegCreateKeyExW specifically
+            r"^regcreatekeyexa$": ["winreg"],  # RegCreateKeyExA specifically
+            r"^regcreatekeyex$": ["winreg"],  # RegCreateKeyEx generic
+            r"^regclosekey$": ["winreg"],  # RegCloseKey specifically
             r"reg.*": ["winreg"],
             r".*key.*": ["winreg"],
             # Services
             r".*service.*": ["winsvc"],
-            # Network
+            # Network - EXPANDED
+            r"^internetopena$": ["wininet"],  # InternetOpenA specifically
+            r"^internetopenw$": ["wininet"],  # InternetOpenW specifically
+            r"^internetopen$": ["wininet"],  # InternetOpen generic
+            r"^internetconnecta$": ["wininet"],  # InternetConnectA specifically
+            r"^internetconnectw$": ["wininet"],  # InternetConnectW specifically
+            r"^internetconnect$": ["wininet"],  # InternetConnect generic
+            r"^internetreadfile$": ["wininet"],  # InternetReadFile specifically
+            r"^socket$": ["winsock2"],  # socket specifically
+            r"^wsastartup$": ["winsock2"],  # WSAStartup specifically
+            r"^wsacleanup$": ["winsock2"],  # WSACleanup specifically
             r".*socket.*": ["winsock2"],
             r"ws.*": ["winsock2"],
             r"internet.*": ["wininet"],
@@ -287,15 +461,32 @@ class SmartURLGenerator:
             r"cert.*": ["wincrypt"],
             r"crypt.*": ["wincrypt", "bcrypt"],
             r".*security.*": ["securitybaseapi"],
+            # Debug/Diagnostics - EXPANDED
+            r"^isdebuggerpresent$": ["debugapi"],  # IsDebuggerPresent specifically
+            r".*debug.*": ["debugapi"],
             r".*acl.*": ["aclapi"],
             r".*effective.*": ["aclapi"],
             r".*trustee.*": ["aclapi"],
-            # Shell/System
+            # Shell/System - EXPANDED
+            r"^shellexecutea$": ["shellapi"],  # ShellExecuteA specifically
+            r"^shellexecutew$": ["shellapi"],  # ShellExecuteW specifically
+            r"^shellexecute$": ["shellapi"],  # ShellExecute generic
+            r"^shellexecuteexa$": ["shellapi"],  # ShellExecuteExA specifically
+            r"^shellexecuteexw$": ["shellapi"],  # ShellExecuteExW specifically
+            r"^shellexecuteex$": ["shellapi"],  # ShellExecuteEx generic
             r"shell.*": ["shellapi"],
             r"sh.*": ["shellapi"],
             # Console
             r".*console.*": ["consoleapi"],
-            # Library loading
+            # Library loading - EXPANDED
+            r"^loadlibrarya$": ["libloaderapi"],  # LoadLibraryA specifically
+            r"^loadlibraryw$": ["libloaderapi"],  # LoadLibraryW specifically
+            r"^loadlibrary$": ["libloaderapi"],  # LoadLibrary generic
+            r"^freelibrary$": ["libloaderapi"],  # FreeLibrary specifically
+            r"^getprocaddress$": ["libloaderapi"],  # GetProcAddress specifically
+            r"^getmodulehandle$": ["libloaderapi"],  # GetModuleHandle specifically
+            r"^getmodulehandlea$": ["libloaderapi"],  # GetModuleHandleA specifically
+            r"^getmodulehandlew$": ["libloaderapi"],  # GetModuleHandleW specifically
             r"load.*": ["libloaderapi"],
             r"get.*module.*": ["libloaderapi"],
             r".*library.*": ["libloaderapi"],
@@ -308,12 +499,331 @@ class SmartURLGenerator:
             r".*edit.*": ["commctrl"],
             r".*combo.*": ["commctrl"],
             r"create.*window.*": ["winuser"],
-            # More GDI functions
+            # More GDI functions - EXPANDED
+            r"^getstockobject$": ["wingdi"],  # GetStockObject specifically
+            r"^deletedc$": ["wingdi"],  # DeleteDC specifically
+            r"^createdc$": ["wingdi"],  # CreateDC specifically
+            r"^createcompatibledc$": ["wingdi"],  # CreateCompatibleDC specifically
+            r"^selectobject$": ["wingdi"],  # SelectObject specifically
+            r"^deleteobject$": ["wingdi"],  # DeleteObject specifically
+            r"^bitblt$": ["wingdi"],  # BitBlt specifically
+            r"^stretchblt$": ["wingdi"],  # StretchBlt specifically
+            r"^textout$": ["wingdi"],  # TextOut specifically
+            r"^drawtext$": ["wingdi"],  # DrawText specifically
             r".*stock.*": ["wingdi"],
             r"delete.*": ["wingdi", "fileapi"],
             r".*dc.*": ["wingdi"],
             r".*brush.*": ["wingdi"],
             r".*font.*": ["wingdi"],
+            # CRITICAL FUNCTIONS - SPECIFIC MAPPINGS
+            r"^enumprocesses$": ["psapi"],  # EnumProcesses specifically
+            r"^createtoolhelp32snapshot$": [
+                "tlhelp32"
+            ],  # CreateToolhelp32Snapshot specifically
+            r"^urldownloadtofile$": ["urlmon"],  # URLDownloadToFile specifically
+            r"^urldownloadtofilea$": ["urlmon"],  # URLDownloadToFileA specifically
+            r"^urldownloadtofilew$": ["urlmon"],  # URLDownloadToFileW specifically
+            r"^winhttpopenrequest$": ["winhttp"],  # WinHttpOpenRequest specifically
+            r"^winhttpopen$": ["winhttp"],  # WinHttpOpen specifically
+            r"^winhttpconnect$": ["winhttp"],  # WinHttpConnect specifically
+            r"^ftpputfile$": ["wininet"],  # FtpPutFile specifically
+            r"^ftpputfilea$": ["wininet"],  # FtpPutFileA specifically
+            r"^ftpputfilew$": ["wininet"],  # FtpPutFileW specifically
+            # COMPREHENSIVE NATIVE API COVERAGE - ALL NT*/ZW* FUNCTIONS
+            # File System Native APIs
+            r"^(nt|zw)createfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)openfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)readfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)writefile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)deletefile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)queryinformationfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)setinformationfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)queryattributesfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)queryfullattributesfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)queryvolumeinformationfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)setvolumeinformationfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)flushinstructioncache$": ["wdm", "winternl"],
+            r"^(nt|zw)lockfile$": ["wdm", "ntifs", "winternl"],
+            r"^(nt|zw)unlockfile$": ["wdm", "ntifs", "winternl"],
+            # Memory Management Native APIs
+            r"^(nt|zw)allocatevirtualmemory$": ["wdm", "winternl"],
+            r"^(nt|zw)freevirtualmemory$": ["wdm", "winternl"],
+            r"^(nt|zw)protectvirtualmemory$": ["wdm", "winternl"],
+            r"^(nt|zw)queryvirtualmemory$": ["wdm", "winternl"],
+            r"^(nt|zw)readvirtualmemory$": ["wdm", "winternl"],
+            r"^(nt|zw)writevirtualmemory$": ["wdm", "winternl"],
+            r"^(nt|zw)mapviewofsection$": ["wdm", "winternl"],
+            r"^(nt|zw)unmapviewofsection$": ["wdm", "winternl"],
+            r"^(nt|zw)createsection$": ["wdm", "winternl"],
+            r"^(nt|zw)opensection$": ["wdm", "winternl"],
+            r"^(nt|zw)extendsection$": ["wdm", "winternl"],
+            r"^(nt|zw)querysection$": ["wdm", "winternl"],
+            r"^(nt|zw)flushmappedfiles$": ["wdm", "winternl"],
+            # Process/Thread Native APIs
+            r"^(nt|zw)createprocess$": ["wdm", "winternl"],
+            r"^(nt|zw)createprocessex$": ["wdm", "winternl"],
+            r"^(nt|zw)openprocess$": ["wdm", "winternl"],
+            r"^(nt|zw)terminateprocess$": ["wdm", "winternl"],
+            r"^(nt|zw)suspendprocess$": ["wdm", "winternl"],
+            r"^(nt|zw)resumeprocess$": ["wdm", "winternl"],
+            r"^(nt|zw)queryinformationprocess$": ["wdm", "winternl"],
+            r"^(nt|zw)setinformationprocess$": ["wdm", "winternl"],
+            r"^(nt|zw)createthread$": ["wdm", "winternl"],
+            r"^(nt|zw)createthreadex$": ["wdm", "winternl"],
+            r"^(nt|zw)openthread$": ["wdm", "winternl"],
+            r"^(nt|zw)terminatethread$": ["wdm", "winternl"],
+            r"^(nt|zw)suspendthread$": ["wdm", "winternl"],
+            r"^(nt|zw)resumethread$": ["wdm", "winternl"],
+            r"^(nt|zw)alertthread$": ["wdm", "winternl"],
+            r"^(nt|zw)alertresumethread$": ["wdm", "winternl"],
+            r"^(nt|zw)getcontextthread$": ["wdm", "winternl"],
+            r"^(nt|zw)setcontextthread$": ["wdm", "winternl"],
+            r"^(nt|zw)queryinformationthread$": ["wdm", "winternl"],
+            r"^(nt|zw)setinformationthread$": ["wdm", "winternl"],
+            r"^(nt|zw)queueapcthread$": ["wdm", "winternl"],
+            r"^(nt|zw)testAlert$": ["wdm", "winternl"],
+            # Object Manager Native APIs
+            r"^(nt|zw)createevent$": ["wdm", "winternl"],
+            r"^(nt|zw)openevent$": ["wdm", "winternl"],
+            r"^(nt|zw)setevent$": ["wdm", "winternl"],
+            r"^(nt|zw)resetevent$": ["wdm", "winternl"],
+            r"^(nt|zw)pulseevent$": ["wdm", "winternl"],
+            r"^(nt|zw)queryevent$": ["wdm", "winternl"],
+            r"^(nt|zw)createmutant$": ["wdm", "winternl"],
+            r"^(nt|zw)openmutant$": ["wdm", "winternl"],
+            r"^(nt|zw)releasemutant$": ["wdm", "winternl"],
+            r"^(nt|zw)querymutant$": ["wdm", "winternl"],
+            r"^(nt|zw)createsemaphore$": ["wdm", "winternl"],
+            r"^(nt|zw)opensemaphore$": ["wdm", "winternl"],
+            r"^(nt|zw)releasesemaphore$": ["wdm", "winternl"],
+            r"^(nt|zw)querysemaphore$": ["wdm", "winternl"],
+            r"^(nt|zw)createtimer$": ["wdm", "winternl"],
+            r"^(nt|zw)opentimer$": ["wdm", "winternl"],
+            r"^(nt|zw)settimer$": ["wdm", "winternl"],
+            r"^(nt|zw)canceltimer$": ["wdm", "winternl"],
+            r"^(nt|zw)querytimer$": ["wdm", "winternl"],
+            r"^(nt|zw)createjobobject$": ["wdm", "winternl"],
+            r"^(nt|zw)openjobobject$": ["wdm", "winternl"],
+            r"^(nt|zw)assignprocesstojobobject$": ["wdm", "winternl"],
+            r"^(nt|zw)terminatejobobject$": ["wdm", "winternl"],
+            r"^(nt|zw)queryinformationjobobject$": ["wdm", "winternl"],
+            r"^(nt|zw)setinformationjobobject$": ["wdm", "winternl"],
+            # Registry Native APIs
+            r"^(nt|zw)createkey$": ["wdm", "winternl"],
+            r"^(nt|zw)openkey$": ["wdm", "winternl"],
+            r"^(nt|zw)openkeytransacted$": ["wdm", "winternl"],
+            r"^(nt|zw)deletekey$": ["wdm", "winternl"],
+            r"^(nt|zw)deletevaluekey$": ["wdm", "winternl"],
+            r"^(nt|zw)enumeratekey$": ["wdm", "winternl"],
+            r"^(nt|zw)enumeratevaluekey$": ["wdm", "winternl"],
+            r"^(nt|zw)flushkey$": ["wdm", "winternl"],
+            r"^(nt|zw)loadkey$": ["wdm", "winternl"],
+            r"^(nt|zw)loadkey2$": ["wdm", "winternl"],
+            r"^(nt|zw)loadkeyex$": ["wdm", "winternl"],
+            r"^(nt|zw)notifychangekey$": ["wdm", "winternl"],
+            r"^(nt|zw)notifychangemultiplekeys$": ["wdm", "winternl"],
+            r"^(nt|zw)querykey$": ["wdm", "winternl"],
+            r"^(nt|zw)queryvaluekey$": ["wdm", "winternl"],
+            r"^(nt|zw)querymultiplevaluekey$": ["wdm", "winternl"],
+            r"^(nt|zw)replacekey$": ["wdm", "winternl"],
+            r"^(nt|zw)restorekey$": ["wdm", "winternl"],
+            r"^(nt|zw)savekey$": ["wdm", "winternl"],
+            r"^(nt|zw)savekeyex$": ["wdm", "winternl"],
+            r"^(nt|zw)savemergedkeys$": ["wdm", "winternl"],
+            r"^(nt|zw)setvaluekey$": ["wdm", "winternl"],
+            r"^(nt|zw)unloadkey$": ["wdm", "winternl"],
+            r"^(nt|zw)unloadkey2$": ["wdm", "winternl"],
+            r"^(nt|zw)unloadkeyex$": ["wdm", "winternl"],
+            # Security Native APIs
+            r"^(nt|zw)accesscheck$": ["wdm", "winternl"],
+            r"^(nt|zw)accesscheckandauditalarm$": ["wdm", "winternl"],
+            r"^(nt|zw)accesscheckbytype$": ["wdm", "winternl"],
+            r"^(nt|zw)accesscheckbytypeandauditalarm$": ["wdm", "winternl"],
+            r"^(nt|zw)adjustgroupstoken$": ["wdm", "winternl"],
+            r"^(nt|zw)adjustprivilegestoken$": ["wdm", "winternl"],
+            r"^(nt|zw)compareTokens$": ["wdm", "winternl"],
+            r"^(nt|zw)createtoken$": ["wdm", "winternl"],
+            r"^(nt|zw)duplicatetoken$": ["wdm", "winternl"],
+            r"^(nt|zw)filtertoken$": ["wdm", "winternl"],
+            r"^(nt|zw)impersonateclientofport$": ["wdm", "winternl"],
+            r"^(nt|zw)openprocesstoken$": ["wdm", "winternl"],
+            r"^(nt|zw)openprocesstokenex$": ["wdm", "winternl"],
+            r"^(nt|zw)openthreadtoken$": ["wdm", "winternl"],
+            r"^(nt|zw)openthreadtokenex$": ["wdm", "winternl"],
+            r"^(nt|zw)privilegecheck$": ["wdm", "winternl"],
+            r"^(nt|zw)queryinformationtoken$": ["wdm", "winternl"],
+            r"^(nt|zw)setinformationtoken$": ["wdm", "winternl"],
+            r"^(nt|zw)setthreadtoken$": ["wdm", "winternl"],
+            # System Information Native APIs
+            r"^(nt|zw)querysysteminformation$": ["wdm", "winternl"],
+            r"^(nt|zw)setsysteminformation$": ["wdm", "winternl"],
+            r"^(nt|zw)querydefaultlocale$": ["wdm", "winternl"],
+            r"^(nt|zw)setdefaultlocale$": ["wdm", "winternl"],
+            r"^(nt|zw)querydefaultuilanguage$": ["wdm", "winternl"],
+            r"^(nt|zw)setdefaultuilanguage$": ["wdm", "winternl"],
+            r"^(nt|zw)queryinstalluilanguage$": ["wdm", "winternl"],
+            r"^(nt|zw)querysystemtime$": ["wdm", "winternl"],
+            r"^(nt|zw)setsystemtime$": ["wdm", "winternl"],
+            r"^(nt|zw)querytimerresolution$": ["wdm", "winternl"],
+            r"^(nt|zw)settimerresolution$": ["wdm", "winternl"],
+            r"^(nt|zw)delayexecution$": ["wdm", "winternl"],
+            r"^(nt|zw)yieldexecution$": ["wdm", "winternl"],
+            # Generic Object Native APIs
+            r"^(nt|zw)close$": ["wdm", "winternl"],
+            r"^(nt|zw)duplicateobject$": ["wdm", "winternl"],
+            r"^(nt|zw)queryobject$": ["wdm", "winternl"],
+            r"^(nt|zw)setinformationobject$": ["wdm", "winternl"],
+            r"^(nt|zw)queryinformationobject$": ["wdm", "winternl"],
+            r"^(nt|zw)querysecurityobject$": ["wdm", "winternl"],
+            r"^(nt|zw)setsecurityobject$": ["wdm", "winternl"],
+            r"^(nt|zw)maketemporaryobject$": ["wdm", "winternl"],
+            r"^(nt|zw)makepermanentobject$": ["wdm", "winternl"],
+            r"^(nt|zw)signalAnDwaitforsingleobject$": ["wdm", "winternl"],
+            r"^(nt|zw)waitforsingleobject$": ["wdm", "winternl"],
+            r"^(nt|zw)waitformultipleobjects$": ["wdm", "winternl"],
+            r"^(nt|zw)waitformultipleobjects32$": ["wdm", "winternl"],
+            # COMPREHENSIVE RTL RUNTIME LIBRARY FUNCTIONS
+            r"^rtlinitansistring$": ["winternl", "ntddk"],
+            r"^rtlinitunicodestring$": ["winternl", "ntddk"],
+            r"^rtlinitString$": ["winternl", "ntddk"],
+            r"^rtlfreeAnsistring$": ["winternl", "ntddk"],
+            r"^rtlfreuUnicodestring$": ["winternl", "ntddk"],
+            r"^rtlfreestring$": ["winternl", "ntddk"],
+            r"^rtlcopyansistring$": ["winternl", "ntddk"],
+            r"^rtlcopyunicodestring$": ["winternl", "ntddk"],
+            r"^rtlcopystring$": ["winternl", "ntddk"],
+            r"^rtlAnsistring^Tounicodestring$": ["winternl", "ntddk"],
+            r"^rtlunicodestringa^Toansistring$": ["winternl", "ntddk"],
+            r"^rtlunicodestring^Tointeger$": ["winternl", "ntddk"],
+            r"^rtlinteger^Tounicodestring$": ["winternl", "ntddk"],
+            r"^rtlcompareAnsistring$": ["winternl", "ntddk"],
+            r"^rtlcompareunicodestring$": ["winternl", "ntddk"],
+            r"^rtlequAnsistring$": ["winternl", "ntddk"],
+            r"^rtleunicodestring$": ["winternl", "ntddk"],
+            r"^rtlPrefixAnsistring$": ["winternl", "ntddk"],
+            r"^rtlprefixunicodestring$": ["winternl", "ntddk"],
+            r"^rtlupperAnsistring$": ["winternl", "ntddk"],
+            r"^rtlupperunicodestring$": ["winternl", "ntddk"],
+            r"^rtldowncaseunicestring$": ["winternl", "ntddk"],
+            r"^rtlAppendansistring^Tostring$": ["winternl", "ntddk"],
+            # RTL Exception/Unwinding functions - DOCUMENTED
+            r"^rtllookupfunctionentry$": [
+                "winnt"
+            ],  # RtlLookupFunctionEntry specifically
+            r"^rtlvirtualunwind$": ["winnt"],  # RtlVirtualUnwind specifically
+            r"^rtladdfunctiontable$": ["winnt"],  # RtlAddFunctionTable specifically
+            r"^rtldeletefunctiontable$": [
+                "winnt"
+            ],  # RtlDeleteFunctionTable specifically
+            r"^rtlinstallfunctiontablecallback$": [
+                "winnt"
+            ],  # RtlInstallFunctionTableCallback specifically
+            r"^rtlrestorecontext$": ["winnt"],  # RtlRestoreContext specifically
+            r"^rtlunwind$": ["winnt"],  # RtlUnwind specifically
+            r"^rtlunwind2$": ["winnt"],  # RtlUnwind2 specifically
+            r"^rtlunwindex$": ["winnt"],  # RtlUnwindEx specifically
+            # RTL Memory functions - DDK/WDM DOCUMENTED
+            r"^rtlzeromemory$": ["wdm"],  # RtlZeroMemory - DDK documented
+            r"^rtlmovememory$": ["wdm"],  # RtlMoveMemory - DDK documented
+            r"^rtlcopymemory$": ["wdm"],  # RtlCopyMemory - DDK documented
+            r"^rtlcomparememory$": ["wdm"],  # RtlCompareMemory - DDK documented
+            r"^rtlfillmemory$": ["wdm"],  # RtlFillMemory - DDK documented
+            r"^rtlappensui$": ["winternl", "ntddk"],
+            # RTL Memory Management
+            r"^rtlallocateheap$": ["winternl", "ntddk"],
+            r"^rtlfreeheap$": ["winternl", "ntddk"],
+            r"^rtlcreateheap$": ["winternl", "ntddk"],
+            r"^rtldestroyheap$": ["winternl", "ntddk"],
+            r"^rtlsizeheap$": ["winternl", "ntddk"],
+            r"^rtlvalidateheap$": ["winternl", "ntddk"],
+            r"^rtlreAllocateheap$": ["winternl", "ntddk"],
+            r"^rtlcompactheap$": ["winternl", "ntddk"],
+            r"^rtllockheap$": ["winternl", "ntddk"],
+            r"^rtlunlockheap$": ["winternl", "ntddk"],
+            r"^rtlfillmemory$": ["winternl", "ntddk"],
+            r"^rtlmovememory$": ["winternl", "ntddk"],
+            r"^rtlcomparememory$": ["winternl", "ntddk"],
+            r"^rtlcopybytes$": ["winternl", "ntddk"],
+            r"^rtlsecurezeromemory$": ["winternl", "ntddk"],
+            # RTL Critical Section and Synchronization
+            r"^rtlinitializecriticalsection$": ["winternl", "ntddk"],
+            r"^rtldeletecriticalsection$": ["winternl", "ntddk"],
+            r"^rtlentercriticalsection$": ["winternl", "ntddk"],
+            r"^rtlleavecriticalsection$": ["winternl", "ntddk"],
+            r"^rtltrycriticalsection$": ["winternl", "ntddk"],
+            r"^rtlinitializecriticalsectionAndspincount$": ["winternl", "ntddk"],
+            r"^rtlsetcriticalsectionspincount$": ["winternl", "ntddk"],
+            r"^rtlcreateuserthead$": ["winternl", "ntddk"],
+            r"^rtlexitusertehead$": ["winternl", "ntddk"],
+            r"^rtlremoteusertread$": ["winternl", "ntddk"],
+            r"^rtlisthread^Terminating$": ["winternl", "ntddk"],
+            # RTL Path and Environment
+            r"^rtlgetcurrentdirectory$": ["winternl", "ntddk"],
+            r"^rtlsetcurrentdirectory$": ["winternl", "ntddk"],
+            r"^rtlgetfullpathname$": ["winternl", "ntddk"],
+            r"^rtldospathnametonpath^Name$": ["winternl", "ntddk"],
+            r"^rtldeterminedospathnameype$": ["winternl", "ntddk"],
+            r"^rtlisDosDevicename$": ["winternl", "ntddk"],
+            r"^rtlgetlonPpathname$": ["winternl", "ntddk"],
+            r"^rtlgetshortpathname$": ["winternl", "ntddk"],
+            r"^rtlqueryen^Tvironmentvariable$": ["winternl", "ntddk"],
+            r"^rtlsetenv$": ["winternl", "ntddk"],
+            r"^rtlsetenvironmentvariable$": ["winternl", "ntddk"],
+            r"^rtlexpandenvironmentstings$": ["winternl", "ntddk"],
+            r"^rtlcreateenvironment$": ["winternl", "ntddk"],
+            r"^rtlDestroyenvironment$": ["winternl", "ntddk"],
+            # RTL Time and Conversion
+            r"^rtlsystemtimetolocaltime$": ["winternl", "ntddk"],
+            r"^rtllocaltimetosystemtime$": ["winternl", "ntddk"],
+            r"^rtltimetotime^Fields$": ["winternl", "ntddk"],
+            r"^rtltimeieldstode$": ["winternl", "ntddk"],
+            r"^rtltimetoseconds$": ["winternl", "ntddk"],
+            r"^rtlsecondstoe$": ["winternl", "ntddk"],
+            r"^rtlquerytime^Zone$": ["winternl", "ntddk"],
+            r"^rtlrandom$": ["winternl", "ntddk"],
+            r"^rtlrandomex$": ["winternl", "ntddk"],
+            r"^rtluniform$": ["winternl", "ntddk"],
+            # LDR DYNAMIC LOADER FUNCTIONS
+            r"^ldrloaddll$": ["winternl", "ntddk"],
+            r"^ldrunloaddll$": ["winternl", "ntddk"],
+            r"^ldrgetprocedureaddress$": ["winternl", "ntddk"],
+            r"^ldrgetdllhandle$": ["winternl", "ntddk"],
+            r"^ldrgetdllhandleex$": ["winternl", "ntddk"],
+            r"^ldrqueriyimagefileexecutionoptions$": ["winternl", "ntddk"],
+            r"^ldrfindentryforaddress$": ["winternl", "ntddk"],
+            r"^ldrfindresource$": ["winternl", "ntddk"],
+            r"^ldrfindresourceex$": ["winternl", "ntddk"],
+            r"^ldraccessresource$": ["winternl", "ntddk"],
+            r"^ldrfindresourcediretory$": ["winternl", "ntddk"],
+            r"^ldrenumeratesources$": ["winternl", "ntddk"],
+            r"^ldrenumerareresourcenames$": ["winternl", "ntddk"],
+            r"^ldrenumerateresourcelanguages$": ["winternl", "ntddk"],
+            r"^ldrprocessrAlocationblock$": ["winternl", "ntddk"],
+            r"^ldrverifyourrimage^Inmemor$": ["winternl", "ntddk"],
+            r"^ldrlockloaderlock$": ["winternl", "ntddk"],
+            r"^ldrunlockloaderlock$": ["winternl", "ntddk"],
+            r"^ldrreelocation^Block$": ["winternl", "ntddk"],
+            # Toolhelp functions
+            r".*toolhelp.*": ["tlhelp32"],
+            r".*snapshot.*": ["tlhelp32"],
+            r"^process32first$": ["tlhelp32"],  # Process32First specifically
+            r"^process32next$": ["tlhelp32"],  # Process32Next specifically
+            r"^thread32first$": ["tlhelp32"],  # Thread32First specifically
+            r"^thread32next$": ["tlhelp32"],  # Thread32Next specifically
+            r"^module32first$": ["tlhelp32"],  # Module32First specifically
+            r"^module32next$": ["tlhelp32"],  # Module32Next specifically
+            # PSAPI functions
+            r".*processes$": ["psapi"],
+            r"enum.*": ["psapi", "winreg", "commctrl"],
+            # URLMon functions - SPECIAL LEGACY PATH
+            r"^urldownloadtofile$": ["urlmon"],  # Special handling needed
+            r"url.*": ["urlmon"],
+            r".*download.*": ["urlmon"],
+            # WinHTTP functions
+            r"winhttp.*": ["winhttp"],
+            r"http.*": ["winhttp", "wininet"],
+            # FTP functions
+            r"ftp.*": ["wininet"],
         }
 
     def generate_possible_urls(
@@ -336,7 +846,20 @@ class SmartURLGenerator:
         function_lower = function_name.lower()
         urls = []
 
-        # 1. Check for DLL-specific primary header first (highest priority)
+        # 0. ML-based header predictions (HIGHEST priority if available)
+        ml_headers = []
+        if self.ml_classifier and self.ml_classifier.is_trained:
+            try:
+                ml_predictions = self.ml_classifier.predict_headers(
+                    function_name, dll_name, top_k=3
+                )
+                ml_headers = [
+                    header for header, confidence in ml_predictions if confidence > 0.1
+                ]
+            except Exception:
+                pass  # Continue without ML if it fails
+
+        # 1. Check for DLL-specific primary header first (high priority)
         priority_headers = []
         if dll_name and dll_name.lower() in self.dll_to_primary_header:
             primary_header = self.dll_to_primary_header[dll_name.lower()]
@@ -362,8 +885,14 @@ class SmartURLGenerator:
             "processthreadsapi",
         ]
 
-        # Combine in order of priority
-        all_headers = priority_headers + pattern_headers + dll_headers + common_headers
+        # Combine in order of priority (ML first!)
+        all_headers = (
+            ml_headers
+            + priority_headers
+            + pattern_headers
+            + dll_headers
+            + common_headers
+        )
 
         # Remove duplicates while preserving order
         headers_to_try = []
@@ -402,18 +931,43 @@ class SmartURLGenerator:
                 full_url = f"{base_url}/windows/win32/api/{url_path}"
                 urls.append(full_url)
 
-        # 5. Native API functions - prioritize WDK documentation paths
+        # 4.5. Special legacy functions with known URLs
+        if function_lower == "urldownloadtofile":
+            # URLDownloadToFile has a special legacy URL
+            legacy_url = "https://learn.microsoft.com/en-us/previous-versions/windows/internet-explorer/ie-developer/platform-apis/ms775123(v=vs.85)"
+            urls.insert(0, legacy_url)  # Insert at beginning for highest priority
+
+        elif function_lower == "ftpputfile":
+            # FtpPutFile works with A suffix
+            ftp_url = f"{base_url}/windows/win32/api/wininet/nf-wininet-ftpputfilea"
+            urls.insert(0, ftp_url)
+
+        # 5. Native API functions - prioritize WDK documentation paths with Nt<->Zw mapping
         if function_lower.startswith(("nt", "zw", "rtl", "ke", "mm")):
             # Native API functions are primarily documented in WDK paths
-            driver_headers = ["ntifs", "ntddk", "wdm", "winternl", "ntdef"]
-            for header in driver_headers:
-                url_path = f"{header}/nf-{header}-{function_lower}"
-                full_url = f"{base_url.replace('/en-us', '').replace('/pt-br', '')}/windows-hardware/drivers/ddi/{url_path}"
-                urls.insert(0, full_url)  # Insert at beginning for priority
+            driver_headers = ["wdm", "ntifs", "ntddk", "winternl", "ntdef"]
+
+            # Create both Nt and Zw variants for testing
+            native_variants = [function_lower]
+            if function_lower.startswith("nt"):
+                # Try Zw variant (most common in documentation)
+                zw_variant = "zw" + function_lower[2:]
+                native_variants.insert(0, zw_variant)  # Prioritize Zw variant
+            elif function_lower.startswith("zw"):
+                # Try Nt variant
+                nt_variant = "nt" + function_lower[2:]
+                native_variants.append(nt_variant)
+
+            # Test both variants against all driver headers
+            for variant in native_variants:
+                for header in driver_headers:
+                    url_path = f"{header}/nf-{header}-{variant}"
+                    full_url = f"{base_url}/windows-hardware/drivers/ddi/{url_path}"
+                    urls.insert(0, full_url)  # Insert at beginning for highest priority
 
             # Also try winternl for some documented Native API functions
-            if function_lower.startswith(("nt", "zw")):
-                url_path = f"winternl/nf-winternl-{function_lower}"
+            for variant in native_variants:
+                url_path = f"winternl/nf-winternl-{variant}"
                 full_url = f"{base_url}/windows/win32/api/{url_path}"
                 urls.append(full_url)
 
@@ -1000,6 +1554,19 @@ class SmartURLGenerator:
         )
         self._requests_with_current_agent = 0
 
+    def _extract_header_from_url(self, url: str) -> Optional[str]:
+        """Extract header name from a successful URL for ML training"""
+        try:
+            # URL format: /windows/win32/api/HEADER/nf-HEADER-functionname
+            if "/api/" in url:
+                parts = url.split("/api/")
+                if len(parts) > 1:
+                    header_part = parts[1].split("/")[0]
+                    return header_part
+        except Exception:
+            pass
+        return None
+
     def report_user_agent_success(self, user_agent: str, success: bool):
         """Track user agent success for intelligent rotation"""
         if user_agent not in self.user_agent_stats:
@@ -1096,7 +1663,7 @@ class SmartURLGenerator:
         return delay
 
     async def _request_with_retry(
-        self, session: aiohttp.ClientSession, url: str, base_headers: Dict[str, str]
+        self, session, url: str, base_headers: Dict[str, str]
     ) -> Optional[str]:
         """Make request with intelligent retry logic"""
 
@@ -1153,7 +1720,7 @@ class SmartURLGenerator:
                     self.report_user_agent_success(headers.get("User-Agent", ""), False)
                     return None
 
-            except aiohttp.ClientError:
+            except Exception:
                 self._record_failure()
                 self.report_user_agent_success(headers.get("User-Agent", ""), False)
 
@@ -1173,13 +1740,16 @@ class SmartURLGenerator:
         function_name: str,
         dll_name: str = None,
         base_url: str = "https://learn.microsoft.com/en-us",
-        session: aiohttp.ClientSession = None,
+        session=None,
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """
         ULTRA-FAST async method with intelligent prioritization and early termination.
         Uses hybrid approach: high-confidence URLs first, then broader search if needed.
         """
+        # Lazy import aiohttp
+        import aiohttp
+
         # Generate smart prioritized URLs
         prioritized_urls = self._get_prioritized_urls(function_name, dll_name, base_url)
 
@@ -1241,72 +1811,9 @@ class SmartURLGenerator:
     def _get_prioritized_urls(
         self, function_name: str, dll_name: str, base_url: str
     ) -> list:
-        """Get URLs in optimal priority order for fastest discovery"""
-        function_lower = function_name.lower()
-        urls = []
-
-        # Phase 1: Highest confidence URLs based on patterns and DLL
-        if dll_name:
-            primary_header = self.dll_to_primary_header.get(dll_name.lower())
-            if primary_header:
-                # Most likely header for this DLL
-                base_api_url = f"{base_url}/windows/win32/api/{primary_header}"
-                urls.extend(
-                    [
-                        f"{base_api_url}/nf-{primary_header}-{function_lower}",
-                        f"{base_api_url}/nf-{primary_header}-{function_lower}a",
-                        f"{base_api_url}/nf-{primary_header}-{function_lower}w",
-                    ]
-                )
-
-        # Phase 2: Pattern-based URLs (high confidence)
-        pattern_headers = []
-        for pattern, headers in self.function_patterns.items():
-            if re.match(pattern, function_lower):
-                pattern_headers.extend(headers[:2])  # Top 2 headers per pattern
-                break  # Use first matching pattern only for speed
-
-        # Add pattern-based URLs
-        for header in pattern_headers[:3]:  # Limit to top 3 for speed
-            if header not in [h.split("/")[-1] for h in urls if h]:  # Avoid duplicates
-                base_api_url = f"{base_url}/windows/win32/api/{header}"
-                new_urls = [f"{base_api_url}/nf-{header}-{function_lower}"]
-                if not function_lower.endswith(("a", "w")):
-                    new_urls.extend(
-                        [
-                            f"{base_api_url}/nf-{header}-{function_lower}a",
-                            f"{base_api_url}/nf-{header}-{function_lower}w",
-                        ]
-                    )
-                urls.extend(new_urls)
-
-        # Phase 3: Native API prioritization
-        if function_lower.startswith(("nt", "zw", "rtl")):
-            for header in ["winternl", "ntifs", "ntddk"]:
-                base_ddi_url = f"{base_url.replace('/pt-br', '').replace('/en-us', '')}/windows-hardware/drivers/ddi/{header}"
-                urls.insert(
-                    0, f"{base_ddi_url}/nf-{header}-{function_lower}"
-                )  # Insert at beginning
-
-        # Phase 4: Common fallback headers (medium confidence)
-        common_headers = ["winbase", "winuser", "fileapi", "memoryapi"]
-        for header in common_headers:
-            if header not in [h.split("/")[-1] for h in urls if h]:  # Avoid duplicates
-                base_api_url = f"{base_url}/windows/win32/api/{header}"
-                new_urls = [f"{base_api_url}/nf-{header}-{function_lower}"]
-                if not function_lower.endswith(("a", "w")):
-                    new_urls.append(f"{base_api_url}/nf-{header}-{function_lower}a")
-                urls.extend(new_urls)
-
-        # Clean up None values and remove duplicates while preserving order
-        clean_urls = []
-        seen = set()
-        for url in urls:
-            if url and url not in seen:
-                clean_urls.append(url)
-                seen.add(url)
-
-        return clean_urls
+        """Get URLs in optimal priority order for fastest discovery with AI learning"""
+        # Use the corrected generate_possible_urls method which has all the fixes
+        return self.generate_possible_urls(function_name, dll_name, base_url)
 
     def _is_important_function(self, function_name: str) -> bool:
         """Determine if function is important enough for extended search"""
@@ -1327,7 +1834,7 @@ class SmartURLGenerator:
     async def _test_urls_fast_batch(
         self,
         urls: List[str],
-        session: aiohttp.ClientSession,
+        session,
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """Fast batch testing with optimized concurrency and early termination"""
@@ -1395,7 +1902,7 @@ class SmartURLGenerator:
                             )
                         return None
 
-                except aiohttp.ClientError as e:
+                except Exception as e:
                     self._record_failure()
                     if headers:
                         self.report_user_agent_success(
@@ -1460,7 +1967,7 @@ class SmartURLGenerator:
     async def _test_urls_sequential(
         self,
         urls: List[str],
-        session: aiohttp.ClientSession,
+        session,
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """Test URLs sequentially with optimized speed and smart delays"""
@@ -1497,7 +2004,7 @@ class SmartURLGenerator:
     async def _test_urls_async(
         self,
         urls: List[str],
-        session: aiohttp.ClientSession,
+        session,
         progress_callback: Optional[Callable[[int, int], None]] = None,
     ) -> Optional[str]:
         """Test multiple URLs concurrently and return first valid one"""
@@ -1534,6 +2041,9 @@ class SmartURLGenerator:
         completed = 0
 
         # Use as_completed to get the FIRST successful result
+        # Capture parameters for closures
+        fn_name, dll = function_name, dll_name
+        
         for completed_task in asyncio.as_completed(tasks):
             try:
                 result = await completed_task
@@ -1541,6 +2051,32 @@ class SmartURLGenerator:
                 if progress_callback:
                     progress_callback(completed, total)
                 if result:  # Found valid URL!
+                    # Record success for pattern learning
+                    try:
+                        # Lazy load pattern learner only when needed
+                        try:
+                            from .url_pattern_learner import pattern_learner
+
+                            pattern_learner.record_success(
+                                fn_name, result, dll or ""
+                            )
+                        except ImportError:
+                            pass  # Pattern learner is optional
+                    except Exception:
+                        pass  # Don't fail on learning errors
+
+                    # Train ML classifier with successful mapping
+                    if self.ml_classifier:
+                        try:
+                            # Extract header from successful URL for training
+                            url_header = self._extract_header_from_url(result)
+                            if url_header:
+                                self.ml_classifier.add_training_example(
+                                    fn_name, url_header, dll or "", success=True
+                                )
+                        except Exception:
+                            pass  # Don't fail on ML training errors
+
                     # Cancel remaining tasks for speed
                     for task in tasks:
                         if not task.done():
@@ -1646,7 +2182,7 @@ class SmartURLGenerator:
         base_url: str = "https://learn.microsoft.com/en-us",
     ) -> List[str]:
         """
-        Get only the most likely URLs (top 5) for faster testing
+        Get only the most likely URLs (top 15) for better Native API coverage
         """
         all_urls = self.generate_possible_urls(function_name, dll_name, base_url)
-        return all_urls[:5]  # Return top 5 most probable
+        return all_urls[:15]  # Return top 15 to cover Zw variants

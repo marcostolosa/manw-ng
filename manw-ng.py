@@ -66,7 +66,14 @@ from rich.console import Console
 from manw_ng.utils.dll_map import detect_dll
 
 # Configure console for Windows compatibility
-console = Console(force_terminal=True, legacy_windows=True, width=100)
+console = Console(
+    force_terminal=True,
+    legacy_windows=True,
+    width=120,
+    no_color=False,
+    color_system="auto",
+    highlight=False,
+)
 
 
 def validate_function_name(value: str) -> str:
@@ -137,15 +144,6 @@ Examples:
             quiet=(args.output == "json"),
             user_agent=args.user_agent,
         )
-
-        if args.output != "json":
-            # Localized loading messages
-            loading_messages = {
-                "us": f"Scraping: {args.function_name} (language: {args.language})",
-                "br": f"Fazendo scraping: {args.function_name} (idioma: {args.language})",
-            }
-            message = loading_messages.get(args.language, loading_messages["us"])
-            console.print(f"[yellow]{message}[/yellow]")
 
         # Auto-detect DLL for smart URL generation
         detected_dll = detect_dll(args.function_name)

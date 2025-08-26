@@ -13,7 +13,6 @@ from rich.console import Console
 from rich.status import Status
 
 from ..core.parser import Win32PageParser
-from ..utils.complete_win32_api_mapping import get_function_url_fast
 from ..utils.smart_url_generator import SmartURLGenerator
 from ..utils.catalog_integration import get_catalog
 from ..utils.http_client import HTTPClient
@@ -65,32 +64,70 @@ class Win32APIScraper:
         )
         self.smart_generator = SmartURLGenerator()
 
+        # Start async ML loading (non-blocking)
+        self._ml_ready = False
+        self._start_async_ml_loading()
+
         # Elegant Unicode characters
         self.check_mark = "✓"
         self.arrow = "→"
         self.catalog = get_catalog()
 
-        # Localized strings
+        # Professional localized strings (inspired by Frida/radare2)
         self.strings = {
             "us": {
-                "documentation_found": "Documentation found:",
-                "testing": "Testing:",
-                "fallback_to_english": "pt-br not found, trying en-us:",
-                "searching": "Searching for function documentation...",
-                "trying_direct": "Checking direct URL mapping...",
-                "discovery_search": "Using intelligent discovery system...",
-                "function_not_found": "Function {function_name} not found in Microsoft documentation",
+                "analyzing": "Analyzing function",
+                "searching_patterns": "Auto-discovering documentation",
+                "testing_urls": "Validating endpoints",
+                "found_documentation": "Documentation located",
+                "fast_exit": "Fast exit: known undocumented API",
+                "fallback_lang": "Fallback: pt-br → en-us",
+                "catalog_lookup": "Consulting internal catalog",
+                "direct_mapping": "Direct URL resolution",
+                "not_found": "API not found in Microsoft documentation",
+                "scanning": "Scanning",
+                "resolving": "Resolving",
             },
             "br": {
-                "documentation_found": "Documentação encontrada:",
-                "testing": "Testando:",
-                "fallback_to_english": "pt-br não encontrada, tentando en-us:",
-                "searching": "Procurando documentação da função...",
-                "trying_direct": "Verificando mapeamento direto de URL...",
-                "discovery_search": "Usando sistema de descoberta inteligente...",
-                "function_not_found": "Função {function_name} não encontrada na documentação Microsoft",
+                "analyzing": "Analisando função",
+                "searching_patterns": "Auto-descobrindo documentação",
+                "testing_urls": "Validando endpoints",
+                "found_documentation": "Documentação localizada",
+                "fast_exit": "Saída rápida: API não documentada conhecida",
+                "fallback_lang": "Fallback: pt-br → en-us",
+                "catalog_lookup": "Consultando catálogo interno",
+                "direct_mapping": "Resolução direta de URL",
+                "not_found": "API não encontrada na documentação Microsoft",
+                "scanning": "Escaneando",
+                "resolving": "Resolvendo",
             },
         }
+
+    def __del__(self):
+        """Ensure HTTP client is closed when scraper is deleted"""
+        if hasattr(self, "http"):
+            try:
+                self.http.cleanup_sync()
+            except:
+                pass
+
+    def _start_async_ml_loading(self):
+        """Start async ML loading in background thread"""
+        import threading
+
+        def load_ml():
+            try:
+                # Import ML here to avoid blocking main thread
+                from ..ml.function_classifier import ml_classifier
+
+                if ml_classifier:
+                    self._ml_ready = True
+            except Exception:
+                # If ML fails to load, continue without it
+                self._ml_ready = False
+
+        # Start loading in background
+        threading.Thread(target=load_ml, daemon=True).start()
 
     def set_current_function_dll(self, dll_name: str) -> None:
         """Public setter to define the DLL used for smart URL generation."""
@@ -105,19 +142,33 @@ class Win32APIScraper:
         Main function to scrape Win32 API documentation
         """
 
-        if not self.quiet:
-            # PRIORITY 1: Smart URL Testing with intelligent patterns
-            try:
+        # FAST EXIT: Check if this is a known undocumented API
+        if self._is_likely_undocumented_api(function_name):
+            if not self.quiet:
+                fast_exit_msg = self.get_string("fast_exit")
+                self.console.print(
+                    f"[bold yellow]⚡[/bold yellow] [dim]{fast_exit_msg}:[/dim] [bold red]{function_name}[/bold red]"
+                )
+            return self._create_not_found_result(function_name, [])
+
+        # PRIORITY 1: Smart URL Testing with intelligent patterns (always run)
+        try:
+            dll_name = getattr(self, "_current_function_dll", None)
+
+            if not self.quiet:
+                # Professional status display (Frida-style)
+                analyzing_msg = self.get_string("analyzing")
+                searching_msg = self.get_string("searching_patterns")
+
                 with Status(
-                    f"[cyan]1/3[/cyan] Testando padrões inteligentes para [bold]{function_name}[/bold]...",
+                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {searching_msg}",
                     console=self.console,
                 ) as status:
-                    # Use the SMART synchronous method with maximum concurrency
-                    dll_name = getattr(self, "_current_function_dll", None)
 
                     def progress(done: int, total: int) -> None:
+                        testing_msg = self.get_string("testing_urls")
                         status.update(
-                            f"[cyan]1/3[/cyan] Testando URLs ({done}/{total})..."
+                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
                         )
 
                     found_url = asyncio.run(
@@ -130,128 +181,102 @@ class Win32APIScraper:
                     )
 
                     if found_url:
+                        found_msg = self.get_string("found_documentation")
                         status.update(
-                            f"[green]1/3[/green] URL encontrada: [blue]{self._format_url_display(found_url)}[/blue]"
+                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [bold green]✓[/bold green] {found_msg}"
                         )
                         result = self._parse_function_page(found_url)
                         if result and result.get("documentation_found"):
                             status.stop()
                             self.console.print(
-                                f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(found_url)}[/green]"
+                                f"[bold green]✓[/bold green] [bold white]{function_name}[/bold white] [dim]{self.arrow}[/dim] [blue]{self._format_url_display(found_url)}[/blue]"
                             )
                             return result
 
                     status.update(
-                        f"[yellow]1/3[/yellow] ULTRA-FAST: Nenhuma URL encontrada nos padrões conhecidos"
+                        f"[yellow]1/3[/yellow] Intelligent discovery completed"
                     )
-            except Exception as e:
-                pass  # Silently continue to next priority
-                # import traceback
-                # traceback.print_exc()
+            else:
+                # Quiet mode - no status display
+                found_url = asyncio.run(
+                    self.smart_generator.find_valid_url_async(
+                        function_name, dll_name, self.base_url, progress_callback=None
+                    )
+                )
 
-            # PRIORITY 2: Try catalog lookup (backup)
-            with Status(
-                f"[cyan]2/3[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
-                console=self.console,
-            ) as status:
+                if found_url:
+                    result = self._parse_function_page(found_url)
+                    if result and result.get("documentation_found"):
+                        return result
+
+        except Exception as e:
+            pass  # Silently continue to next priority
+
+        # PRIORITY 2: Try catalog lookup (backup)
+        try:
+            if not self.quiet:
+                with Status(
+                    f"[cyan]2/3[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
+                    console=self.console,
+                ) as status:
+                    catalog_url = self.catalog.get_function_url(
+                        function_name, "en-us" if self.language == "us" else "pt-br"
+                    )
+                    if catalog_url:
+                        status.update(
+                            f"[cyan]2/3[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
+                        )
+                        result = self._parse_function_page(catalog_url)
+                        if result:
+                            status.stop()
+                            self.console.print(
+                                f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(catalog_url)}[/green]"
+                            )
+                            return result
+                        status.update(
+                            f"[yellow]2/3[/yellow] Catálogo não retornou resultado válido"
+                        )
+            else:
+                # Quiet mode
                 catalog_url = self.catalog.get_function_url(
                     function_name, "en-us" if self.language == "us" else "pt-br"
                 )
                 if catalog_url:
-                    status.update(
-                        f"[cyan]2/3[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
-                    )
                     result = self._parse_function_page(catalog_url)
                     if result:
-                        status.stop()
-                        self.console.print(
-                            f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(catalog_url)}[/green]"
-                        )
                         return result
-                    status.update(
-                        f"[yellow]2/3[/yellow] Catálogo não retornou resultado válido"
-                    )
+        except Exception as e:
+            pass
 
-            # PRIORITY 3: Use direct mapping (final backup)
-            with Status(
-                f"[cyan]3/3[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
-                console=self.console,
-            ) as status:
-                direct_url = self._try_direct_url(function_name)
-                if direct_url:
-                    status.update(
-                        f"[cyan]3/3[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
-                    )
-                    result = self._parse_function_page(direct_url)
-                    if result:
-                        status.stop()
-                        self.console.print(
-                            f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(direct_url)}[/green]"
-                        )
-                        return result
-                    status.update(
-                        f"[yellow]3/3[/yellow] Mapeamento direto não funcionou"
-                    )
-
-            search_results = []  # No discovery engine
-        else:
-            # Silent mode - use ONLY smart generator for speed
+        # PRIORITY 3: Use direct mapping (final backup)
+        try:
             direct_url = self._try_direct_url(function_name)
             if direct_url:
-                result = self._parse_function_page(direct_url)
-                if result:
-                    return result
-
-            # PRIORITY: ULTRA-FAST Smart generator with ALL patterns
-            dll_name = getattr(self, "_current_function_dll", None)
-            found_url = asyncio.run(
-                self.smart_generator.find_valid_url_async(
-                    function_name, dll_name, self.base_url
-                )
-            )
-
-            if found_url:
-                result = self._parse_function_page(found_url)
-                if result and result.get("documentation_found"):
-                    return result
-
-            # NO DISCOVERY ENGINE FALLBACK - too slow
-            search_results = []
-
-        # Try each discovered URL with Rich Status
-        if not self.quiet and search_results:
-            with Status("", console=self.console) as status:
-                for i, url in enumerate(search_results, 1):
-                    try:
+                if not self.quiet:
+                    with Status(
+                        f"[cyan]3/3[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
+                        console=self.console,
+                    ) as status:
                         status.update(
-                            f"[cyan]•[/cyan] [bold]{function_name}[/bold] [dim]({i}/{len(search_results)})[/dim] {self.arrow} [blue]{self._format_url_display(url)}[/blue]"
+                            f"[cyan]3/3[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
                         )
-                        result = self._parse_function_page(url, status)
-
-                        if result:  # Se resultado válido
+                        result = self._parse_function_page(direct_url)
+                        if result:
                             status.stop()
                             self.console.print(
-                                f"[green]OK[/green] [bold]{function_name}[/bold] -> [green]{self._format_url_display(url)}[/green]"
+                                f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(direct_url)}[/green]"
                             )
                             return result
-
-                    except Exception as e:
-                        continue
-
-                status.stop()
-        else:
-            # Silent mode
-            for url in search_results:
-                try:
-                    result = self._parse_function_page(url)
-                    if result:  # Se resultado válido
-                        if not self.quiet:
-                            self.console.print(
-                                f"[green]OK[/green] [bold]{function_name}[/bold] -> [green]{self._format_url_display(url)}[/green]"
-                            )
+                        status.update(
+                            f"[yellow]3/3[/yellow] Mapeamento direto não funcionou"
+                        )
+                else:
+                    # Quiet mode
+                    result = self._parse_function_page(direct_url)
+                    if result:
                         return result
-                except Exception as e:
-                    continue
+        except Exception as e:
+            pass
 
         # FINAL: Handle A/W suffix variations before giving up
         if not function_name.endswith(("A", "W")):
@@ -306,14 +331,8 @@ class Win32APIScraper:
                 function_name=function_name
             )
             self.console.print(f"[red]X {error_msg}[/red]")
-            if search_results:
-                self.console.print(f"[dim]URLs testados:[/dim]")
-                for i, url in enumerate(search_results, 1):
-                    self.console.print(
-                        f"[dim]  {i}. {self._format_url_display(url)}[/dim]"
-                    )
 
-        return self._create_not_found_result(function_name, search_results)
+        return self._create_not_found_result(function_name, [])
 
     def _classify_symbol_type(self, symbol_name: str) -> str:
         """Classifica o tipo do símbolo baseado no padrão do nome (versão segura)"""
@@ -343,6 +362,19 @@ class Win32APIScraper:
             return "enum"
         else:
             return "win32_function"
+
+    def _is_likely_undocumented_api(self, function_name: str) -> bool:
+        """Detecta se uma API é provavelmente não documentada (para falha rápida)"""
+        # APIs Native conhecidas como realmente não documentadas (verificadas individualmente)
+        undocumented_patterns = [
+            # Apenas LDR APIs que são confirmadamente não documentadas
+            "ldrloaddll",
+            "ldrgetdllhandle",
+            "ldrgetprocedureaddress",
+            # APIs de processo que não existem na documentação pública
+            "ntcreateuserprocess",
+        ]
+        return function_name.lower() in undocumented_patterns
 
     def _create_not_found_result(
         self, function_name: str, attempted_urls: List[str]
@@ -377,7 +409,8 @@ class Win32APIScraper:
         Try direct URL mapping for known functions (fastest path)
         """
         # Try complete Win32 API mapping without network requests for speed
-        direct_url = get_function_url_fast(function_name, self.base_url)
+        # Use smart generator for all URL generation now
+        direct_url = None
         if direct_url:
             return direct_url
         return None
@@ -450,12 +483,22 @@ class Win32APIScraper:
                     )
                 return result
 
-        # Suffixed functions should be caught by smart pattern system
-        # Return empty result since all patterns are already tested
-        return {
-            "documentation_found": False,
-            "function_name": suffixed_name,
-        }
+        # Use smart URL generator directly to avoid recursion
+        found_url = asyncio.run(
+            self.smart_generator.find_valid_url_async(
+                suffixed_name,
+                getattr(self, "_current_function_dll", None),
+                self.base_url,
+            )
+        )
+
+        if found_url:
+            result = self._parse_function_page(found_url)
+            if result and result.get("documentation_found"):
+                return result
+
+        # If not found, return None to indicate no success
+        return None
 
     def _format_url_display(self, url: str) -> str:
         """Format URL for clean display"""

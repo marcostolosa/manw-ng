@@ -86,27 +86,29 @@ class HTTPClient:
         """Get or create persistent session for better performance"""
         current_time = time.time()
 
-        # Reuse session for 5 minutes, then recreate
+        # Reuse session for 10 minutes, then recreate (longer reuse)
         if (
             not self._session
             or self._session.closed
-            or (current_time - self._session_created_at) > 300
+            or (current_time - self._session_created_at) > 600
         ):
 
             if self._session and not self._session.closed:
                 await self._session.close()
 
-            # Advanced connector settings for better performance
+            # Advanced connector settings for MAXIMUM performance
             connector = aiohttp.TCPConnector(
-                limit=10,
-                limit_per_host=5,
-                ttl_dns_cache=300,
+                limit=50,  # Much higher connection pool
+                limit_per_host=20,  # More connections per host
+                ttl_dns_cache=600,  # Longer DNS cache
                 use_dns_cache=True,
-                keepalive_timeout=60,
+                keepalive_timeout=120,  # Longer keepalive
                 enable_cleanup_closed=True,
             )
 
-            timeout = aiohttp.ClientTimeout(total=15, connect=5, sock_read=10)
+            timeout = aiohttp.ClientTimeout(
+                total=30, connect=10, sock_read=20
+            )  # More aggressive timeouts for production
 
             self._session = aiohttp.ClientSession(
                 connector=connector,

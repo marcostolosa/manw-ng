@@ -58,7 +58,7 @@ def test_function(scraper, function_name, category="unknown"):
     try:
         result = scraper.scrape_function(function_name)
 
-        if result and result.get("documentation_found") != False:
+        if result and result.get("documentation_found") is True:
             return True, result.get("url"), None
         else:
             return False, None, "Documentation not found"

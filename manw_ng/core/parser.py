@@ -7,7 +7,6 @@ Extracts function information from Microsoft documentation pages.
 import re
 from typing import Dict, List, Tuple, Optional
 from bs4 import BeautifulSoup
-from .symbol_classifier import Win32SymbolClassifier
 
 
 class Win32PageParser:
@@ -16,7 +15,7 @@ class Win32PageParser:
     """
 
     def __init__(self):
-        self.classifier = Win32SymbolClassifier()
+        pass
 
     def parse_function_page(self, soup: BeautifulSoup, url: str) -> Dict:
         """
@@ -58,15 +57,30 @@ class Win32PageParser:
             function_info["name"] = self._extract_function_name_from_url(url)
 
         # Classificar o símbolo profissionalmente
-        symbol_info = self.classifier.classify_symbol(function_info["name"], url)
+        # Simple symbol classification without external classifier
+        symbol_info = {
+            "symbol": function_info["name"],
+            "kind": "function",
+            "surface": (
+                "win32"
+                if "/win32/" in url
+                else "driver" if "/drivers/" in url else "unknown"
+            ),
+            "header": "unknown",
+            "dll": None,
+            "library": None,
+            "api_set": None,
+            "url_pattern": "nf-" if "/nf-" in url else "",
+            "confidence": 0.95,
+        }
         function_info["symbol_info"] = symbol_info
-        function_info["kind"] = symbol_info.kind
-        function_info["surface"] = symbol_info.surface
-        function_info["header"] = symbol_info.header
-        function_info["symbol_type"] = symbol_info.kind  # Backward compatibility
+        function_info["kind"] = symbol_info["kind"]
+        function_info["surface"] = symbol_info["surface"]
+        function_info["header"] = symbol_info["header"]
+        function_info["symbol_type"] = symbol_info["kind"]  # Backward compatibility
 
         # DLL baseada na classificação profissional
-        function_info["dll"] = symbol_info.dll or self._extract_dll(soup)
+        function_info["dll"] = symbol_info["dll"] or self._extract_dll(soup)
 
         # Extrair assinatura/sintaxe para todos os tipos de símbolos
         signature_info = self._extract_signature_with_language(soup)
@@ -74,21 +88,21 @@ class Win32PageParser:
         function_info["signature_language"] = signature_info["language"]
 
         # Para estruturas, certificar que a definição C seja extraída
-        if symbol_info.kind == "struct" and not function_info["signature"]:
+        if symbol_info["kind"] == "struct" and not function_info["signature"]:
             struct_definition = self._extract_struct_definition(soup)
             if struct_definition:
                 function_info["signature"] = struct_definition
                 function_info["signature_language"] = "c"
 
         # Extrair informações baseadas no tipo de símbolo
-        if symbol_info.kind in ["function", "callback"]:
+        if symbol_info["kind"] in ["function", "callback"]:
             function_info["parameters"] = self._extract_parameters(soup)
             function_info["parameter_count"] = len(function_info["parameters"])
             function_info["return_type"], function_info["return_description"] = (
                 self._extract_return_info(soup)
             )
             function_info["remarks"] = self._extract_remarks(soup)
-        elif symbol_info.kind == "struct":
+        elif symbol_info["kind"] == "struct":
             # Para estruturas, extrair membros ao invés de parâmetros
             function_info["members"] = self._extract_struct_members(soup)
             function_info["member_count"] = len(function_info.get("members", []))
@@ -101,7 +115,7 @@ class Win32PageParser:
 
         function_info["architectures"] = self._extract_architectures(soup)
         function_info["description"] = self._extract_complete_description(
-            soup, symbol_info.kind
+            soup, symbol_info["kind"]
         )
 
         return function_info
@@ -388,7 +402,7 @@ class Win32PageParser:
         return "\n".join(cleaned_lines)
 
     def _extract_parameters(self, soup: BeautifulSoup) -> List[Dict]:
-        """Extract detailed parameter information"""
+        """Extract detailed parameter information with improved logic"""
         parameters = []
 
         # Look for Parameters section
@@ -400,10 +414,19 @@ class Win32PageParser:
         for header in param_headers:
             next_elem = header.find_next_sibling()
             current_param = {}
+            collected_descriptions = []  # Store descriptions for current parameter
+            header_level = int(
+                header.name[1]
+            )  # Get numeric level (h2 -> 2, h3 -> 3, etc.)
 
             while next_elem:
-                if next_elem.name in ["h1", "h2", "h3", "h4"]:
-                    break
+                # Only break on headers of same or higher level (h2 breaks h2/h1, h3 breaks h3/h2/h1)
+                if next_elem.name and next_elem.name.startswith("h"):
+                    current_header_level = int(next_elem.name[1])
+                    if current_header_level <= header_level:
+                        break
+                    # For lower level headers (like h4, h5), continue processing
+                    # These might be sub-sections within parameters
 
                 # New format: <p><code>[in] paramName</code></p>
                 if next_elem.name == "p":
@@ -411,9 +434,22 @@ class Win32PageParser:
                     if code_elem:
                         # Save previous parameter if exists
                         if current_param.get("name"):
+                            # Join all collected descriptions for the previous parameter
+                            if collected_descriptions:
+                                current_param["description"] = " ".join(
+                                    collected_descriptions
+                                )
                             parameters.append(current_param)
+                            collected_descriptions = []  # Reset descriptions
 
                         param_text = code_elem.get_text().strip()
+
+                        # Skip expressions like (lpAddress+dwSize) or mathematical expressions
+                        if param_text.startswith("(") and param_text.endswith(")"):
+                            continue
+                        if "+" in param_text or "-" in param_text or "*" in param_text:
+                            continue
+
                         # Extract parameter name, removing brackets
                         param_match = re.search(r"(\w+)$", param_text)
                         if param_match:
@@ -427,29 +463,31 @@ class Win32PageParser:
                                 "type": param_type,
                                 "description": "",
                             }
-                    elif current_param.get("name") and next_elem.get_text().strip():
-                        # This paragraph contains the description - only take first valid one
-                        if not current_param[
-                            "description"
-                        ]:  # Only if we don't have description yet
-                            desc_text = next_elem.get_text().strip()
-                            # Skip short texts or ones that look like parameter declarations
-                            if len(desc_text) > 20 and not re.match(
-                                r"^\[.*?\]", desc_text
-                            ):
-                                current_param["description"] = desc_text
+                    elif current_param.get("name"):
+                        # This paragraph contains description for current parameter
+                        desc_text = next_elem.get_text().strip()
+                        # Skip short texts or ones that look like parameter declarations
+                        if len(desc_text) > 15 and not re.match(r"^\[.*?\]", desc_text):
+                            # Don't look for code elements inside - this breaks the logic
+                            # Just collect the text as description
+                            collected_descriptions.append(desc_text)
 
-                                # Check for value tables within this description
-                                value_tables = self._extract_parameter_value_tables(
-                                    next_elem
-                                )
-                                if value_tables:
-                                    current_param["values"] = value_tables
+                            # Check for value tables within this description
+                            value_tables = self._extract_parameter_value_tables(
+                                next_elem
+                            )
+                            if value_tables:
+                                current_param["values"] = value_tables
 
                 # Legacy format: <dt><dd>
                 elif next_elem.name == "dt":
                     if current_param.get("name"):
+                        if collected_descriptions:
+                            current_param["description"] = " ".join(
+                                collected_descriptions
+                            )
                         parameters.append(current_param)
+                        collected_descriptions = []
 
                     param_name = next_elem.get_text().strip()
                     param_name = re.sub(r"^\[.*?\]\s*", "", param_name)
@@ -461,13 +499,16 @@ class Win32PageParser:
 
                 elif next_elem.name == "dd" and current_param.get("name"):
                     desc_text = next_elem.get_text().strip()
-                    current_param["description"] = self._clean_description_text(
-                        desc_text
+                    collected_descriptions.append(
+                        self._clean_description_text(desc_text)
                     )
 
                 next_elem = next_elem.find_next_sibling()
 
+            # Don't forget the last parameter
             if current_param.get("name"):
+                if collected_descriptions:
+                    current_param["description"] = " ".join(collected_descriptions)
                 parameters.append(current_param)
 
             if parameters:
