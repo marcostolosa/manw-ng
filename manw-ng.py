@@ -130,7 +130,7 @@ Examples:
         dest="user_agent",
         help="User-Agent personalizado para as requisições (padrão: aleatório)",
     )
-    parser.add_argument("--version", action="version", version="MANW-NG 3.2.0")
+    parser.add_argument("--version", action="version", version="MANW-NG 3.3.0")
 
     args = parser.parse_args()
 

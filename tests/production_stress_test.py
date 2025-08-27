@@ -19,9 +19,11 @@ class ProductionStressTest:
     Comprehensive production stress testing for manw-ng system
     """
 
-    def __init__(self):
+    def __init__(self, timeout=30, concurrent=5):
         self.test_results = {}
         self.performance_metrics = []
+        self.timeout = timeout
+        self.concurrent = concurrent
 
         # MASSIVE test function database organized by complexity and category
         self.test_functions = {
@@ -343,12 +345,16 @@ class ProductionStressTest:
             }
 
     def run_category_test(
-        self, category_name, functions, max_concurrent=10
-    ):  # Higher default concurrency
+        self, category_name, functions, max_concurrent=None
+    ):  # Use self.concurrent as default
         """Test all functions in a category with controlled concurrency"""
         print(f"\n=== TESTING {category_name.upper()} ({len(functions)} functions) ===")
 
         category_results = []
+
+        # Use self.concurrent if max_concurrent not provided
+        if max_concurrent is None:
+            max_concurrent = self.concurrent
 
         with ThreadPoolExecutor(
             max_workers=max_concurrent * 2
@@ -359,9 +365,21 @@ class ProductionStressTest:
                 for func in functions
             }
 
-            # Collect results as they complete
+            # Collect results as they complete with timeout
             for future in as_completed(future_to_function):
-                result = future.result()
+                try:
+                    result = future.result(timeout=self.timeout)
+                except Exception as e:
+                    # Handle timeout and other exceptions
+                    func = future_to_function[future]
+                    result = {
+                        "function": func,
+                        "category": category_name,
+                        "success": False,
+                        "url": "TIMEOUT" if "timeout" in str(e).lower() else "ERROR",
+                        "execution_time": self.timeout,
+                        "error": str(e),
+                    }
                 category_results.append(result)
 
                 status = "OK" if result["success"] else "FAIL"
@@ -397,9 +415,11 @@ class ProductionStressTest:
         overall_start = time.time()
         all_results = []
 
-        # Test each category
+        # Test each category with concurrent setting
         for category_name, functions in self.test_functions.items():
-            category_results = self.run_category_test(category_name, functions)
+            category_results = self.run_category_test(
+                category_name, functions, max_concurrent=self.concurrent
+            )
             all_results.extend(category_results)
 
             # Minimal delay between categories for speed
@@ -467,9 +487,12 @@ class ProductionStressTest:
             print(f"   Fastest Function: {min(self.performance_metrics):.3f}s")
             print(f"   Slowest Function: {max(self.performance_metrics):.3f}s")
             print(f"   Median Time: {statistics.median(self.performance_metrics):.3f}s")
-            print(
-                f"   Standard Deviation: {statistics.stdev(self.performance_metrics):.3f}s"
-            )
+            if len(self.performance_metrics) >= 2:
+                print(
+                    f"   Standard Deviation: {statistics.stdev(self.performance_metrics):.3f}s"
+                )
+            else:
+                print(f"   Standard Deviation: N/A (need at least 2 samples)")
 
         # Category breakdown
         print(f"\nCATEGORY BREAKDOWN:")
@@ -561,7 +584,7 @@ def main():
         print(f"   Fast mode: ON")
     print()
 
-    tester = ProductionStressTest()
+    tester = ProductionStressTest(timeout=args.timeout, concurrent=args.concurrent)
 
     # Apply fast mode
     if args.fast:
@@ -576,11 +599,11 @@ def main():
             2: ["advanced_system"],
             3: ["network_internet"],
             4: ["graphics_ui"],
-            5: ["security_crypto"],
-            6: ["registry_system"],
-            7: ["file_system"],
-            8: ["process_thread"],
-            9: ["memory_management"],
+            5: ["registry_config"],
+            6: ["security_crypto"],
+            7: ["service_system"],
+            8: ["native_api"],
+            9: ["multimedia_device"],
             10: ["com_advanced"],
             11: ["edge_cases"],
             12: ["native_undocumented"],
