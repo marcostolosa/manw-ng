@@ -101,7 +101,9 @@ class RichFormatter:
             not function_info.get("documentation_found")
             or function_info.get("documentation_found") == "False"
         ):
-            self._show_not_found_error(function_info.get("function_name", "Unknown"))
+            self._show_not_found_error(
+                function_info.get("name", function_info.get("symbol", "Unknown"))
+            )
             return
 
         # Get symbol classification info
@@ -598,7 +600,9 @@ class MarkdownFormatter:
             not function_info.get("documentation_found")
             or function_info.get("documentation_found") == "False"
         ):
-            function_name = function_info.get("function_name", "Unknown")
+            function_name = function_info.get(
+                "name", function_info.get("symbol", "Unknown")
+            )
             if language == "br":
                 return f"""# Função Não Encontrada
 

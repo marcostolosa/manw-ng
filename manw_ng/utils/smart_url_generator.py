@@ -137,6 +137,7 @@ class SmartURLGenerator:
                 "threadpoollegacyapiset",
                 "wow64apiset",
                 "debugapi",
+                "appmodel",
                 "fibersapi",
                 "interlockedapi",
                 "profileapi",
@@ -464,6 +465,18 @@ class SmartURLGenerator:
             # Debug/Diagnostics - EXPANDED
             r"^isdebuggerpresent$": ["debugapi"],  # IsDebuggerPresent specifically
             r".*debug.*": ["debugapi"],
+            # Application Model - EXPANDED
+            r"^getapplicationusermodelidfromtoken$": [
+                "appmodel"
+            ],  # GetApplicationUserModelIdFromToken specifically
+            r"^getcurrentapplicationusermodelid$": [
+                "appmodel"
+            ],  # GetCurrentApplicationUserModelId specifically
+            r"^getapplicationusermodelid$": [
+                "appmodel"
+            ],  # GetApplicationUserModelId specifically
+            r".*applicationusermodelid.*": ["appmodel"],
+            r".*appmodel.*": ["appmodel"],
             r".*acl.*": ["aclapi"],
             r".*effective.*": ["aclapi"],
             r".*trustee.*": ["aclapi"],
@@ -1015,6 +1028,7 @@ class SmartURLGenerator:
             "synchapi",
             "errhandlingapi",
             "debugapi",
+            "appmodel",
             "libloaderapi",
             "heapapi",
             "processenv",
@@ -1051,6 +1065,7 @@ class SmartURLGenerator:
             "accctrl",
             "errhandlingapi",
             "debugapi",
+            "appmodel",
             # SECURITY & CRYPTO COMPLETE
             "aclapi",
             "wincrypt",
@@ -2041,9 +2056,7 @@ class SmartURLGenerator:
         completed = 0
 
         # Use as_completed to get the FIRST successful result
-        # Capture parameters for closures
-        fn_name, dll = function_name, dll_name
-        
+
         for completed_task in asyncio.as_completed(tasks):
             try:
                 result = await completed_task
@@ -2051,31 +2064,7 @@ class SmartURLGenerator:
                 if progress_callback:
                     progress_callback(completed, total)
                 if result:  # Found valid URL!
-                    # Record success for pattern learning
-                    try:
-                        # Lazy load pattern learner only when needed
-                        try:
-                            from .url_pattern_learner import pattern_learner
-
-                            pattern_learner.record_success(
-                                fn_name, result, dll or ""
-                            )
-                        except ImportError:
-                            pass  # Pattern learner is optional
-                    except Exception:
-                        pass  # Don't fail on learning errors
-
-                    # Train ML classifier with successful mapping
-                    if self.ml_classifier:
-                        try:
-                            # Extract header from successful URL for training
-                            url_header = self._extract_header_from_url(result)
-                            if url_header:
-                                self.ml_classifier.add_training_example(
-                                    fn_name, url_header, dll or "", success=True
-                                )
-                        except Exception:
-                            pass  # Don't fail on ML training errors
+                    # Success found - ML training disabled in async context
 
                     # Cancel remaining tasks for speed
                     for task in tasks:
