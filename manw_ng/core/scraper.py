@@ -155,7 +155,7 @@ class Win32APIScraper:
         # PRIORITY 1: Enhanced ML Classification + Smart URL Generation
         try:
             dll_name = getattr(self, "_current_function_dll", None)
-            
+
             # Try enhanced ML classifier first (if available)
             if HAS_ENHANCED and primary_classifier:
                 if not self.quiet:
@@ -167,29 +167,35 @@ class Win32APIScraper:
                     status.start()
 
                 try:
-                    predictions = primary_classifier.predict_headers(function_name, dll_name, top_k=1)
-                    if predictions and predictions[0][1] > 0.5:  # High confidence prediction
+                    predictions = primary_classifier.predict_headers(
+                        function_name, dll_name, top_k=1
+                    )
+                    if (
+                        predictions and predictions[0][1] > 0.5
+                    ):  # High confidence prediction
                         header = predictions[0][0]
                         confidence = predictions[0][1]
-                        
+
                         # Generate URL using enhanced classifier
-                        enhanced_url = primary_classifier.generate_url(function_name, header)
-                        
+                        enhanced_url = primary_classifier.generate_url(
+                            function_name, header
+                        )
+
                         # Adapt URL for language
                         if self.language == "br":
                             enhanced_url = enhanced_url.replace("/en-us/", "/pt-br/")
-                        
+
                         if not self.quiet:
                             status.update(
                                 f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [bold green]✓[/bold green] ML Prediction: {header} ({confidence:.2f})"
                             )
                             status.stop()
-                        
+
                         # Test the ML-predicted URL first
                         result = self._parse_function_page(enhanced_url)
                         if result and result.get("documentation_found"):
                             return result
-                        
+
                 except Exception as e:
                     if not self.quiet:
                         status.stop()
