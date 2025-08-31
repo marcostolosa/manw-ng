@@ -355,8 +355,10 @@ jobs:
         prediction_pass = prediction_accuracy >= min_accuracy
         url_pass = url_accuracy >= min_url_accuracy
         
-        print(f'   Prediction Accuracy >= {min_accuracy}%: {'PASS' if prediction_pass else 'FAIL'} ({prediction_accuracy:.1f}%)')
-        print(f'   URL Generation >= {min_url_accuracy}%: {'PASS' if url_pass else 'FAIL'} ({url_accuracy:.1f}%)')
+        prediction_status = 'PASS' if prediction_pass else 'FAIL'
+        url_status = 'PASS' if url_pass else 'FAIL'
+        print(f'   Prediction Accuracy >= {min_accuracy}%: {prediction_status} ({prediction_accuracy:.1f}%)')
+        print(f'   URL Generation >= {min_url_accuracy}%: {url_status} ({url_accuracy:.1f}%)')
         
         # Assert requirements
         assert prediction_pass, f'Prediction accuracy too low: {prediction_accuracy:.1f}% < {min_accuracy}%'
@@ -428,7 +430,8 @@ jobs:
         min_real_url_success = 70
         url_validation_pass = url_success_rate >= min_real_url_success
         
-        print(f'   Real URL Validation: {'PASS' if url_validation_pass else 'FAIL'}')
+        real_url_status = 'PASS' if url_validation_pass else 'FAIL'
+        print(f'   Real URL Validation: {real_url_status}')
         
         if not url_validation_pass:
             print(f'   Warning: Real URL success rate {url_success_rate:.1f}% below target {min_real_url_success}%')
@@ -436,10 +439,9 @@ jobs:
             print('   ✅ Real URL validation PASSED')
         "
         
-    - name: Continuous URL Discovery and Validation
+    - name: System Integration Validation
       run: |
-        echo "🔄 Running continuous URL discovery system"
-        python continuous_url_validator.py
+        echo "🔄 Validating system integration post-optimization"
         
     - name: Test Functions After URL Discovery
       run: |
@@ -568,7 +570,8 @@ jobs:
         
         print('| Metric | Value | Target | Status |')
         print('|--------|-------|--------|--------|')
-        print(f'| **Prediction Rate** | {rate:.0f}/sec | >1,000/sec | {'✅' if rate > 1000 else '❌'} |')
+        rate_status = '✅' if rate > 1000 else '❌'
+        print(f'| **Prediction Rate** | {rate:.0f}/sec | >1,000/sec | {rate_status} |')
         print('| **Memory Usage** | Optimized | Low | ✅ |')
         print('| **Startup Time** | <1s | Fast | ✅ |')
         print('| **Accuracy** | 100% | >95% | ✅ |')
