@@ -47,8 +47,10 @@ jobs:
 
     - name: 🧪 Run unit tests
       run: |
-        # Teste básico de funcionalidade sem pytest/coverage por enquanto
+        # Teste módulos principais
         python -c "import manw_ng.core.scraper; print('Core modules import OK')"
+        python -c "from manw_ng.ml import enhanced_ml_classifier, HAS_ENHANCED; print(f'Enhanced ML: {HAS_ENHANCED}')"
+        python -c "from manw_ng.ml.enhanced_classifier import enhanced_ml_classifier; stats = enhanced_ml_classifier.get_model_stats(); print(f'Function mappings: {stats[\"mapped_functions\"]:,}')"
         python manw-ng.py --help > help_output.txt && echo "CLI working OK"
 
     # Note: Coverage disabled temporarily - can be re-enabled later with proper test setup
@@ -72,19 +74,62 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests beautifulsoup4 rich lxml flake8 aiohttp
 
-    - name: 🎯 Test CLI functionality (pt-br)
+    - name: 🎯 Test Standard Win32 APIs
       run: |
-        # Testa funcionalidades principais em português
-        python manw-ng.py CreateProcessW -l br --output json > test_output_br.json
-        cat test_output_br.json
-        python -c "import json; data=json.load(open('test_output_br.json')); assert data['return_description'], 'Missing return description'"
+        # Testa APIs Win32 padrão
+        python manw-ng.py CreateFileW -l us --output json > test_createfile.json
+        python -c "import json; data=json.load(open('test_createfile.json')); assert data['return_description'], 'Missing return description'"
+        echo "✅ Standard Win32 API test passed"
 
-    - name: 🎯 Test CLI functionality (en-us)
+    - name: 🎯 Test Native APIs
       run: |
-        # Testa funcionalidades principais em inglês
-        python manw-ng.py OpenProcess -l us --output json > test_output_us.json
-        cat test_output_us.json
-        python -c "import json; data=json.load(open('test_output_us.json')); assert data['return_description'], 'Missing return description'"
+        # Testa Native APIs (NTAPI)
+        python manw-ng.py NtCreateFile -l us --output json > test_native.json
+        python -c "import json; data=json.load(open('test_native.json')); assert data['return_description'], 'Missing return description'"
+        echo "✅ Native API test passed"
+
+    - name: 🎯 Test Shell APIs
+      run: |
+        # Testa Shell APIs
+        python manw-ng.py PathCombineW -l us --output json > test_shell.json
+        python -c "import json; data=json.load(open('test_shell.json')); assert data['return_description'], 'Missing return description'"
+        echo "✅ Shell API test passed"
+
+    - name: 🎯 Test Enhanced ML Coverage
+      run: |
+        # Testa cobertura do sistema ML melhorado
+        python -c "
+        from manw_ng.ml.enhanced_classifier import enhanced_ml_classifier
+        import random
+        
+        # Testa várias categorias de funções
+        test_functions = [
+            'CreateProcessW', 'RegOpenKeyExW', 'NtCreateFile', 'ZwAllocateVirtualMemory',
+            'PathCombineW', 'SHGetFolderPathW', 'PlaySoundW', 'waveOutOpen',
+            'CryptAcquireContextW', 'WSAStartup', 'InternetOpenW', 'glBegin'
+        ]
+        
+        predictions_made = 0
+        high_confidence = 0
+        
+        for func in test_functions:
+            predictions = enhanced_ml_classifier.predict_headers(func, top_k=1)
+            if predictions:
+                predictions_made += 1
+                if predictions[0][1] > 0.8:
+                    high_confidence += 1
+                print(f'{func}: {predictions[0][0]} ({predictions[0][1]:.2f})')
+        
+        coverage = predictions_made / len(test_functions) * 100
+        confidence_rate = high_confidence / predictions_made * 100 if predictions_made > 0 else 0
+        
+        print(f'Coverage: {coverage:.1f}% ({predictions_made}/{len(test_functions)})')
+        print(f'High Confidence: {confidence_rate:.1f}% ({high_confidence}/{predictions_made})')
+        
+        assert coverage >= 95, f'Coverage too low: {coverage}%'
+        assert confidence_rate >= 90, f'Confidence rate too low: {confidence_rate}%'
+        "
+        echo "✅ Enhanced ML system test passed"
 
   security:
     name: 🔒 Security Scan
@@ -180,21 +225,35 @@ jobs:
 
     - name: ⚡ Run performance benchmarks
       run: |
-        # Testa performance de funções críticas
+        # Testa performance do sistema ML aprimorado
         python -c "
         import time
-        from manw_ng.core.scraper import Win32APIScraper
+        from manw_ng.ml.enhanced_classifier import enhanced_ml_classifier
         
-        scraper = Win32APIScraper()
+        # Testa velocidade de predição
+        test_functions = ['CreateFileW', 'RegOpenKeyW', 'NtCreateFile', 'PathCombineW', 'WSAStartup'] * 20
         
-        # Testa URLs diretos (deve ser rápido)
         start = time.time()
-        url = scraper._try_direct_url('CreateProcessW')
+        for func in test_functions:
+            predictions = enhanced_ml_classifier.predict_headers(func, top_k=1)
         end = time.time()
         
-        print(f'Direct URL lookup: {(end-start)*1000:.2f}ms')
-        assert (end-start) < 0.1, 'Direct URL lookup too slow'
+        total_predictions = len(test_functions)
+        elapsed = end - start
+        rate = total_predictions / elapsed
+        
+        print(f'ML Predictions: {total_predictions} in {elapsed:.3f}s')
+        print(f'Prediction Rate: {rate:.0f} predictions/second')
+        
+        # Sistema deve ser rápido (>1000 predições/segundo)
+        assert rate > 1000, f'Performance too slow: {rate:.0f} predictions/second'
+        
+        # Testa estatísticas do sistema
+        stats = enhanced_ml_classifier.get_model_stats()
+        print(f'System Stats: {stats[\"mapped_headers\"]} headers, {stats[\"mapped_functions\"]:,} mappings')
+        assert stats['mapped_functions'] > 50000, 'Function mapping count too low'
         "
+        echo "✅ Performance benchmarks passed"
 
   deploy-docs:
     name: 📚 Deploy Documentation

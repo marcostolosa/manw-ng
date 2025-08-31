@@ -18,10 +18,10 @@ class Win32CatalogIntegration:
     def __init__(self, catalog_path: str = None):
         """Initialize with catalog file path"""
         if catalog_path is None:
-            # Look for catalog in project root
+            # Look for catalog in assets folder
             project_root = Path(__file__).parent.parent.parent
-            self.csv_path = project_root / "win32_api_catalog.csv"
-            self.json_path = project_root / "win32_api_catalog.json"
+            self.csv_path = project_root / "assets" / "win32_api_catalog.csv"
+            self.json_path = project_root / "assets" / "win32_api_catalog.json"
         else:
             base_path = Path(catalog_path)
             self.csv_path = base_path.with_suffix(".csv")
