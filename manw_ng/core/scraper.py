@@ -16,6 +16,7 @@ from ..core.parser import Win32PageParser
 from ..utils.smart_url_generator import SmartURLGenerator
 from ..utils.catalog_integration import get_catalog
 from ..utils.http_client import HTTPClient
+from ..ml import primary_classifier, HAS_ENHANCED
 
 
 class Win32APIScraper:
@@ -151,24 +152,65 @@ class Win32APIScraper:
                 )
             return self._create_not_found_result(function_name, [])
 
-        # PRIORITY 1: Smart URL Testing with intelligent patterns (always run)
+        # PRIORITY 1: Enhanced ML Classification + Smart URL Generation
         try:
             dll_name = getattr(self, "_current_function_dll", None)
+            
+            # Try enhanced ML classifier first (if available)
+            if HAS_ENHANCED and primary_classifier:
+                if not self.quiet:
+                    analyzing_msg = self.get_string("analyzing")
+                    status = Status(
+                        f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] AI Classification",
+                        console=self.console,
+                    )
+                    status.start()
 
+                try:
+                    predictions = primary_classifier.predict_headers(function_name, dll_name, top_k=1)
+                    if predictions and predictions[0][1] > 0.5:  # High confidence prediction
+                        header = predictions[0][0]
+                        confidence = predictions[0][1]
+                        
+                        # Generate URL using enhanced classifier
+                        enhanced_url = primary_classifier.generate_url(function_name, header)
+                        
+                        # Adapt URL for language
+                        if self.language == "br":
+                            enhanced_url = enhanced_url.replace("/en-us/", "/pt-br/")
+                        
+                        if not self.quiet:
+                            status.update(
+                                f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [bold green]✓[/bold green] ML Prediction: {header} ({confidence:.2f})"
+                            )
+                            status.stop()
+                        
+                        # Test the ML-predicted URL first
+                        result = self._parse_function_page(enhanced_url)
+                        if result and result.get("documentation_found"):
+                            return result
+                        
+                except Exception as e:
+                    if not self.quiet:
+                        status.stop()
+                    # Fall through to original method
+                    pass
+                else:
+                    if not self.quiet:
+                        status.stop()
+
+            # FALLBACK: Original Smart URL Testing
             if not self.quiet:
-                # Professional status display (Frida-style)
-                analyzing_msg = self.get_string("analyzing")
                 searching_msg = self.get_string("searching_patterns")
-
                 with Status(
-                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {searching_msg}",
+                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/3[/cyan] {searching_msg}",
                     console=self.console,
                 ) as status:
 
                     def progress(done: int, total: int) -> None:
                         testing_msg = self.get_string("testing_urls")
                         status.update(
-                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
+                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/3[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
                         )
 
                     found_url = asyncio.run(

@@ -2843,7 +2843,7 @@ class EnhancedFunctionClassifier:
         # Then, load complete mapping from JSON file (all 61k+ mappings)
         try:
             complete_mapping_path = (
-                Path(__file__).parent / "complete_function_mapping.json"
+                Path(__file__).parent.parent.parent / "assets" / "complete_function_mapping.json"
             )
             if complete_mapping_path.exists():
                 import json
@@ -2851,11 +2851,10 @@ class EnhancedFunctionClassifier:
                 with open(complete_mapping_path, "r", encoding="utf-8") as f:
                     complete_mapping = json.load(f)
                 mapping.update(complete_mapping)
-                print(
-                    f"Loaded {len(complete_mapping):,} additional function mappings from complete database"
-                )
-        except Exception as e:
-            print(f"Could not load complete mapping: {e}")
+                # Quietly load complete mapping
+        except Exception:
+            # Silently continue if complete mapping can't be loaded
+            pass
 
         return mapping
 
@@ -2988,7 +2987,7 @@ class EnhancedFunctionClassifier:
             pattern = self.url_patterns["native"]
         elif header in ["ntddk", "wdm"]:
             pattern = self.url_patterns["driver"]
-        elif header in ["shlwapi", "shlobj"]:
+        elif header in ["shlobj"]:
             pattern = self.url_patterns["shell"]
         elif header in ["mmsystem", "vfw", "mfapi"]:
             pattern = self.url_patterns["multimedia"]

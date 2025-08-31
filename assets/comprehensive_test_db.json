@@ -1,0 +1,1653 @@
+{
+  "Aclapi.h": [
+    "GetTrusteeType",
+    "BuildTrusteeWithName",
+    "GetInheritanceSource",
+    "BuildTrusteeWithObjectsAndSid",
+    "FreeInheritedFromArray"
+  ],
+  "Aclui.h": [
+    "EditSecurityAdvanced",
+    "EditSecurity",
+    "CreateSecurityPage"
+  ],
+  "Adshlp.h": [
+    "AllocADsStr",
+    "FreeADsMem",
+    "ADsSetLastError",
+    "ADsBuildEnumerator",
+    "ADsEncodeBinaryData"
+  ],
+  "Appmgmt.h": [
+    "UninstallApplication",
+    "GetLocalManagedApplications",
+    "GetManagedApplicationCategories",
+    "InstallApplication",
+    "GetManagedApplications"
+  ],
+  "Appnotify.h": [
+    "UnregisterAppStateChangeNotification",
+    "RegisterAppStateChangeNotification"
+  ],
+  "AtAcct.h": [
+    "GetNetScheduleAccountInformation",
+    "SetNetScheduleAccountInformation"
+  ],
+  "AuthIf.h": [
+    "SetAt",
+    "InsertAt",
+    "GetSize",
+    "SetResponseType",
+    "RadiusExtensionFreeAttributes"
+  ],
+  "Authz.h": [
+    "AuthzInstallSecurityEventSource",
+    "AuthzInitializeContextFromSid",
+    "AuthzOpenObjectAudit",
+    "AuthzInitializeResourceManagerEx",
+    "AuthzInitializeObjectAccessAuditEvent2"
+  ],
+  "Avrt.h": [
+    "AvSetMmMaxThreadCharacteristics",
+    "AvQuerySystemResponsiveness",
+    "AvRevertMmThreadCharacteristics",
+    "AvSetMmThreadCharacteristics",
+    "AvRtLeaveThreadOrderingGroup"
+  ],
+  "Bcrypt.h": [
+    "BCryptEnumRegisteredProviders",
+    "BCryptSignHash",
+    "BCryptFreeBuffer",
+    "BCryptQueryContextFunctionConfiguration",
+    "BCryptGenerateSymmetricKey"
+  ],
+  "BluetoothAPIs.h (include Bthsdpdef.h or BluetoothAPIs.h)": [
+    "BluetoothIsConnectable",
+    "BluetoothSelectDevicesFree",
+    "BluetoothRegisterForAuthenticationEx",
+    "BluetoothEnableDiscovery",
+    "BluetoothSdpGetString"
+  ],
+  "Certbcli.h (include Certsrv.h)": [
+    "CertSrvBackupClose",
+    "CertSrvIsServerOnline",
+    "CertSrvBackupRead",
+    "CertSrvRestoreGetDatabaseLocations",
+    "CertSrvBackupGetDynamicFileList"
+  ],
+  "Combaseapi.h": [
+    "CoCreateInstanceFromApp",
+    "CoWaitForMultipleObjects",
+    "CoEnterApplicationThreadLifetimeLoop",
+    "CoAllowUnmarshalerCLSID",
+    "CoGetApplicationThreadReference"
+  ],
+  "Commctrl.h": [
+    "ImageList_DragShowNolock",
+    "GetWindowSubclass",
+    "DefSubclassProc",
+    "RemoveWindowSubclass",
+    "LVGroupCompare"
+  ],
+  "Commdlg.h (include Windows.h)": [
+    "ChooseColor",
+    "OFNHookProcOldStyle",
+    "PrintDlgEx",
+    "PageSetupHook",
+    "OFNHookProc"
+  ],
+  "Compressapi.h on Windows 8 and Windows Server 2012": [
+    "CreateCompressor",
+    "ResetDecompressor",
+    "SetCompressorInformation",
+    "QueryCompressorInformation",
+    "CreateDecompressor"
+  ],
+  "CryptDlg.h": [
+    "CertModifyCertificatesToTrust",
+    "GetFriendlyNameOfCert",
+    "PFNCMFILTERPROC",
+    "CertSelectCertificate",
+    "PFNCMHOOKPROC"
+  ],
+  "Cryptuiapi.h": [
+    "CryptUIWizImport",
+    "CryptUIWizFreeDigitalSignContext",
+    "CryptUIDlgCertMgr",
+    "CryptUIDlgSelectCertificateFromStore",
+    "CertSelectionGetSerializedBlob"
+  ],
+  "Cryptxml.h": [
+    "CryptXmlOpenToEncode",
+    "CryptXmlDllDigestData pointer",
+    "PFN_CRYPT_XML_WRITE_CALLBACK",
+    "CryptXmlDllEncodeAlgorithm pointer",
+    "CryptXmlGetTransforms"
+  ],
+  "D2d1.h": [
+    "D2D1InvertMatrix",
+    "D2D1MakeRotateMatrix",
+    "D2D1IsMatrixInvertible",
+    "D2D1MakeSkewMatrix",
+    "D2D1CreateFactory(D2D1_FACTORY_TYPE,REFIID,D2D1_FACTORY_OPTIONS*,void**)"
+  ],
+  "D2d1_1.h": [
+    "D2D1ComputeMaximumScaleFactor",
+    "D2D1CreateDevice",
+    "D2D1SinCos",
+    "D2D1ConvertColorSpace",
+    "D2D1Vec3Length"
+  ],
+  "D2d1effectauthor.h": [
+    "PD2D1_PROPERTY_GET_FUNCTION pointer",
+    "PD2D1_PROPERTY_SET_FUNCTION pointer"
+  ],
+  "D2d1effecthelpers.h": [
+    "ValueGetter",
+    "StringSetter",
+    "StringGetter",
+    "ValueSetter"
+  ],
+  "DSSec.h": [
+    "DSCreateISecurityInfoObject",
+    "DSCreateSecurityPage",
+    "DSEditSecurity",
+    "DSCreateISecurityInfoObjectEx"
+  ],
+  "Datetimeapi.h (include Windows.h)": [
+    "GetDateFormatEx",
+    "GetTimeFormatEx",
+    "GetTimeFormat",
+    "GetDateFormat"
+  ],
+  "Davclnt.h": [
+    "DavUnregisterAuthCallback",
+    "DavAddConnection",
+    "DavGetExtendedError",
+    "DavInvalidateCache",
+    "DavRegisterAuthCallback"
+  ],
+  "Dcomp.h": [
+    "DCompositionAttachMouseWheelToHwnd",
+    "DCompositionCreateDevice",
+    "DCompositionGetFrameStatistics",
+    "DCompositionAttachMouseDragToHwnd",
+    "DCompositionCreateSurfaceHandle"
+  ],
+  "Dde.h (include Windows.h)": [
+    "PackDDElParam",
+    "UnpackDDElParam",
+    "FreeDDElParam",
+    "DdeSetQualityOfService",
+    "ImpersonateDdeClientWindow"
+  ],
+  "Ddeml.h (include Windows.h)": [
+    "DdeFreeDataHandle",
+    "DdePostAdvise",
+    "DdeEnableCallback",
+    "DdeAddData",
+    "DdeClientTransaction"
+  ],
+  "Dpapi.h;  Wincrypt.h on Windows Server 2008 R2, Windows 7, Windows Server 2008 and Windows Vista": [
+    "CryptUpdateProtectedState",
+    "CryptProtectMemory"
+  ],
+  "Dpapi.h;  Wincrypt.h on Windows Server 2008 R2, Windows 7, Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP": [
+    "CryptUnprotectData",
+    "CryptProtectData"
+  ],
+  "Dwmapi.h": [
+    "DwmExtendFrameIntoClientArea",
+    "DwmTransitionOwnedWindow",
+    "DwmDefWindowProc",
+    "DwmGetGraphicsStreamClient",
+    "DwmQueryThumbnailSourceSize"
+  ],
+  "Dxva2api.h": [
+    "DXVA2_Fixed32OpaqueAlpha",
+    "DXVA2CreateDirect3DDeviceManager9",
+    "DXVA2_Fixed32TransparentAlpha",
+    "DXVA2FloatToFixed",
+    "DXVA2FixedToFloat"
+  ],
+  "Dxvahd.h": [
+    "PDXVAHDSW_GetVideoProcessStreamStatePrivate pointer",
+    "PDXVAHDSW_GetVideoProcessorDeviceCaps pointer",
+    "PDXVAHDSW_CreateDevice pointer",
+    "PDXVAHDSW_GetVideoProcessBltStatePrivate pointer",
+    "PDXVAHDSW_DestroyVideoProcessor pointer"
+  ],
+  "Enclaveapi.h (include Winbase.h)": [
+    "InitializeEnclave",
+    "CreateEnclave",
+    "IsEnclaveTypeSupported",
+    "LoadEnclaveData"
+  ],
+  "ErrorRep.h": [
+    "WerReportHang",
+    "ReportFault",
+    "AddERExcludedApplication"
+  ],
+  "Evntcons.h": [
+    "EventAccessQuery",
+    "EventAccessControl",
+    "EventAccessRemove"
+  ],
+  "Evntprov.h": [
+    "EnableCallback",
+    "EventWriteTransfer",
+    "EventUnregister",
+    "EventProviderEnabled",
+    "EventWrite"
+  ],
+  "Evntrace.h": [
+    "EventClassCallback",
+    "OpenTrace",
+    "BufferCallback",
+    "EnableTraceEx",
+    "EnumerateTraceGuids"
+  ],
+  "Evr.h": [
+    "MFCreateVideoSampleFromSurface",
+    "MFCreateVideoRenderer",
+    "MFCreateVideoMixerAndPresenter",
+    "MFCreateVideoPresenter",
+    "MFCreateVideoMixer"
+  ],
+  "Fci.h": [
+    "FCIFlushCabinet",
+    "FCIDestroy",
+    "FCICreate",
+    "FCIFlushFolder",
+    "FCIAddFile"
+  ],
+  "Fdi.h": [
+    "FDIIsCabinet",
+    "FDICreate",
+    "FDIDestroy",
+    "FDITruncateCabinet",
+    "FDICopy"
+  ],
+  "FileAPI.h (include Windows.h);  WinBase.h on Windows Server 2008 R2, Windows 7, Windows Server 2008 and Windows Vista (include Windows.h)": [
+    "GetFinalPathNameByHandle",
+    "GetVolumeInformationByHandleW"
+  ],
+  "FileAPI.h (include Windows.h);  WinBase.h on Windows Server 2008 R2, Windows 7, Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP (include Windows.h)": [
+    "FindNextChangeNotification",
+    "GetFileTime",
+    "UnlockFile",
+    "GetTempFileName",
+    "WriteFileGather"
+  ],
+  "FontSub.h": [
+    "CreateFontPackage",
+    "CFP_FREEPROC pointer",
+    "MergeFontPackage",
+    "CFP_REALLOCPROC pointer",
+    "CFP_ALLOCPROC pointer"
+  ],
+  "Gb18030.h": [
+    "BytesToUnicode",
+    "UnicodeToBytes",
+    "NlsDllCodePageTranslation"
+  ],
+  "Gl.h": [
+    "glTexSubImage1D",
+    "glBitmap",
+    "glFlush",
+    "glLineStipple",
+    "glGetTexImage"
+  ],
+  "Gpedit.h": [
+    "DeleteGPOLink",
+    "BrowseForGPO",
+    "ExportRSoPData",
+    "ImportRSoPData",
+    "DeleteAllGPOLinks"
+  ],
+  "GuidDef.h": [
+    "IsEqualIID",
+    "IsEqualCLSID",
+    "IsEqualGUID"
+  ],
+  "HeapApi.h (include Windows.h);  WinBase.h on Windows Server 2008 R2, Windows 7, Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP (include Windows.h)": [
+    "HeapWalk",
+    "HeapUnlock",
+    "HeapDestroy",
+    "HeapAlloc",
+    "HeapQueryInformation"
+  ],
+  "HighLevelMonitorConfigurationAPI.h": [
+    "GetMonitorDisplayAreaPosition",
+    "DegaussMonitor",
+    "GetMonitorContrast",
+    "SaveCurrentMonitorSettings",
+    "SetMonitorDisplayAreaPosition"
+  ],
+  "Icmpapi.h": [
+    "IcmpCreateFile",
+    "Icmp6CreateFile",
+    "IcmpParseReplies",
+    "Icmp6SendEcho2",
+    "IcmpSendEcho"
+  ],
+  "Idndl.h": [
+    "DownlevelGetLocaleScripts",
+    "DownlevelVerifyScripts",
+    "DownlevelGetStringScripts"
+  ],
+  "Intshcut.h": [
+    "URLAssociationDialog",
+    "InetIsOffline",
+    "TranslateURL",
+    "MIMEAssociationDialog"
+  ],
+  "IoAPI.h (include Windows.h);  WinBase.h on Windows Server 2008 R2, Windows 7, Windows Server 2008 and Windows Vista (include Windows.h)": [
+    "CancelIoEx",
+    "CancelSynchronousIo",
+    "GetQueuedCompletionStatusEx"
+  ],
+  "IoAPI.h (include Windows.h);  WinBase.h on Windows Server 2008 R2, Windows 7, Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP (include Windows.h)": [
+    "CancelIo",
+    "CreateIoCompletionPort",
+    "PostQueuedCompletionStatus"
+  ],
+  "Iphlpapi.h": [
+    "ParseNetworkString",
+    "GetOwnerModuleFromTcp6Entry",
+    "GetTcpStatisticsEx",
+    "DeletePersistentTcpPortReservation",
+    "CreatePersistentTcpPortReservation"
+  ],
+  "Iscsidsc.h": [
+    "RemoveRadiusServer",
+    "SetIscsiTunnelModeOuterAddress",
+    "RemoveIscsiPersistentTarget",
+    "SendScsiReadCapacity",
+    "SetIscsiInitiatorRADIUSSharedSecret"
+  ],
+  "KtmW32.h": [
+    "PrePrepareEnlistment",
+    "GetNotificationResourceManagerAsync",
+    "CommitEnlistment",
+    "CreateEnlistment",
+    "CreateTransaction"
+  ],
+  "Ktmw32.h": [
+    "SetEnlistmentRecoveryInformation",
+    "OpenTransactionManager",
+    "OpenTransactionManagerById",
+    "SetResourceManagerCompletionPort",
+    "CommitComplete"
+  ],
+  "LibLoaderAPI.h (include Windows.h);  None on Windows 7, Windows Server 2008 R2, Windows Vista and Windows Server 2008": [
+    "SetDefaultDllDirectories",
+    "AddDllDirectory",
+    "RemoveDllDirectory"
+  ],
+  "Lmaccess.h (include Lm.h)": [
+    "NetGroupAddUser",
+    "NetGroupAdd",
+    "NetUserModalsGet",
+    "NetUserGetLocalGroups",
+    "NetValidatePasswordPolicy"
+  ],
+  "Lmalert.h (include Lm.h)": [
+    "NetAlertRaiseEx",
+    "NetAlertRaise"
+  ],
+  "Lmapibuf.h (include Lm.h)": [
+    "NetApiBufferAllocate",
+    "NetApiBufferReallocate",
+    "NetApiBufferSize",
+    "NetApiBufferFree"
+  ],
+  "Lmat.h (include Lmat.h)": [
+    "NetScheduleJobDel",
+    "NetScheduleJobGetInfo",
+    "NetScheduleJobEnum",
+    "NetScheduleJobAdd"
+  ],
+  "Lmjoin.h": [
+    "NetGetAadJoinInformation",
+    "NetFreeAadJoinInformation"
+  ],
+  "Lmjoin.h (include Lm.h)": [
+    "NetRemoveAlternateComputerName",
+    "NetRequestProvisioningPackageInstall",
+    "NetRequestOfflineDomainJoin",
+    "NetUnjoinDomain",
+    "NetProvisionComputerAccount"
+  ],
+  "Lmmsg.h (include Lm.h)": [
+    "NetMessageNameGetInfo",
+    "NetMessageNameEnum",
+    "NetMessageNameAdd",
+    "NetMessageNameDel",
+    "NetMessageBufferSend"
+  ],
+  "Lmremutl.h (include Lm.h)": [
+    "NetRemoteComputerSupports",
+    "NetRemoteTOD"
+  ],
+  "Lmserver.h (include Lm.h)": [
+    "NetServerComputerNameDel",
+    "NetServerEnum",
+    "NetServerGetInfo",
+    "NetServerTransportAddEx",
+    "NetServerDiskEnum"
+  ],
+  "Lmshare.h (include Lm.h)": [
+    "NetFileGetInfo",
+    "NetShareGetInfo",
+    "NetSessionGetInfo",
+    "NetFileEnum",
+    "NetShareCheck"
+  ],
+  "Lmuse.h (include Lm.h)": [
+    "NetUseGetInfo",
+    "NetUseAdd",
+    "NetUseDel"
+  ],
+  "Lmwksta.h (include Lm.h)": [
+    "NetWkstaUserGetInfo",
+    "NetWkstaGetInfo",
+    "NetWkstaSetInfo",
+    "NetWkstaUserEnum",
+    "NetWkstaTransportEnum"
+  ],
+  "Loadperf.h": [
+    "LoadPerfCounterTextStrings",
+    "UnloadPerfCounterTextStrings"
+  ],
+  "LowLevelMonitorConfigurationAPI.h": [
+    "GetTimingReport",
+    "GetVCPFeatureAndVCPFeatureReply",
+    "SaveCurrentSettings",
+    "GetCapabilitiesStringLength",
+    "CapabilitiesRequestAndCapabilitiesReply"
+  ],
+  "LzExpand.h (include Windows.h)": [
+    "LZInit",
+    "LZRead",
+    "LZCopy",
+    "LZSeek",
+    "LZOpenFile"
+  ],
+  "Madcapcl.h": [
+    "McastApiCleanup",
+    "McastEnumerateScopes",
+    "McastApiStartup",
+    "McastGenUID",
+    "McastReleaseAddress"
+  ],
+  "MemoryApi.h (include Windows.h)": [
+    "CreateFileMappingFromApp",
+    "VirtualProtectFromApp",
+    "MapViewOfFileFromApp",
+    "VirtualAllocFromApp"
+  ],
+  "Mfapi.h": [
+    "MFCreate2DMediaBuffer",
+    "MFRegisterLocalSchemeHandler",
+    "MFCreateDXSurfaceBuffer",
+    "MFGetAttributeDouble",
+    "MFPutWorkItem2"
+  ],
+  "Mfapi.h;  Mfplat.lib": [
+    "MFUnregisterPlatformFromMMCSS",
+    "MFGetWorkQueueMMCSSPriority",
+    "MFPutWaitingWorkItem",
+    "MFRegisterPlatformWithMMCSS"
+  ],
+  "Mfidl.h": [
+    "MFCreatePropertiesFromMediaType",
+    "MFCreateProtectedEnvironmentAccess",
+    "MFCreateProxyLocator",
+    "MFCreateMP3MediaSink",
+    "MFLoadSignedLibrary"
+  ],
+  "Mfobjects.h (include Mfidl.h)": [
+    "MFDeserializeAttributesFromStream",
+    "MFSerializeAttributesToStream",
+    "MFGetAttribute2UINT32asUINT64",
+    "MFSetAttribute2UINT32asUINT64"
+  ],
+  "Mfreadwrite.h": [
+    "MFCreateSourceReaderFromMediaSource",
+    "MFCreateSinkWriterFromURL",
+    "MFCreateSinkWriterFromMediaSink",
+    "MFCreateSourceReaderFromByteStream",
+    "MFCreateSourceReaderFromURL"
+  ],
+  "Mgmtapi.h": [
+    "SnmpMgrClose",
+    "SnmpMgrCtl",
+    "SnmpMgrTrapListen",
+    "SnmpMgrGetTrapEx",
+    "SnmpMgrStrToOid"
+  ],
+  "Mmc.h": [
+    "MMCPropPageCallback",
+    "MMCPropertyChangeNotify",
+    "MMCPropertyHelp",
+    "MMCFreeNotifyHandle"
+  ],
+  "Mmddk.h": [
+    "mmTaskBlock",
+    "mmTaskYield",
+    "mmTaskSignal",
+    "mmTaskCreate"
+  ],
+  "Mmsystem.h (include Windows.h)": [
+    "mmioStringToFOURCC",
+    "midiInMessage",
+    "midiStreamStop",
+    "mixerGetID",
+    "mciGetDeviceIDFromElementID"
+  ],
+  "Msacm.h": [
+    "acmStreamOpen",
+    "acmStreamSize",
+    "acmDriverOpen",
+    "acmFilterEnumCallback",
+    "acmMetrics"
+  ],
+  "Mscat.h": [
+    "CryptCATAdminAcquireContext2",
+    "CryptCATGetAttrInfo",
+    "CryptCATEnumerateCatAttr",
+    "CryptCATCatalogInfoFromContext",
+    "CryptCATAdminCalcHashFromFileHandle2"
+  ],
+  "Mssip.h": [
+    "CryptSIPPutSignedDataMsg",
+    "CryptSIPRemoveSignedDataMsg",
+    "CryptSIPRetrieveSubjectGuid",
+    "CryptSIPGetSignedDataMsg",
+    "CryptSIPAddProvider"
+  ],
+  "Mstcpip.h": [
+    "RtlIpv6StringToAddressEx",
+    "RtlIpv4StringToAddressEx",
+    "RtlIpv4AddressToStringEx",
+    "RtlIpv6StringToAddress",
+    "RtlIpv6AddressToStringEx"
+  ],
+  "Mswsock.h": [
+    "RIOCreateRequestQueue",
+    "TransmitPackets",
+    "WSARecvMsg",
+    "RIOResizeRequestQueue",
+    "GetAcceptExSockaddrs"
+  ],
+  "Muiload.h": [
+    "GetUILanguageFallbackList",
+    "LoadMUILibrary",
+    "FreeMUILibrary"
+  ],
+  "NCryptprotect.h": [
+    "NCryptCreateProtectionDescriptor",
+    "PFNCryptStreamOutputCallback pointer",
+    "NCryptGetProtectionDescriptorInfo",
+    "NCryptStreamUpdate",
+    "NCryptStreamOpenToProtect"
+  ],
+  "NapUtil.h": [
+    "InitializeNapAgentNotifier",
+    "FreeIsolationInfoEx",
+    "FreeSystemHealthAgentState",
+    "FreePrivateData",
+    "FreeNetworkSoH"
+  ],
+  "Ncrypt.h": [
+    "NCryptOpenStorageProvider",
+    "NCryptDecrypt",
+    "NCryptDeriveKey",
+    "NCryptCreatePersistedKey",
+    "NCryptNotifyChangeKey"
+  ],
+  "Ndattributils.h": [
+    "UtilAssembleStringsWithAlloc",
+    "CopyRepairInfo",
+    "UtilLoadStringWithAlloc",
+    "FreeHelperAttributes",
+    "FreeRepairInfoExs"
+  ],
+  "Nddeapi.h": [
+    "NDdeShareGetInfo",
+    "NDdeGetShareSecurity",
+    "NDdeIsValidAppTopicList",
+    "NDdeSetShareSecurity",
+    "NDdeGetTrustedShare"
+  ],
+  "Ndfapi.h": [
+    "NdfDiagnoseIncident",
+    "NdfCreateWebIncidentEx",
+    "NdfExecuteDiagnosis",
+    "NdfCancelIncident",
+    "NdfCreatePnrpIncident"
+  ],
+  "NetCon.h": [
+    "NcFreeNetconProperties",
+    "NcIsValidConnectionName"
+  ],
+  "Netfw.h": [
+    "NetworkIsolationGetAppContainerConfig",
+    "NetworkIsolationFreeAppContainers",
+    "NetworkIsolationUnregisterForAppContainerChanges",
+    "PAC_CHANGES_CALLBACK_FN pointer",
+    "NetworkIsolationRegisterForAppContainerChanges"
+  ],
+  "Netioapi.h (include Iphlpapi.h)": [
+    "CancelMibChangeNotify2",
+    "GetAnycastIpAddressTable",
+    "GetMulticastIpAddressTable",
+    "GetBestRoute2",
+    "GetTeredoPort"
+  ],
+  "Nlsdl.h": [
+    "DownlevelLCIDToLocaleName",
+    "DownlevelGetParentLocaleName",
+    "DownlevelGetParentLocaleLCID",
+    "DownlevelLocaleNameToLCID"
+  ],
+  "None": [
+    "REExtendedRegisterClass",
+    "CreateHardwareEventMoniker",
+    "CompareStringWrapW",
+    "MLWinHelp",
+    "PassportWizardRunDll"
+  ],
+  "Npapi.h": [
+    "NPGetResourceInformation",
+    "NPSearchDialog",
+    "NPGetConnection",
+    "NPGetDirectoryType",
+    "NPGetCaps"
+  ],
+  "Nspapi.h": [
+    "EnumProtocols",
+    "GetNameByType",
+    "GetTypeByName",
+    "GetService",
+    "SetService"
+  ],
+  "Ntddk.h": [
+    "ZwPowerInformation",
+    "RtlGetSuiteMask"
+  ],
+  "Ntddk.h (include Ntddk.h or Ntifs.h)": [
+    "ZwOpenProcess",
+    "RtlEqualString",
+    "RtlCopyString",
+    "RtlCompareString"
+  ],
+  "Ntddk.h (include Ntddk.h)": [
+    "IoMakeAssociatedIrp",
+    "MmFreeNonCachedMemory",
+    "IoGetFileObjectGenericMapping",
+    "MmUnsecureVirtualMemory",
+    "MmAllocateNonCachedMemory"
+  ],
+  "Ntddk.h (include Wdm.h or Ntddk.h)": [
+    "DbgBreakPoint",
+    "ASSERTMSG",
+    "KdBreakPoint",
+    "KdRefreshDebuggerNotPresent"
+  ],
+  "Ntddk.h (include Wdm.h, Ntddk.h, or Ntifs.h)": [
+    "PutScatterGatherList",
+    "GetScatterGatherList"
+  ],
+  "Ntifs.h (include Ntdef.h, Ntifs.h, or Fltkernel.h)": [
+    "ZwOpenDirectoryObject",
+    "ZwDuplicateObject"
+  ],
+  "Ntifs.h (include Ntifs.h or FltKernel.h)": [
+    "ZwWaitForSingleObject",
+    "ZwDuplicateToken",
+    "ZwQueryObject",
+    "ZwLockFile",
+    "ZwQueryQuotaInformationFile"
+  ],
+  "Ntifs.h (include Ntifs.h)": [
+    "ZwDeleteFile",
+    "ZwOpenProcessTokenEx",
+    "ZwFlushVirtualMemory",
+    "ZwFsControlFile",
+    "ZwOpenThreadTokenEx"
+  ],
+  "Ntsecapi.h": [
+    "AuditComputeEffectivePolicyByToken",
+    "AuditComputeEffectivePolicyBySid",
+    "AuditQuerySystemPolicy",
+    "AuditSetSecurity",
+    "LsaQueryDomainInformationPolicy"
+  ],
+  "Ntsecpkg.h": [
+    "OpenSamUser",
+    "GetAuthDataForUser",
+    "SpGetInfo",
+    "CreateLogonSession",
+    "GetCredentials"
+  ],
+  "ObjBase.h": [
+    "CreateDataCache",
+    "CreateDataAdviseHolder"
+  ],
+  "Objbase.h": [
+    "GetRunningObjectTable",
+    "CLSIDFromProgIDEx",
+    "CoRegisterSurrogate",
+    "CoFileTimeToDosDateTime",
+    "CreatePointerMoniker"
+  ],
+  "Ole2.h": [
+    "CreateOleAdviseHolder",
+    "OleCreateLinkToFileEx",
+    "OleRegEnumFormatEtc",
+    "OleCreateDefaultHandler",
+    "OleIsCurrentClipboard"
+  ],
+  "OleAuto.h": [
+    "VarDecSub",
+    "SafeArrayGetElemsize",
+    "VarI1FromR8",
+    "VariantCopyInd",
+    "VarDateFromR4"
+  ],
+  "OleCtl.h": [
+    "OleCreatePictureIndirect",
+    "OleCreatePropertyFrame",
+    "OleCreateFontIndirect",
+    "OleLoadPictureEx",
+    "OleLoadPicture"
+  ],
+  "OleDlg.h": [
+    "OleUIEditLinks",
+    "OleUIChangeSource",
+    "OleUIBusy",
+    "OleUIObjectProperties",
+    "OleUIUpdateLinks"
+  ],
+  "Oleacc.h": [
+    "AccessibleObjectFromEvent",
+    "AccessibleObjectFromPoint",
+    "LresultFromObject",
+    "CreateStdAccessibleProxy",
+    "AccNotifyTouchInteraction"
+  ],
+  "Oleauto.h": [
+    "SysReleaseString",
+    "SafeArrayReleaseDescriptor",
+    "SysAddRefString",
+    "SafeArrayReleaseData",
+    "SafeArrayAddRef"
+  ],
+  "Olectl.h": [
+    "DllUnregisterServer",
+    "DllRegisterServer",
+    "OleIconToCursor"
+  ],
+  "Pathcch.h": [
+    "PathCchAddBackslash",
+    "PathCchIsRoot",
+    "PathCchRenameExtension",
+    "PathCchAddBackslashEx",
+    "PathCchRemoveExtension"
+  ],
+  "Pdh.h": [
+    "PdhGetDefaultPerfCounterH",
+    "PdhOpenLog",
+    "PdhGetFormattedCounterValue",
+    "PdhGetRawCounterValue",
+    "PdhRemoveCounter"
+  ],
+  "Perflib.h": [
+    "PerfStartProvider",
+    "PerfIncrementULongLongCounterValue",
+    "PerfQueryInstance",
+    "PerfQueryCounterInfo",
+    "PerfSetULongLongCounterValue"
+  ],
+  "PhysicalMonitorEnumerationAPI.h": [
+    "GetNumberOfPhysicalMonitorsFromHMONITOR",
+    "DestroyPhysicalMonitors",
+    "DestroyPhysicalMonitor",
+    "GetPhysicalMonitorsFromIDirect3DDevice9",
+    "GetNumberOfPhysicalMonitorsFromIDirect3DDevice9"
+  ],
+  "Powerbase.h": [
+    "PowerRegisterSuspendResumeNotification",
+    "PowerUnregisterSuspendResumeNotification"
+  ],
+  "Powerbase.h;  PowrProf.h on Windows Server 2008 R2, Windows 7, Windows Server 2008, Windows Vista, Windows Server 2003 and Windows XP": [
+    "GetPwrCapabilities",
+    "CallNtPowerInformation"
+  ],
+  "Powersetting.h;  PowrProf.h on Windows Server 2008 R2, Windows 7, Windows Server 2008 and Windows Vista": [
+    "PowerReadDCValue",
+    "PowerSetActiveScheme",
+    "PowerReadACValue",
+    "PowerWriteACValueIndex",
+    "PowerWriteDCValueIndex"
+  ],
+  "Powersetting.h;  Powrprof.h on Windows Server 2008 R2 and Windows 7": [
+    "PowerSettingUnregisterNotification",
+    "PowerSettingRegisterNotification"
+  ],
+  "PowrProf.h": [
+    "PowerRestoreDefaultPowerSchemes",
+    "IsPwrShutdownAllowed",
+    "PowerWriteValueMax",
+    "PowerWriteACDefaultIndex",
+    "PowerReadValueMax"
+  ],
+  "Powrprof.h": [
+    "PowerIsSettingRangeDefined",
+    "PowerSettingAccessCheckEx"
+  ],
+  "ProcessThreadsApi.h": [
+    "GetThreadDescription",
+    "SetThreadDescription"
+  ],
+  "Processsnapshot.h": [
+    "PssQuerySnapshot",
+    "PssDuplicateSnapshot",
+    "PssFreeSnapshot",
+    "PssWalkMarkerSeekToBeginning",
+    "PssCaptureSnapshot"
+  ],
+  "Processthreadsapi.h": [
+    "GetCurrentThreadToken",
+    "GetCurrentProcessToken",
+    "SetProcessMitigationPolicy",
+    "GetCurrentThreadEffectiveToken",
+    "GetProcessMitigationPolicy"
+  ],
+  "Propidl.h": [
+    "FreePropVariantArray",
+    "PropVariantCopy",
+    "PropVariantClear"
+  ],
+  "Propsys.h": [
+    "PSGetPropertyDescriptionByName",
+    "PSPropertyBag_ReadInt",
+    "PSGetPropertyDescriptionListFromString",
+    "PSPropertyBag_WritePOINTL",
+    "PSPropertyBag_ReadSHORT"
+  ],
+  "Propsys.idl": [
+    "PSGetImageReferenceForValue",
+    "PSPropertyBag_ReadGUID",
+    "PSPropertyBag_ReadLONG",
+    "PSPropertyBag_ReadDWORD"
+  ],
+  "Propvarutil.h": [
+    "InitVariantFromDouble",
+    "InitPropVariantFromPropVariantVectorElem",
+    "VariantToInt64Array",
+    "VariantToStringAlloc",
+    "InitPropVariantFromInt64Vector"
+  ],
+  "Prsht.h": [
+    "CreatePropertySheetPage",
+    "AddPropSheetPageProc",
+    "PropertySheet",
+    "PropSheetProc",
+    "DestroyPropertySheetPage"
+  ],
+  "Psapi.h": [
+    "EnumProcessModules",
+    "InitializeProcessForWsWatch",
+    "EnumProcesses",
+    "QueryWorkingSetEx",
+    "GetModuleFileNameEx"
+  ],
+  "Qosname.h": [
+    "WSCInstallQOSTemplate",
+    "WPUGetQOSTemplate",
+    "WSCRemoveQOSTemplate"
+  ],
+  "Raseapif.h": [
+    "RasEapGetInfo",
+    "RasEapGetIdentity",
+    "RasEapBegin",
+    "RasEapEnd",
+    "RasEapInvokeConfigUI"
+  ],
+  "Realtimeapiset.h": [
+    "QueryUnbiasedInterruptTimePrecise",
+    "ConvertAuxiliaryCounterToPerformanceCounter",
+    "QueryAuxiliaryCounterFrequency",
+    "QueryInterruptTimePrecise",
+    "ConvertPerformanceCounterToAuxiliaryCounter"
+  ],
+  "Richedit.h": [
+    "EditWordBreakProcEx",
+    "AutoCorrectProc",
+    "HyphenateProc",
+    "EditStreamCallback"
+  ],
+  "Rkeysvcc.h": [
+    "RKeyOpenKeyService",
+    "RKeyPFXInstall",
+    "RKeyCloseKeyService"
+  ],
+  "Schannel.h": [
+    "SslEmptyCache",
+    "SslCrackCertificate",
+    "SslFreeCertificate"
+  ],
+  "Scrnsave.h": [
+    "RegisterDialogClasses",
+    "ScreenSaverProc",
+    "ScreenSaverConfigureDialog",
+    "DefScreenSaverProc"
+  ],
+  "Sddl.h": [
+    "ConvertSidToStringSid",
+    "ConvertSecurityDescriptorToStringSecurityDescriptor",
+    "ConvertStringSidToSid",
+    "ConvertStringSecurityDescriptorToSecurityDescriptor"
+  ],
+  "Secext.h (include Security.h)": [
+    "GetUserNameEx",
+    "TranslateName",
+    "GetComputerObjectName"
+  ],
+  "Securitybaseapi.h": [
+    "AddResourceAttributeAce",
+    "AddScopedPolicyIDAce",
+    "CheckTokenCapability",
+    "CheckTokenMembershipEx"
+  ],
+  "Securitybaseapi.h (include WinBase.h);  WinBase.h on Windows Server 2008 R2, Windows 7, Windows Server 2008 and Windows Vista (include Windows.h)": [
+    "SetSecurityAccessMask",
+    "AddMandatoryAce",
+    "QuerySecurityAccessMask"
+  ],
+  "Sensapi.h": [
+    "IsDestinationReachable",
+    "IsNetworkAlive"
+  ],
+  "Sfc.h": [
+    "SfcIsFileProtected",
+    "SfcIsKeyProtected"
+  ],
+  "Sha.h": [
+    "A_SHAFinal",
+    "A_SHAInit",
+    "A_SHAUpdate"
+  ],
+  "ShellScalingAPI.h": [
+    "RevokeScaleChangeNotifications",
+    "RegisterScaleChangeNotifications",
+    "GetScaleFactorForDevice",
+    "GetDpiForShellUiComponent",
+    "UnregisterScaleChangeEvent"
+  ],
+  "Shellapi.h": [
+    "SHGetPropertyStoreForWindow",
+    "WinExecError",
+    "ExtractIconEx",
+    "SHGetDiskFreeSpaceEx",
+    "AssocCreateForClasses"
+  ],
+  "Shlobj.h": [
+    "ILSkip(PUIDLIST_RELATIVE, UINT)",
+    "SHOpenFolderAndSelectItems",
+    "PathResolve",
+    "RealDriveType",
+    "ILLoadFromStreamEx(IStream*, PIDLIST_RELATIVE*)"
+  ],
+  "Shlwapi.h": [
+    "SHDeleteKey",
+    "StrCmpC",
+    "StrCmpIC",
+    "StopWatchFlush",
+    "PathCanonicalize"
+  ],
+  "Shobjidl.h": [
+    "FreeKnownFolderDefinitionFields",
+    "SHCreateDefaultExtractIcon",
+    "SHCreateItemWithParent",
+    "SHGetPropertyStoreFromIDList",
+    "SHGetTemporaryPropertyForItem"
+  ],
+  "Sisbkup.h": [
+    "SisRestoredCommonStoreFile",
+    "SisRestoredLink",
+    "SisFreeRestoreStructure",
+    "SisCreateRestoreStructure",
+    "SisFreeAllocatedMemory"
+  ],
+  "Slpublic.h": [
+    "SLGetServerStatus",
+    "SLGetInstalledSAMLicenseApplications",
+    "SLGetPolicyInformation",
+    "SLGatherMigrationBlob",
+    "SLUninstallSAMLicense"
+  ],
+  "Snmp.h": [
+    "SnmpUtilOidCpy",
+    "SnmpExtensionQueryEx",
+    "SnmpSvcSetLogLevel",
+    "SnmpUtilOctetsFree",
+    "SnmpUtilMemFree"
+  ],
+  "Sslprovider.h": [
+    "SslComputeClientAuthHash",
+    "SslCreateHandshakeHash",
+    "SslEnumCipherSuites",
+    "SslGetProviderProperty",
+    "SslComputeFinishedHash"
+  ],
+  "Sspi.h": [
+    "SspiIsAuthIdentityEncrypted",
+    "SspiLocalFree",
+    "SspiUpdateCredentials",
+    "SspiValidateAuthIdentity",
+    "SspiFreeAuthIdentity"
+  ],
+  "Sspi.h (include Security.h)": [
+    "QuerySecurityPackageInfo",
+    "SaslEnumerateProfiles",
+    "QueryContextAttributes (General)",
+    "ImportSecurityContext",
+    "DeleteSecurityContext"
+  ],
+  "StorProp.h": [
+    "CdromIsDigitalPlaybackEnabled",
+    "CdromEnableDigitalPlayback",
+    "CdromDisableDigitalPlayback"
+  ],
+  "Stringapiset.h (include Windows.h)": [
+    "CompareStringOrdinal",
+    "CompareStringEx",
+    "GetStringTypeW",
+    "WideCharToMultiByte",
+    "MultiByteToWideChar"
+  ],
+  "Subauth.h": [
+    "Msv1_0SubAuthenticationFilter",
+    "Msv1_0SubAuthenticationRoutine"
+  ],
+  "SynchAPI.h (include Windows.h)": [
+    "WaitOnAddress",
+    "WakeByAddressSingle",
+    "InitializeSynchronizationBarrier"
+  ],
+  "T2embapi.h": [
+    "TTIsEmbeddingEnabledForFacename",
+    "TTGetEmbeddedFontInfo",
+    "TTRunValidationTestsEx",
+    "TTLoadEmbeddedFont",
+    "TTEmbedFontFromFileA"
+  ],
+  "Tapi.h": [
+    "lineSetAppSpecific",
+    "lineSetMediaControl",
+    "lineOpen",
+    "lineSetAgentSessionState",
+    "lineGenerateDigits"
+  ],
+  "Tbs.h": [
+    "Tbsi_Revoke_Attestation",
+    "Tbsip_Cancel_Commands",
+    "Tbsi_Get_OwnerAuth",
+    "Tbsip_Context_Close",
+    "Tbsi_GetDeviceInfo"
+  ],
+  "Tdh.h": [
+    "TdhGetPropertySize",
+    "TdhUnloadManifest",
+    "TdhLoadManifestFromBinary",
+    "TdhEnumerateManifestProviderEvents",
+    "TdhGetManifestEventInformation"
+  ],
+  "Threadpoolapiset.h": [
+    "SetThreadpoolWaitEx",
+    "SetThreadpoolTimerEx"
+  ],
+  "TimeAPI.h (include Windows.h);  Mmsystem.h on Windows Server 2008 R2, Windows 7, Windows 7, Windows Server 2008 and Windows Vista (include Windows.h)": [
+    "timeKillEvent",
+    "timeSetEvent",
+    "timeGetDevCaps",
+    "timeGetSystemTime",
+    "timeGetTime"
+  ],
+  "Timeprov.h": [
+    "LogTimeProvEventFunc",
+    "GetTimeSysInfoFunc",
+    "TimeProvCommand",
+    "TimeProvClose",
+    "SetProviderStatusFunc"
+  ],
+  "TlHelp32.h": [
+    "Process32Next",
+    "Process32First"
+  ],
+  "Tokenbinding.h": [
+    "TokenBindingGenerateBinding",
+    "TokenBindingDeleteBinding"
+  ],
+  "Tom.h": [
+    "GetMathAlphanumeric",
+    "MathTranslate",
+    "MathBuildDown",
+    "MathBuildUp",
+    "GetMathAlphanumericCode"
+  ],
+  "TxfW32.h": [
+    "TxfLogReadRecords",
+    "TxfLogCreateFileReadContext",
+    "TxfLogDestroyReadContext"
+  ],
+  "Urlmon.h": [
+    "CreateAsyncBindCtx",
+    "CreateFormatEnumerator"
+  ],
+  "Userenv.h": [
+    "RegisterGPNotification",
+    "UnregisterGPNotification",
+    "GetAppContainerFolderPath",
+    "GetProfileType",
+    "GetAppContainerRegistryLocation"
+  ],
+  "Uxtheme.h": [
+    "GetThemeTextMetrics",
+    "GetThemeSysBool",
+    "GetThemeSysColor",
+    "GetThemeDocumentationProperty",
+    "GetThemeFilename"
+  ],
+  "Vfw.h": [
+    "AVIStreamCreate",
+    "capWaveStreamCallback",
+    "ICOpenFunction",
+    "capGetDriverDescription",
+    "AVIStreamRelease"
+  ],
+  "VirtDisk.h (include Windows.h)": [
+    "EnumerateVirtualDiskMetadata",
+    "SetVirtualDiskInformation",
+    "AddVirtualDiskParent",
+    "OpenVirtualDisk",
+    "ExpandVirtualDisk"
+  ],
+  "VsBackup.h (include VsBackup.h, Vss.h, or VsWriter.h)": [
+    "IsVolumeSnapshotted",
+    "ShouldBlockRevert",
+    "CreateVssExamineWriterMetadata",
+    "CreateVssBackupComponents",
+    "VssFreeSnapshotProperties"
+  ],
+  "Wcmapi.h": [
+    "WcmSetProfileList",
+    "WcmQueryProperty",
+    "WcmFreeMemory",
+    "WcmGetProfileList",
+    "WcmSetProperty"
+  ],
+  "Wct.h": [
+    "WaitChainCallback",
+    "OpenThreadWaitChainSession",
+    "GetThreadWaitChain",
+    "CloseThreadWaitChainSession"
+  ],
+  "Wdm.h (include Ntddk.h)": [
+    "KeReadStateEvent",
+    "IoGetInitialStack",
+    "IoReuseIrp",
+    "IoCreateSynchronizationEvent"
+  ],
+  "Wdm.h (include Wdm.h or Ntifs.h)": [
+    "ZwCommitEnlistment",
+    "ZwOpenTransactionManager",
+    "ZwGetNotificationResourceManager",
+    "ZwPrepareEnlistment",
+    "ZwPrepareComplete"
+  ],
+  "Wdm.h (include Wdm.h)": [
+    "KdPrintEx",
+    "KdChangeOption",
+    "KdPrint",
+    "DbgPrintEx",
+    "DbgPrint"
+  ],
+  "Wdm.h (include Wdm.h, Ntddk.h, Ntifs.h, or Fltkernel.h)": [
+    "ObDereferenceObject",
+    "ZwDeleteValueKey"
+  ],
+  "Wdm.h (include Wdm.h, Ntddk.h, or Ntifs.h)": [
+    "IoGetDeviceInterfaceAlias",
+    "IoInitializeTimer",
+    "KeSynchronizeExecution",
+    "PopEntryList",
+    "IoOpenDeviceInterfaceRegistryKey"
+  ],
+  "WebServices.h": [
+    "WS_VALIDATE_SAML_CALLBACK",
+    "WS_ASYNC_CALLBACK",
+    "WS_ABORT_CHANNEL_CALLBACK",
+    "WS_RESET_CHANNEL_CALLBACK",
+    "WS_CREATE_CHANNEL_CALLBACK"
+  ],
+  "Websocket.h": [
+    "WebSocketSend",
+    "WebSocketEndServerHandshake",
+    "WebSocketBeginServerHandshake",
+    "WebSocketReceive",
+    "WebSocketCompleteAction"
+  ],
+  "Werapi.h": [
+    "OutOfProcessExceptionEventCallback",
+    "WerUnregisterFile",
+    "WerUnregisterAdditionalProcess",
+    "WerStoreGetNextReportKey",
+    "OutOfProcessExceptionEventDebuggerLaunchCallback"
+  ],
+  "Wfdsink.h": [
+    "WFDDisplaySinkStart",
+    "WFDDisplaySinkCloseSession",
+    "WFD_DISPLAY_SINK_NOTIFICATION_CALLBACK",
+    "WFDDisplaySinkStop",
+    "WFDDisplaySinkSetPersistedGroupIDList"
+  ],
+  "WinBase.h (include Windows.h)": [
+    "ImportCallback",
+    "FindNextVolumeMountPoint",
+    "GetProcessDEPPolicy",
+    "ReOpenFile",
+    "AllocateUserPhysicalPages"
+  ],
+  "WinBase.h (include Windows.h);  FileExtd.h on Windows Server 2003 and Windows XP": [
+    "OpenFileById",
+    "GetFileInformationByHandleEx"
+  ],
+  "WinBase.h (include Windows.h);  WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Threadpoolapiset.h on Windows 8 and Windows Server 2012": [
+    "CloseThreadpool",
+    "CloseThreadpoolCleanupGroupMembers"
+  ],
+  "WinBase.h on Windows 7 and Windows Server 2008 R2 (include Windows.h);  Processthreadsapi.h on Windows 8 and Windows Server 2012": [
+    "GetCurrentProcessorNumberEx",
+    "GetThreadIdealProcessorEx"
+  ],
+  "WinBase.h on Windows 7 and Windows Server 2008 R2 (include Windows.h);  Processtopologyapi.h on Windows 8 and Windows Server 2012": [
+    "GetThreadGroupAffinity",
+    "SetThreadGroupAffinity"
+  ],
+  "WinBase.h on Windows 7 and Windows Server 2008 R2 (include Windows.h);  Synchapi.h on Windows 8 and Windows Server 2012": [
+    "SetWaitableTimerEx",
+    "TryAcquireSRWLockExclusive",
+    "TryAcquireSRWLockShared"
+  ],
+  "WinBase.h on Windows 7 and Windows Server 2008 R2 (include Windows.h);  Threadpoolapiset.h on Windows 8 and Windows Server 2012": [
+    "SetThreadpoolStackInformation",
+    "QueryThreadpoolStackInformation"
+  ],
+  "WinBase.h on Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Fibersapi.h on Windows 8 and Windows Server 2012": [
+    "FlsSetValue",
+    "FlsGetValue",
+    "FlsAlloc"
+  ],
+  "WinBase.h on Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Processthreadsapi.h on Windows 8 and Windows Server 2012": [
+    "GetCurrentProcessorNumber",
+    "GetThreadId",
+    "GetProcessIdOfThread"
+  ],
+  "WinBase.h on Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Processthreadsapi.h on Windows 8, Windows Server 2012 and Windows Phone 8.1": [
+    "TlsFree",
+    "TlsSetValue",
+    "TlsGetValue",
+    "SuspendThread",
+    "TlsAlloc"
+  ],
+  "WinBase.h on Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Synchapi.h on Windows 8, Windows Server 2012 and Windows Phone 8.1": [
+    "Sleep",
+    "SleepEx"
+  ],
+  "WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Fibersapi.h on Windows 8 and Windows Server 2012": [
+    "FlsFree",
+    "IsThreadAFiber"
+  ],
+  "WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  InterlockedAPI.h on Windows 8 and Windows Server 2012 (include Windows.h)": [
+    "InterlockedPushListSList",
+    "InterlockedPushEntrySList",
+    "InterlockedPopEntrySList",
+    "InterlockedFlushSList"
+  ],
+  "WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Namespaceapi.h on Windows 8 and Windows Server 2012": [
+    "DeleteBoundaryDescriptor",
+    "AddSIDToBoundaryDescriptor"
+  ],
+  "WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Processthreadsapi.h on Windows 8 and Windows Server 2012": [
+    "SetProcessAffinityUpdateMode",
+    "FlushProcessWriteBuffers",
+    "InitializeProcThreadAttributeList",
+    "QueryProcessAffinityUpdateMode",
+    "UpdateProcThreadAttribute"
+  ],
+  "WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Realtimeapiset.h on Windows 8 and Windows Server 2012": [
+    "QueryProcessCycleTime",
+    "QueryIdleProcessorCycleTime",
+    "QueryThreadCycleTime"
+  ],
+  "WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Synchapi.h on Windows 8 and Windows Server 2012": [
+    "CreateMutexEx",
+    "ReleaseSRWLockExclusive",
+    "InitOnceExecuteOnce",
+    "InitOnceInitialize",
+    "SleepConditionVariableSRW"
+  ],
+  "WinBase.h on Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Threadpoolapiset.h on Windows 8 and Windows Server 2012": [
+    "WaitForThreadpoolTimerCallbacks",
+    "SetThreadpoolTimer",
+    "CreateThreadpoolTimer",
+    "CreateThreadpool",
+    "CallbackMayRunLong"
+  ],
+  "WinBase.h on Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Interlockedapi.h on Windows 8 and Windows Server 2012": [
+    "QueryDepthSList",
+    "InitializeSListHead"
+  ],
+  "WinBase.h on Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Processenv.h on Windows 8 and Windows Server 2012": [
+    "SetEnvironmentVariable",
+    "GetCommandLine",
+    "FreeEnvironmentStrings",
+    "GetEnvironmentStrings",
+    "GetEnvironmentVariable"
+  ],
+  "WinBase.h on Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Processthreadsapi.h on Windows 8 and Windows Server 2012": [
+    "OpenProcess",
+    "GetThreadPriorityBoost",
+    "ExitProcess",
+    "SwitchToThread",
+    "TerminateThread"
+  ],
+  "WinBase.h on Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Processthreadsapi.h on Windows 8, Windows Server 2012 and Windows Phone 8.1": [
+    "ResumeThread",
+    "CreateThread",
+    "GetExitCodeThread",
+    "GetThreadPriority",
+    "ExitThread"
+  ],
+  "WinBase.h on Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Synchapi.h on Windows 8 and Windows Server 2012": [
+    "SetWaitableTimer",
+    "WaitForMultipleObjectsEx",
+    "InitializeCriticalSectionAndSpinCount",
+    "CancelWaitableTimer",
+    "SetCriticalSectionSpinCount"
+  ],
+  "WinBase.h on Windows XP, Windows Server 2003, Windows Vista, Windows 7, Windows Server 2008 and Windows Server 2008 R2 (include Windows.h);  Threadpoolapilegacyset.h on Windows 8 and Windows Server 2012": [
+    "CreateTimerQueueTimer",
+    "CreateTimerQueue",
+    "DeleteTimerQueueEx",
+    "ChangeTimerQueueTimer",
+    "DeleteTimerQueueTimer"
+  ],
+  "WinCred.h": [
+    "CredFree",
+    "CredUIReadSSOCredW",
+    "CredGetTargetInfo",
+    "CredUnPackAuthenticationBuffer",
+    "CredUIStoreSSOCredW"
+  ],
+  "WinGdi.h (include Windows.h)": [
+    "GetEnhMetaFile",
+    "GetDCPenColor",
+    "GradientFill",
+    "GetTextExtentPoint",
+    "TransparentBlt"
+  ],
+  "WinNT.h (include Windows.h)": [
+    "RtlFirstEntrySList",
+    "RtlCaptureContext",
+    "RtlUnwind",
+    "RtlUnwind2",
+    "SecureMemoryCacheCallback"
+  ],
+  "WinSpool.h (include Windows.h)": [
+    "SetPrinter",
+    "SetJob"
+  ],
+  "WinUser.h": [
+    "UnregisterPointerInputTargetEx",
+    "RegisterPointerInputTargetEx"
+  ],
+  "WinUser.h (include Windows.h)": [
+    "UnregisterPointerInputTarget",
+    "RegisterPowerSettingNotification",
+    "MessageBeep",
+    "UnregisterPowerSettingNotification",
+    "RegisterPointerInputTarget"
+  ],
+  "Winbase.h (include Windows.h)": [
+    "AreAnyAccessesGranted",
+    "SetKernelObjectSecurity",
+    "MapGenericMask",
+    "CloseHandle",
+    "SetSecurityDescriptorGroup"
+  ],
+  "Wincodec.h": [
+    "WICCreateBitmapFromSectionEx",
+    "WICConvertBitmapSource",
+    "WICCreateBitmapFromSection",
+    "WICMapSchemaToName",
+    "WICSerializeMetadataContent"
+  ],
+  "Wincon.h": [
+    "GetConsoleHistoryInfo",
+    "SetConsoleHistoryInfo"
+  ],
+  "Wincon.h (include Windows.h)": [
+    "GetNumberOfConsoleMouseButtons",
+    "GetConsoleSelectionInfo",
+    "FillConsoleOutputCharacter",
+    "SetCurrentConsoleFontEx",
+    "WriteConsoleOutputCharacter"
+  ],
+  "Wincrypt.h": [
+    "CertCompareCertificate",
+    "CryptGetMessageCertificates",
+    "CertDuplicateCertificateContext",
+    "PFXExportCertStore",
+    "PFN_CRYPT_EXTRACT_ENCODED_SIGNATURE_PARAMETERS_FUNC pointer"
+  ],
+  "Windns.h": [
+    "DnsValidateName",
+    "DnsRecordSetDetach",
+    "DnsNameCompare",
+    "DnsGetProxyInformation",
+    "DnsAcquireContextHandle"
+  ],
+  "Winefs.h (include Windows.h)": [
+    "AddUsersToEncryptedFile",
+    "RemoveUsersFromEncryptedFile",
+    "QueryUsersOnEncryptedFile",
+    "FreeEncryptionCertificateHashList",
+    "QueryRecoveryAgentsOnEncryptedFile"
+  ],
+  "Wingdi.h (include Windows.h)": [
+    "GdiSetBatchLimit",
+    "GetEnhMetaFilePaletteEntries",
+    "CloseEnhMetaFile",
+    "GetFontLanguageInfo",
+    "CreateIC"
+  ],
+  "Wininet.h": [
+    "CommitUrlCacheEntryA",
+    "CreateUrlCacheGroup",
+    "InternetQueryDataAvailable",
+    "UnlockUrlCacheEntryStream",
+    "InternetSetStatusCallback"
+  ],
+  "Winnetwk.h": [
+    "WNetCancelConnection",
+    "WNetOpenEnum",
+    "WNetDisconnectDialog1",
+    "WNetAddConnection2",
+    "WNetEnumResource"
+  ],
+  "Winnls.h (include Windows.h)": [
+    "IdnToAscii",
+    "SetCalendarInfo",
+    "IdnToUnicode",
+    "EnumCalendarInfoProcExEx",
+    "GetACP"
+  ],
+  "Winnls.h (see Remarks) (include Windows.h);  Stringapiset.h (see Remarks) (include Windows.h)": [
+    "FoldString",
+    "CompareString"
+  ],
+  "Winnt.h": [
+    "TpSetCallbackPriority",
+    "TpSetCallbackNoActivationContext",
+    "TpSetCallbackFinalizationCallback",
+    "TpDestroyCallbackEnviron",
+    "TpSetCallbackThreadpool"
+  ],
+  "Winnt.h (include Windows.h)": [
+    "InterlockedDecrement16",
+    "InterlockedDecrement16Release",
+    "InterlockedCompareExchange16Acquire",
+    "InterlockedAddRelease64",
+    "InterlockedCompareExchangeNoFence"
+  ],
+  "Winperf.h": [
+    "OpenPerformanceData",
+    "CollectPerformanceData",
+    "ClosePerformanceData"
+  ],
+  "Winreg.h (include Windows.h)": [
+    "RegCreateKeyTransacted",
+    "RegSetValue",
+    "RegFlushKey",
+    "RegCreateKeyEx",
+    "RegCreateKey"
+  ],
+  "Winscard.h": [
+    "SCardForgetReader",
+    "SCardReleaseStartedEvent",
+    "SCardGetStatusChange",
+    "SCardLocateCards",
+    "SCardListInterfaces"
+  ],
+  "Winsock2.h": [
+    "recv",
+    "getsockopt",
+    "WSAAsyncGetProtoByNumber",
+    "WSAConnect",
+    "WSAEnumProtocols"
+  ],
+  "Winspool.h (include Windows.h)": [
+    "GetDefaultPrinter",
+    "SetPrinterDataEx",
+    "AddPrinterConnection",
+    "AddPrinterConnection2",
+    "SetDefaultPrinter"
+  ],
+  "Winsvc.h (include Windows.h)": [
+    "QueryServiceConfig2",
+    "GetServiceKeyName",
+    "StartService",
+    "QueryServiceStatus",
+    "EnumServicesStatus"
+  ],
+  "Winternl.h": [
+    "NtQuerySystemTime",
+    "RtlLocalTimeToSystemTime",
+    "NtQueryInformationProcess",
+    "RtlConvertSidToUnicodeString",
+    "NtQuerySystemInformation"
+  ],
+  "Wintrust.h": [
+    "WTHelperGetProvPrivateDataFromChain",
+    "WTHelperGetProvSignerFromChain",
+    "WintrustGetDefaultForUsage",
+    "WintrustSetRegPolicyFlags",
+    "WintrustLoadFunctionPointers"
+  ],
+  "Winuser.h": [
+    "GetMenuContextHelpId",
+    "GetWindowContextHelpId",
+    "IsImmersiveProcess",
+    "PrivateExtractIcons",
+    "BlockInput"
+  ],
+  "Winuser.h (include Windows.h)": [
+    "GetSubMenu",
+    "CharPrev",
+    "GetClassWord",
+    "SetClassWord",
+    "SetLastErrorEx"
+  ],
+  "Winwlx.h": [
+    "WlxNegotiate",
+    "WlxDialogBoxIndirect",
+    "WlxChangePasswordNotifyEx",
+    "WlxNetworkProviderLoad",
+    "WlxActivateUserShell"
+  ],
+  "Wlanapi.h": [
+    "WFDStartOpenSession",
+    "WFDUpdateDeviceVisibility",
+    "WFDCloseHandle",
+    "WFD_OPEN_SESSION_COMPLETE_CALLBACK",
+    "WFDOpenHandle"
+  ],
+  "Wlanapi.h (include Wlanapi.h)": [
+    "WlanSetInterface",
+    "WlanConnect",
+    "WlanGetInterfaceCapability",
+    "WlanAllocateMemory",
+    "WlanUIEditProfile"
+  ],
+  "Wmcontainer.h": [
+    "MFCreateASFIndexer",
+    "MFCreatePresentationDescriptorFromASFProfile",
+    "MFCreateWMAEncoderActivate",
+    "MFCreateASFContentInfo",
+    "MFCreateASFProfileFromPresentationDescriptor"
+  ],
+  "Wmilib.h (include Wmilib.h)": [
+    "WmiCompleteRequest",
+    "WmiSystemControl"
+  ],
+  "Wmsdkidl.h": [
+    "WMValidateData",
+    "WMCheckURLScheme",
+    "WMIsAvailableOffline",
+    "WMIsContentProtected",
+    "WMCheckURLExtension"
+  ],
+  "Wmsdkidl.h (include Wmsdk.h)": [
+    "WMCreateDRMTranscryptor",
+    "WMCreateWriterFileSink",
+    "WMCreateLicenseRevocationAgent",
+    "WMCreateIndexer",
+    "WMCreateBackupRestorer"
+  ],
+  "Wmsecure.h": [
+    "WMCreateSecureChannel",
+    "WMCreateSecureChannel_Certified_DES",
+    "WMCreateSecureChannel_DES",
+    "WMCreateSecureChannel_Certified"
+  ],
+  "Wofapi.h": [
+    "WofWimUpdateEntry",
+    "WofGetDriverVersion",
+    "WofEnumEntries",
+    "WofIsExternalFile",
+    "WofSetFileDataLocation"
+  ],
+  "Ws2tcpip.h": [
+    "FreeAddrInfoEx",
+    "setipv4sourcefilter",
+    "WSADeleteSocketPeerTargetName",
+    "GetAddrInfoExCancel",
+    "InetNtop"
+  ]
+}

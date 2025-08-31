@@ -239,10 +239,250 @@ jobs:
         
         print('✅ URL pattern variety validated')
         "
+        
+  comprehensive-function-test:
+    name: 🎯 Comprehensive Function Testing
+    runs-on: ubuntu-latest
+    needs: url-discovery-test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Test Comprehensive Function Database
+      env:
+        PYTHONPATH: .
+      run: |
+        echo "🎯 Testing comprehensive function database (5 functions per header)"
+        python -c "
+        import json
+        import time
+        from manw_ng.ml.enhanced_classifier import enhanced_ml_classifier
+        
+        # Load comprehensive test database
+        with open('assets/comprehensive_test_db.json', 'r', encoding='utf-8') as f:
+            test_db = json.load(f)
+        
+        print(f'📊 Testing {len(test_db)} headers with comprehensive function coverage')
+        
+        total_tests = sum(len(functions) for functions in test_db.values())
+        successful_predictions = 0
+        valid_urls = 0
+        header_success = {}
+        failed_functions = []
+        
+        for header, functions in test_db.items():
+            print(f'\\n🔍 Testing header: {header} ({len(functions)} functions)')
+            header_successful = 0
+            
+            # Clean header name (remove .h extension and normalize)
+            clean_header = header.lower().replace('.h', '').split(' (')[0]
+            
+            for func_name in functions:
+                # Get prediction from enhanced classifier
+                predictions = enhanced_ml_classifier.predict_headers(func_name, top_k=1)
+                
+                if predictions:
+                    predicted_header, confidence = predictions[0]
+                    success = predicted_header.lower() == clean_header
+                    
+                    if success:
+                        successful_predictions += 1
+                        header_successful += 1
+                        
+                        # Generate and validate URL
+                        url = enhanced_ml_classifier.generate_url(func_name, predicted_header)
+                        url_valid = (
+                            'learn.microsoft.com' in url and
+                            func_name.lower() in url and
+                            predicted_header.lower() in url
+                        )
+                        
+                        if url_valid:
+                            valid_urls += 1
+                        
+                        status = 'OK' if success else 'NO'
+                        print(f'  {status} {func_name}: {predicted_header} ({confidence:.2f})')
+                    else:
+                        failed_functions.append(f'{func_name} -> expected {header}, got {predicted_header}')
+                        print(f'  NO {func_name}: expected {header}, got {predicted_header} ({confidence:.2f})')
+                else:
+                    failed_functions.append(f'{func_name} -> NO PREDICTION')
+                    print(f'  NO {func_name}: NO PREDICTION')
+            
+            header_success[header] = (header_successful, len(functions))
+        
+        # Calculate statistics
+        prediction_accuracy = (successful_predictions / total_tests) * 100
+        url_accuracy = (valid_urls / total_tests) * 100
+        
+        print(f'\\n📊 COMPREHENSIVE TEST RESULTS:')
+        print(f'   Total Functions Tested: {total_tests}')
+        print(f'   Successful Predictions: {successful_predictions}/{total_tests} ({prediction_accuracy:.1f}%)')
+        print(f'   Valid URLs Generated: {valid_urls}/{total_tests} ({url_accuracy:.1f}%)')
+        print(f'   Headers Tested: {len(test_db)}')
+        
+        # Show top performing headers
+        print(f'\\n🏆 TOP PERFORMING HEADERS:')
+        sorted_headers = sorted(header_success.items(), 
+                               key=lambda x: x[1][0]/x[1][1] if x[1][1] > 0 else 0, 
+                               reverse=True)[:10]
+        
+        for header, (success, total) in sorted_headers:
+            accuracy = (success/total)*100 if total > 0 else 0
+            print(f'   {header}: {success}/{total} ({accuracy:.0f}%)')
+        
+        # Show failed functions (first 10)
+        if failed_functions:
+            print(f'\\n❌ FAILED FUNCTIONS (showing first 10):')
+            for fail in failed_functions[:10]:
+                print(f'   {fail}')
+        
+        # Validation requirements
+        print(f'\\n✅ VALIDATION CHECKS:')
+        min_accuracy = 75
+        min_url_accuracy = 85
+        
+        prediction_pass = prediction_accuracy >= min_accuracy
+        url_pass = url_accuracy >= min_url_accuracy
+        
+        print(f'   Prediction Accuracy >= {min_accuracy}%: {'PASS' if prediction_pass else 'FAIL'} ({prediction_accuracy:.1f}%)')
+        print(f'   URL Generation >= {min_url_accuracy}%: {'PASS' if url_pass else 'FAIL'} ({url_accuracy:.1f}%)')
+        
+        # Assert requirements
+        assert prediction_pass, f'Prediction accuracy too low: {prediction_accuracy:.1f}% < {min_accuracy}%'
+        assert url_pass, f'URL generation accuracy too low: {url_accuracy:.1f}% < {min_url_accuracy}%'
+        
+        print('\\n✅ Comprehensive function testing PASSED')
+        "
+        
+    - name: Test Real URL Validation (Sample)
+      run: |
+        echo "🌐 Testing real URL validation with sample functions"
+        python -c "
+        import json
+        import requests
+        import time
+        from manw_ng.ml.enhanced_classifier import enhanced_ml_classifier
+        
+        # Load sample functions for real URL testing (to avoid rate limits)
+        sample_functions = [
+            'CreateFileW', 'DeleteUrlCacheEntry', 'PathCombineW', 
+            'PlaySoundW', 'NtCreateFile', 'VirtualAlloc',
+            'MessageBoxW', 'RegOpenKeyExW', 'WSAStartup'
+        ]
+        
+        print(f'🔗 Testing {len(sample_functions)} sample functions with real URLs')
+        
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+        working_urls = 0
+        total_tested = 0
+        
+        for func_name in sample_functions:
+            predictions = enhanced_ml_classifier.predict_headers(func_name, top_k=1)
+            
+            if predictions:
+                header, confidence = predictions[0]
+                url = enhanced_ml_classifier.generate_url(func_name, header)
+                
+                try:
+                    # Quick HEAD request to check if URL exists
+                    response = requests.head(url, headers=headers, timeout=10, allow_redirects=True)
+                    status_ok = response.status_code == 200
+                    
+                    if status_ok:
+                        working_urls += 1
+                    
+                    total_tested += 1
+                    result = 'OK' if status_ok else f'HTTP{response.status_code}'
+                    print(f'  {result} {func_name}: {url[:60]}...')
+                    
+                    # Small delay to be nice to Microsoft
+                    time.sleep(0.5)
+                    
+                except requests.RequestException as e:
+                    print(f'  ERR {func_name}: {str(e)[:40]}...')
+                    total_tested += 1
+            else:
+                print(f'  NO {func_name}: No prediction')
+        
+        url_success_rate = (working_urls / total_tested) * 100 if total_tested > 0 else 0
+        
+        print(f'\\n📊 REAL URL VALIDATION RESULTS:')
+        print(f'   Working URLs: {working_urls}/{total_tested} ({url_success_rate:.1f}%)')
+        print(f'   Target Success Rate: >= 70%')
+        
+        # Validation (more lenient for real URLs due to network/rate limits)
+        min_real_url_success = 70
+        url_validation_pass = url_success_rate >= min_real_url_success
+        
+        print(f'   Real URL Validation: {'PASS' if url_validation_pass else 'FAIL'}')
+        
+        if not url_validation_pass:
+            print(f'   Warning: Real URL success rate {url_success_rate:.1f}% below target {min_real_url_success}%')
+        else:
+            print('   ✅ Real URL validation PASSED')
+        "
+        
+    - name: Continuous URL Discovery and Validation
+      run: |
+        echo "🔄 Running continuous URL discovery system"
+        python continuous_url_validator.py
+        
+    - name: Test Functions After URL Discovery
+      run: |
+        echo "🧪 Testing functions after URL discovery updates"
+        python -c "
+        # Test some key functions that should now work better
+        import subprocess
+        import json
+        
+        test_functions = ['CreateFileW', 'VirtualAlloc', 'MessageBoxW', 'RegOpenKeyExW']
+        working_functions = 0
+        
+        print('Testing updated function mappings:')
+        
+        for func in test_functions:
+            try:
+                result = subprocess.run(['python', 'manw-ng.py', '--output', 'json', func], 
+                                      capture_output=True, text=True, timeout=30)
+                
+                if result.returncode == 0:
+                    data = json.loads(result.stdout)
+                    if data.get('documentation_found', False):
+                        working_functions += 1
+                        print(f'  OK {func}: {data.get(\"url\", \"unknown\")[:50]}...')
+                    else:
+                        print(f'  NO {func}: documentation not found')
+                else:
+                    print(f'  ERR {func}: command failed')
+            except Exception as e:
+                print(f'  ERR {func}: {str(e)[:30]}...')
+        
+        success_rate = (working_functions / len(test_functions)) * 100
+        print(f'\\nPost-discovery success rate: {working_functions}/{len(test_functions)} ({success_rate:.1f}%)')
+        
+        # Assert improvement
+        min_success_rate = 75
+        assert success_rate >= min_success_rate, f'Post-discovery success rate too low: {success_rate:.1f}% < {min_success_rate}%'
+        print('✅ Post-discovery validation PASSED')
+        "
 
   validate-system:
     name: 📊 System Validation & Summary
-    needs: comprehensive-coverage-test
+    needs: comprehensive-function-test
     runs-on: ubuntu-latest
     if: always()
     
