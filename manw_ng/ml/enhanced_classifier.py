@@ -1529,6 +1529,9 @@ COMPREHENSIVE_HEADER_MAPPING = {
         "PssWalkSnapshot",
     ],
     "processthreadsapi": [
+        "CreateProcess",
+        "CreateProcessA",
+        "CreateProcessW",
         "GetProcessHandleFromHwnd",
         "GetCurrentProcessToken",
         "GetCurrentThreadEffectiveToken",
@@ -1666,7 +1669,17 @@ COMPREHENSIVE_HEADER_MAPPING = {
         "ConvertStringSecurityDescriptorToSecurityDescriptor",
         "ConvertStringSidToSid",
     ],
-    "secextsecurity": ["GetComputerObjectName", "GetUserNameEx", "TranslateName"],
+    "secext": [
+        "GetComputerObjectName",
+        "GetUserNameEx",
+        "GetUserNameExA",
+        "GetUserNameExW",
+        "TranslateName",
+        "TranslateNameA",
+        "TranslateNameW",
+        "GetComputerObjectNameA",
+        "GetComputerObjectNameW",
+    ],
     "securityappcontainer": ["GetAppContainerNamedObjectPath"],
     "securitybaseapi": [
         "AddResourceAttributeAce",

@@ -13,11 +13,21 @@ Author: Marcos Tolosa
 License: MIT
 """
 
+# Suppress sklearn warnings before any other imports
+import warnings
+
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+try:
+    from sklearn.exceptions import InconsistentVersionWarning
+
+    warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
+except ImportError:
+    pass
+
 import argparse
 import sys
 import os
 import re
-import warnings
 
 
 # Suppress specific aiohttp ResourceWarnings

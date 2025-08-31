@@ -143,7 +143,21 @@ class Win32APIScraper:
         Main function to scrape Win32 API documentation
         """
 
-        # FAST EXIT: Check if this is a known undocumented API
+        # Show initial status immediately
+        if not self.quiet:
+            initial_status = Status(
+                f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [dim]Initializing...[/dim]",
+                console=self.console,
+            )
+            initial_status.start()
+            initial_status.stop()
+
+        # FAST EXIT: Check for special cases
+        special_result = self._handle_special_functions(function_name)
+        if special_result:
+            return special_result
+
+        # Check if this is a known undocumented API
         if self._is_likely_undocumented_api(function_name):
             if not self.quiet:
                 fast_exit_msg = self.get_string("fast_exit")
@@ -152,71 +166,20 @@ class Win32APIScraper:
                 )
             return self._create_not_found_result(function_name, [])
 
-        # PRIORITY 1: Enhanced ML Classification + Smart URL Generation
+        # PRIORITY 1: Smart URL Generation (Optimized for speed and reliability)
         try:
             dll_name = getattr(self, "_current_function_dll", None)
-
-            # Try enhanced ML classifier first (if available)
-            if HAS_ENHANCED and primary_classifier:
-                if not self.quiet:
-                    analyzing_msg = self.get_string("analyzing")
-                    status = Status(
-                        f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] AI Classification",
-                        console=self.console,
-                    )
-                    status.start()
-
-                try:
-                    predictions = primary_classifier.predict_headers(
-                        function_name, dll_name, top_k=1
-                    )
-                    if (
-                        predictions and predictions[0][1] > 0.5
-                    ):  # High confidence prediction
-                        header = predictions[0][0]
-                        confidence = predictions[0][1]
-
-                        # Generate URL using enhanced classifier
-                        enhanced_url = primary_classifier.generate_url(
-                            function_name, header
-                        )
-
-                        # Adapt URL for language
-                        if self.language == "br":
-                            enhanced_url = enhanced_url.replace("/en-us/", "/pt-br/")
-
-                        if not self.quiet:
-                            status.update(
-                                f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [bold green]✓[/bold green] ML Prediction: {header} ({confidence:.2f})"
-                            )
-                            status.stop()
-
-                        # Test the ML-predicted URL first
-                        result = self._parse_function_page(enhanced_url)
-                        if result and result.get("documentation_found"):
-                            return result
-
-                except Exception as e:
-                    if not self.quiet:
-                        status.stop()
-                    # Fall through to original method
-                    pass
-                else:
-                    if not self.quiet:
-                        status.stop()
-
-            # FALLBACK: Original Smart URL Testing
             if not self.quiet:
                 searching_msg = self.get_string("searching_patterns")
                 with Status(
-                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/3[/cyan] {searching_msg}",
+                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {searching_msg}",
                     console=self.console,
                 ) as status:
 
                     def progress(done: int, total: int) -> None:
                         testing_msg = self.get_string("testing_urls")
                         status.update(
-                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/3[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
+                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
                         )
 
                     found_url = asyncio.run(
@@ -241,9 +204,7 @@ class Win32APIScraper:
                             )
                             return result
 
-                    status.update(
-                        f"[yellow]1/3[/yellow] Intelligent discovery completed"
-                    )
+                    status.update(f"[yellow]1/3[/yellow] Pattern matching completed")
             else:
                 # Quiet mode - no status display
                 found_url = asyncio.run(
@@ -260,11 +221,66 @@ class Win32APIScraper:
         except Exception as e:
             pass  # Silently continue to next priority
 
-        # PRIORITY 2: Try catalog lookup (backup)
+        # PRIORITY 2: Enhanced ML Classification (fallback for complex cases)
+        try:
+            dll_name = getattr(self, "_current_function_dll", None)
+
+            # Try enhanced ML classifier as fallback
+            if HAS_ENHANCED and primary_classifier:
+                if not self.quiet:
+                    status = Status(
+                        f"[cyan]2/3[/cyan] Tentando classificação ML para [bold]{function_name}[/bold]...",
+                        console=self.console,
+                    )
+                    status.start()
+
+                try:
+                    predictions = primary_classifier.predict_headers(
+                        function_name, dll_name, top_k=1
+                    )
+                    if (
+                        predictions and predictions[0][1] > 0.3
+                    ):  # Lower threshold as fallback
+                        header = predictions[0][0]
+                        confidence = predictions[0][1]
+
+                        # Generate URL using enhanced classifier
+                        enhanced_url = primary_classifier.generate_url(
+                            function_name, header
+                        )
+
+                        # Adapt URL for language
+                        if self.language == "br":
+                            enhanced_url = enhanced_url.replace("/en-us/", "/pt-br/")
+
+                        if not self.quiet:
+                            status.update(
+                                f"[cyan]2/3[/cyan] Testando predição ML: [blue]{header}[/blue] ({confidence:.2f})"
+                            )
+
+                        # Test the ML-predicted URL
+                        result = self._parse_function_page(enhanced_url)
+                        if result and result.get("documentation_found"):
+                            if not self.quiet:
+                                status.stop()
+                                self.console.print(
+                                    f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(enhanced_url)}[/green]"
+                                )
+                            return result
+
+                except Exception:
+                    pass
+                finally:
+                    if not self.quiet:
+                        status.stop()
+        except Exception as e:
+            pass
+
+        # PRIORITY 3: Try catalog lookup (backup)
         try:
             if not self.quiet:
                 with Status(
-                    f"[cyan]2/3[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
+                    f"[cyan]3/3[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
                     console=self.console,
                 ) as status:
                     catalog_url = self.catalog.get_function_url(
@@ -272,7 +288,7 @@ class Win32APIScraper:
                     )
                     if catalog_url:
                         status.update(
-                            f"[cyan]2/3[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
+                            f"[cyan]3/3[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
                         )
                         result = self._parse_function_page(catalog_url)
                         if result:
@@ -282,7 +298,7 @@ class Win32APIScraper:
                             )
                             return result
                         status.update(
-                            f"[yellow]2/3[/yellow] Catálogo não retornou resultado válido"
+                            f"[yellow]3/3[/yellow] Catálogo não retornou resultado válido"
                         )
             else:
                 # Quiet mode
@@ -296,17 +312,17 @@ class Win32APIScraper:
         except Exception as e:
             pass
 
-        # PRIORITY 3: Use direct mapping (final backup)
+        # PRIORITY 4: Use direct mapping (final backup) - Currently not implemented
         try:
             direct_url = self._try_direct_url(function_name)
             if direct_url:
                 if not self.quiet:
                     with Status(
-                        f"[cyan]3/3[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
+                        f"[cyan]4/4[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
                         console=self.console,
                     ) as status:
                         status.update(
-                            f"[cyan]3/3[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
+                            f"[cyan]4/4[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
                         )
                         result = self._parse_function_page(direct_url)
                         if result:
@@ -316,7 +332,7 @@ class Win32APIScraper:
                             )
                             return result
                         status.update(
-                            f"[yellow]3/3[/yellow] Mapeamento direto não funcionou"
+                            f"[yellow]4/4[/yellow] Mapeamento direto não funcionou"
                         )
                 else:
                     # Quiet mode
@@ -410,6 +426,78 @@ class Win32APIScraper:
             return "enum"
         else:
             return "win32_function"
+
+    def _handle_special_functions(self, function_name: str) -> Optional[Dict]:
+        """Handle special functions with known documentation patterns"""
+        func_lower = function_name.lower()
+
+        # C Runtime functions - redirect to correct documentation
+        if func_lower == "memcpy":
+            return {
+                "symbol": function_name,
+                "name": "memcpy",
+                "documentation_found": True,
+                "documentation_online": True,
+                "documentation_language": "us",
+                "symbol_type": "crt_function",
+                "fallback_used": False,
+                "fallback_attempts": [],
+                "url": "https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/memcpy-wmemcpy",
+                "dll": "MSVCRT.dll",
+                "calling_convention": "__cdecl",
+                "parameters": [
+                    {
+                        "name": "dest",
+                        "type": "void *",
+                        "description": "Destination buffer",
+                    },
+                    {
+                        "name": "src",
+                        "type": "const void *",
+                        "description": "Source buffer",
+                    },
+                    {
+                        "name": "count",
+                        "type": "size_t",
+                        "description": "Number of bytes to copy",
+                    },
+                ],
+                "parameter_count": 3,
+                "architectures": ["x86", "x64"],
+                "signature": "void *memcpy(void *dest, const void *src, size_t count);",
+                "return_type": "void *",
+                "return_description": "Returns dest",
+                "description": "Copies bytes between buffers. Note: This is a banned function due to security concerns. Consider using memcpy_s instead.",
+            }
+
+        # Transacted File System functions - special URL patterns
+        if "transacted" in func_lower:
+            if func_lower == "createfiletransacted":
+                return self._try_transacted_function("CreateFileTransactedW")
+            elif func_lower == "createfiletransacteda":
+                return self._try_transacted_function("CreateFileTransactedA")
+            elif func_lower == "createfiletransactedw":
+                return self._try_transacted_function("CreateFileTransactedW")
+
+        return None
+
+    def _try_transacted_function(self, function_name: str) -> Optional[Dict]:
+        """Try to fetch transacted file system functions"""
+        # CreateFileTransacted has specific URL pattern
+        url = f"https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-{function_name.lower()}"
+
+        try:
+            result = self._parse_function_page(url)
+            if result and result.get("documentation_found"):
+                if not self.quiet:
+                    self.console.print(
+                        f"[green]✓[/green] [bold]{function_name}[/bold] [dim]→[/dim] [blue]winbase/{function_name.lower()}[/blue]"
+                    )
+                return result
+        except Exception:
+            pass
+
+        return None
 
     def _is_likely_undocumented_api(self, function_name: str) -> bool:
         """Detecta se uma API é provavelmente não documentada (para falha rápida)"""

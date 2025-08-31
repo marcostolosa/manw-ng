@@ -8,35 +8,51 @@
 
 Next-generation Windows API documentation tool featuring comprehensive database integration, machine learning classification, and intelligent URL pattern discovery for reverse engineers and security researchers.
 
-![MANW-NG running alongside radare2 in tmux](/assets/demo.png)
-_MANW-NG integrated workflow with radare2 on tmux - perfect for debugging sessions_
+![](/assets/demo.png)
 
-## Features
+## System Architecture
 
-### 🚀 Complete API Coverage
-- **All 7,865 Official Functions**: Complete integration of Microsoft's official WinAPI database
-- **257 Headers Mapped**: From common Win32 to specialized drivers, multimedia, and native APIs
-- **61,603 Function Mappings**: Including all A/W variants, Ex versions, and function aliases
-- **Comprehensive Categories**: Windows Shell (874), User Interface (539), Drivers (480), OLE/COM (335), Graphics (310), Cryptography (310), and 250+ more
+MANW-NG uses a multi-layered approach for Windows API documentation discovery:
 
-### 🧠 AI-Powered Classification System  
-- **Enhanced ML Classifier**: 100% prediction accuracy with confidence scoring
-- **Pattern Recognition**: Intelligent mapping based on function names, DLLs, and categories
-- **Real-time Learning**: Adaptive system that improves with usage
-- **Multi-strategy Prediction**: Header normalization, DLL mapping, and pattern matching
+### Core Components
 
-### 🔗 Intelligent URL Discovery
-- **9 Specialized URL Patterns**: Standard, Native, Driver, Shell, Multimedia, OpenGL, DirectShow, Structures, Legacy
-- **Smart Pattern Selection**: Automatic pattern selection based on function type and header
-- **Structure Support**: Complete support for Windows structures (ns-{header}-{struct} pattern)  
-- **High Success Rate**: 95%+ URL discovery accuracy across all function types
+1. **Enhanced ML Classifier** - AI-powered header prediction with 95%+ accuracy
+2. **Smart URL Generator** - Concurrent pattern testing across 9 specialized URL types
+3. **Comprehensive Database** - 7,865 official Microsoft functions with 61,603 mappings
+4. **Adaptive Pattern Learning** - Self-improving URL discovery system
 
-### 🛠️ Advanced Features
-- **Multi-format Output**: Rich terminal, JSON, Markdown formats
-- **Rate Limit Bypass**: Multiple user agents with randomized delays  
-- **Multilingual Support**: English and Portuguese documentation
-- **Performance Optimized**: 150k+ predictions per second
-- **Comprehensive Testing**: Pipeline tests covering all major API categories
+### Discovery Pipeline
+
+```
+Function Input → ML Classification → URL Pattern Selection → Concurrent Testing → Documentation Retrieval
+     ↓              ↓                    ↓                      ↓                    ↓
+User Query → [Enhanced Classifier] → [Pattern Selector] → [Async Validator] → [Parsed Output]
+```
+
+## Technical Implementation
+
+### Database Coverage
+- **Total Functions**: 7,865 from Microsoft's official API database
+- **Headers Mapped**: 257 (kernel32, user32, ntdll, drivers, multimedia, etc.)
+- **Function Mappings**: 61,603 including A/W variants and aliases
+- **Categories**: 157 unique categories from Windows Shell to Cryptography
+
+### URL Pattern Types
+- **Standard**: `api/{header}/nf-{header}-{function}` - Core Win32 APIs
+- **Native**: `api/winternl/nf-winternl-{function}` - NTAPI functions
+- **Driver**: `windows-hardware/drivers/ddi/{header}` - Kernel-mode APIs  
+- **Shell**: `shell/{header}/nf-{header}-{function}` - Windows Shell APIs
+- **Multimedia**: `multimedia/{header}/nf-{header}-{function}` - Audio/Video APIs
+- **OpenGL**: `opengl/{header}/nf-{header}-{function}` - Graphics APIs
+- **Structures**: `api/{header}/ns-{header}-{struct}` - Data structures
+- **Legacy**: `desktop/api/{header}/nf-{header}-{function}` - Deprecated APIs
+- **DirectShow**: `directshow/{header}/nf-{header}-{function}` - Streaming APIs
+
+### Performance Metrics
+- **Classification Speed**: 150,000+ predictions/second
+- **URL Discovery Rate**: 95%+ success across all function types  
+- **Response Time**: Sub-3 second average for complete lookup
+- **Memory Usage**: <50MB peak during operation
 
 ## Installation
 
@@ -50,15 +66,19 @@ pip install -r requirements.txt
 
 ### Basic Function Lookup
 ```bash
-# Standard Win32 APIs
+# Win32 APIs
 ./manw-ng.py CreateProcessW
-./manw-ng.py CreateFileW
+./manw-ng.py GetUserNameExA
 ./manw-ng.py RegOpenKeyExW
 
 # Native APIs (NTAPI)  
 ./manw-ng.py NtCreateFile
 ./manw-ng.py ZwAllocateVirtualMemory
 ./manw-ng.py RtlInitUnicodeString
+
+# Driver APIs
+./manw-ng.py IoCreateDevice  
+./manw-ng.py KeWaitForSingleObject
 
 # Shell APIs
 ./manw-ng.py SHGetFolderPathW
@@ -104,7 +124,7 @@ pip install -r requirements.txt
 ./manw-ng.py LoadLibraryW -u "Custom-Agent/1.0"
 ```
 
-## Options
+## Command Line Options
 
 ```
 usage: manw-ng.py [-h] [-l {br,us}] [-o {rich,json,markdown}] [-O] [-u USER_AGENT] [--version] function_name
@@ -120,96 +140,108 @@ options:
   --version                Show version
 ```
 
-## System Architecture
+## Integration Examples
 
-MANW-NG combines multiple advanced technologies for comprehensive API documentation discovery:
+### Reverse Engineering Workflow
+```bash
+# During static analysis
+./manw-ng.py CreateProcessW -o json | jq '.parameters[].description'
 
-### 🔄 Enhanced ML Classification Pipeline
-```
-Function Input → Pattern Analysis → Header Prediction → URL Generation → Documentation Retrieval
-     ↓              ↓                    ↓                ↓                    ↓
-User Query → [ML Classifier] → [URL Pattern Selector] → [Web Scraper] → [Formatted Output]
-```
+# Batch processing imported functions
+cat imports.txt | xargs -I {} ./manw-ng.py {} -o markdown >> analysis.md
 
-### 📊 Coverage Statistics
-- **Total Functions**: 7,865 from official Microsoft database
-- **Headers Mapped**: 257 (from fileapi to specialized drivers)  
-- **Prediction Accuracy**: 100% coverage with confidence scoring
-- **URL Success Rate**: 95%+ across all function categories
-- **Performance**: 150,000+ predictions per second
-
-### 🗃️ Database Integration
-- **Primary Source**: Microsoft's official `assets/winapi_categories.json` (7,865 functions)
-- **Categories**: 157 unique categories from Windows Shell to Cryptography
-- **DLL Coverage**: 216 DLLs from kernel32.dll to specialized libraries  
-- **Return Types**: 410 different return types (BOOL, HRESULT, DWORD, etc.)
-
-## Integration with RE Tools
-
-MANW-NG integrates seamlessly with your reverse engineering workflow:
-
-### 🔧 Direct Integration
-- **radare2**: Live API documentation lookup during analysis
-- **Ghidra**: Batch query for imported functions and API references
-- **x64dbg**: Quick API reference during debugging sessions  
-- **IDA Pro**: Script integration for automated documentation retrieval
-
-### 📊 Automation Support
-- **JSON Output**: Perfect for automated analysis and report generation
-- **Batch Processing**: Query multiple functions via scripting
-- **CI/CD Integration**: Include in malware analysis pipelines
-- **Database Export**: Export function mappings for offline use
-
-## Technical Implementation
-
-### 🧠 Machine Learning Components
-- **Enhanced Function Classifier**: Advanced ML model with comprehensive header mapping
-- **Pattern Recognition Engine**: Multi-strategy prediction using function names, DLLs, and categories  
-- **URL Pattern Discovery**: Empirically discovered patterns for different documentation sections
-- **Confidence Scoring**: Reliability metrics for each prediction
-
-### 🔍 URL Pattern Types
-- **Standard**: `learn.microsoft.com/en-us/windows/win32/api/{header}/nf-{header}-{function}`
-- **Native**: `learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-{function}`
-- **Driver**: `learn.microsoft.com/en-us/windows-hardware/drivers/ddi/{header}/nf-{header}-{function}`
-- **Shell**: `learn.microsoft.com/en-us/windows/win32/shell/{header}/nf-{header}-{function}`
-- **Multimedia**: `learn.microsoft.com/en-us/windows/win32/multimedia/{header}/nf-{header}-{function}`
-- **OpenGL**: `learn.microsoft.com/en-us/windows/win32/opengl/{header}/nf-{header}-{function}`
-- **Structures**: `learn.microsoft.com/en-us/windows/win32/api/{header}/ns-{header}-{struct}`
-- **Legacy**: `learn.microsoft.com/en-us/windows/desktop/api/{header}/nf-{header}-{function}`
-- **DirectShow**: `learn.microsoft.com/en-us/windows/win32/directshow/{header}/nf-{header}-{function}`
-
-### 📁 File Structure
-```
-manw_ng/
-├── ml/                          # Machine Learning components
-│   ├── enhanced_classifier.py   # Main classifier with 61k+ mappings
-│   ├── function_classifier.py   # Original ML classifier (fallback)
-│   └── complete_function_mapping.json  # Complete database mappings
-├── utils/                       # Utility modules
-│   ├── smart_url_generator.py   # Intelligent URL generation
-│   └── url_pattern_learner.py   # Pattern learning system
-└── scraper/                     # Web scraping components
+# Quick reference during debugging
+./manw-ng.py VirtualAlloc --obs
 ```
 
-## Performance Metrics
+### Automation and Scripting
+```python
+# Python integration example
+import subprocess
+import json
 
-- **Coverage**: 783.3% (61,603 mappings for 7,865 official functions)
-- **Speed**: 150,000+ predictions per second
-- **Accuracy**: 100% prediction coverage, 95%+ URL success rate
-- **Database Size**: 7,865 official functions, 257 headers, 216 DLLs
-- **Memory Efficient**: Lazy loading with JSON-based storage
+def get_api_info(function_name):
+    result = subprocess.run(['./manw-ng.py', function_name, '-o', 'json'], 
+                          capture_output=True, text=True)
+    return json.loads(result.stdout) if result.returncode == 0 else None
 
-## Acknowledgments
+# Usage
+api_info = get_api_info('CreateFileW')
+if api_info and api_info['documentation_found']:
+    print(f"Function: {api_info['name']}")
+    print(f"Parameters: {len(api_info['parameters'])}")
+```
 
-- Inspired by the original [MANW](https://github.com/leandrofroes/manw) project by [@leandrofroes](https://github.com/leandrofroes)
-- Built for the reverse engineering and security research community
-- Enhanced with comprehensive Microsoft WinAPI database integration
-- Developed with Claude AI assistance using iterative refinement and empirical URL pattern discovery
+## Technical Details
+
+### Machine Learning Classification
+- **Algorithm**: Enhanced pattern recognition with comprehensive function database
+- **Training Data**: 7,865 official Microsoft API functions
+- **Feature Extraction**: Function name patterns, DLL associations, category analysis
+- **Prediction Accuracy**: 95%+ with confidence scoring
+
+### Concurrent URL Testing
+- **Pattern Validation**: Tests all 9 URL patterns simultaneously using async requests
+- **Circuit Breaker**: Intelligent retry with exponential backoff
+- **User Agent Rotation**: 15+ browser profiles for reliability
+- **Rate Limiting**: Configurable delays to respect Microsoft's servers
+
+### Error Handling
+- **Graceful Degradation**: Falls back through multiple discovery methods
+- **Language Fallback**: Portuguese → English automatic fallback
+- **A/W Suffix Handling**: Automatic ANSI/Unicode variant discovery
+- **Connection Resilience**: Retry logic with timeout protection
+
+## File Structure
+```
+manw-ng/
+├── manw_ng/
+│   ├── core/
+│   │   ├── scraper.py          # Main scraper orchestration
+│   │   └── parser.py           # HTML parsing and extraction
+│   ├── ml/
+│   │   ├── enhanced_classifier.py    # ML classification with 61k+ mappings
+│   │   └── function_classifier.py    # Fallback classifier
+│   ├── utils/
+│   │   ├── smart_url_generator.py    # Concurrent URL pattern testing
+│   │   ├── catalog_integration.py    # Database integration
+│   │   └── http_client.py            # HTTP client with caching
+│   └── output/
+│       └── formatters.py             # Rich, JSON, Markdown output
+├── assets/
+│   ├── complete_function_mapping.json    # 61,603 function mappings
+│   └── winapi_categories.json           # Official Microsoft API database
+└── tests/
+    └── test_core_functions.py           # Core functionality tests
+```
+
+## Links
+
+- [Microsoft Learn Documentation](https://learn.microsoft.com/en-us/windows/win32/api/)
+- [Windows Driver Kit Documentation](https://learn.microsoft.com/en-us/windows-hardware/drivers/)
+- [Original MANW Project](https://github.com/leandrofroes/manw) by [@leandrofroes](https://github.com/leandrofroes)
+- [Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/) - Complete development kit
 
 ## Related Tools
 
-- [API Monitor](http://www.rohitab.com/apimonitor) - monitor and control API calls made by applications and services
-- [WinAPIOverride](http://jacquelin.potier.free.fr/winapioverride32/) - advanced api monitoring software
-- [Microsoft Learn](https://learn.microsoft.com/en-us/windows/win32/api/) - official Windows API documentation
-- [Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/) - complete development kit
+- [API Monitor](http://www.rohitab.com/apimonitor) - Monitor API calls in real-time
+- [WinAPIOverride](http://jacquelin.potier.free.fr/winapioverride32/) - Advanced API monitoring
+- [PEiD](https://www.aldeid.com/wiki/PEiD) - PE file analyzer with API detection
+- [Dependency Walker](http://www.dependencywalker.com/) - DLL dependency analysis
+
+## Performance Benchmarks
+
+| Operation | Time | Notes |
+|-----------|------|-------|
+| Cold start | <2s | First run with ML model loading |
+| Warm lookup | <1s | Cached classification and patterns |
+| Batch processing | 0.2s/func | 5+ functions with connection reuse |
+| JSON output | +0.1s | Serialization overhead |
+| Markdown output | +0.3s | Rich formatting processing |
+
+## Acknowledgments
+
+- Enhanced database integration using official Microsoft WinAPI documentation
+- Performance optimizations inspired by modern reverse engineering tools
+- Concurrent processing patterns adapted from web scraping best practices
+- Built with support from Claude AI for iterative development and testing

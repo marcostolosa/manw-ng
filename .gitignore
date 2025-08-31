@@ -41,6 +41,9 @@ coverage.xml
 pytest-debug.log
 test-results.xml
 .cache
+tests/
+test_*.py
+*_test.py
 
 # 📊 Code Quality Reports
 # -----------------------
