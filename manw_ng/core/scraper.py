@@ -221,7 +221,42 @@ class Win32APIScraper:
         except Exception as e:
             pass  # Silently continue to next priority
 
-        # PRIORITY 2: Enhanced ML Classification (fallback for complex cases)
+        # PRIORITY 2: Microsoft Learn Search API (official search)
+        try:
+            if not self.quiet:
+                status = Status(
+                    f"[cyan]2/4[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
+                    console=self.console,
+                )
+                status.start()
+
+            # Search Microsoft Learn API
+            search_result = self._search_microsoft_learn(function_name)
+            if search_result:
+                if not self.quiet:
+                    status.update(
+                        f"[cyan]2/4[/cyan] Encontrado na API Microsoft Learn: [blue]{self._format_url_display(search_result)}[/blue]"
+                    )
+
+                # Parse the official Microsoft documentation
+                result = self._parse_function_page(search_result)
+                if result and result.get("documentation_found"):
+                    if not self.quiet:
+                        status.stop()
+                        self.console.print(
+                            f"[green]✓[/green] [bold]{function_name}[/bold] [dim]→[/dim] [green]Microsoft Learn API[/green]"
+                        )
+                    return result
+
+            if not self.quiet:
+                status.stop()
+
+        except Exception as e:
+            if not self.quiet and "status" in locals():
+                status.stop()
+            pass  # Continue to next priority
+
+        # PRIORITY 3: Enhanced ML Classification (fallback for complex cases)
         try:
             dll_name = getattr(self, "_current_function_dll", None)
 
@@ -276,11 +311,11 @@ class Win32APIScraper:
         except Exception as e:
             pass
 
-        # PRIORITY 3: Try catalog lookup (backup)
+        # PRIORITY 4: Try catalog lookup (backup)
         try:
             if not self.quiet:
                 with Status(
-                    f"[cyan]3/3[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
+                    f"[cyan]4/4[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
                     console=self.console,
                 ) as status:
                     catalog_url = self.catalog.get_function_url(
@@ -288,7 +323,7 @@ class Win32APIScraper:
                     )
                     if catalog_url:
                         status.update(
-                            f"[cyan]3/3[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
+                            f"[cyan]4/4[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
                         )
                         result = self._parse_function_page(catalog_url)
                         if result:
@@ -298,7 +333,7 @@ class Win32APIScraper:
                             )
                             return result
                         status.update(
-                            f"[yellow]3/3[/yellow] Catálogo não retornou resultado válido"
+                            f"[yellow]4/4[/yellow] Catálogo não retornou resultado válido"
                         )
             else:
                 # Quiet mode
@@ -495,6 +530,64 @@ class Win32APIScraper:
                     )
                 return result
         except Exception:
+            pass
+
+        return None
+
+    def _search_microsoft_learn(self, function_name: str) -> Optional[str]:
+        """Search Microsoft Learn API for official documentation"""
+        try:
+            import requests
+
+            # Microsoft Learn Search API
+            search_url = "https://learn.microsoft.com/api/search"
+            params = {
+                "locale": "en-us" if self.language == "us" else "pt-br",
+                "search": function_name,  # Simple search works better
+                "$top": 5,
+            }
+
+            headers = {
+                "User-Agent": self.http_client.session.headers.get(
+                    "User-Agent",
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                )
+            }
+
+            response = requests.get(
+                search_url, params=params, headers=headers, timeout=10
+            )
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get("results", [])
+
+                # Filter for official documentation (not Q&A)
+                docs = [r for r in results if r.get("category") == "Documentation"]
+
+                # Look for Win32 API documentation specifically
+                for doc in docs:
+                    url = doc.get("url", "")
+                    title = doc.get("title", "").lower()
+
+                    # Prioritize Win32 API documentation
+                    if "windows/win32/api/" in url and function_name.lower() in title:
+                        return url
+
+                    # Also accept C runtime documentation for functions like memcpy
+                    if (
+                        "cpp/c-runtime-library/" in url
+                        and function_name.lower() in title
+                    ):
+                        return url
+
+                # Fallback: any official documentation mentioning the function
+                for doc in docs:
+                    title = doc.get("title", "").lower()
+                    if function_name.lower() in title and "function" in title:
+                        return doc.get("url", "")
+
+        except Exception as e:
+            # Silently fail - this is a fallback method
             pass
 
         return None

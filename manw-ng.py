@@ -170,6 +170,9 @@ Examples:
         except Exception:
             pass
 
+        # Check if function was found and set appropriate exit code
+        function_found = function_info.get("documentation_found", False)
+
         # Format output
         if args.output == "rich":
             try:
@@ -181,10 +184,16 @@ Examples:
                 formatter = MarkdownFormatter()
                 print(formatter.format_output(function_info, language=args.language))
             except Exception as e:
-                # Outros erros - debug
-                console.print(f"[red]Rich formatter error: {e}[/red]")
-                formatter = MarkdownFormatter()
-                print(formatter.format_output(function_info, language=args.language))
+                # Outros erros - fallback silencioso para markdown
+                try:
+                    formatter = MarkdownFormatter()
+                    print(
+                        formatter.format_output(function_info, language=args.language)
+                    )
+                except Exception:
+                    # Último recurso - JSON simples
+                    json_formatter = JSONFormatter()
+                    print(json_formatter.format_output(function_info))
         elif args.output == "json":
             formatter = JSONFormatter()
             print(formatter.format_output(function_info, show_remarks=args.obs))
@@ -196,8 +205,16 @@ Examples:
                 )
             )
 
+        # Exit with appropriate code
+        if not function_found:
+            sys.exit(1)  # Function not found
+
     except Exception as e:
-        console.print(f"[red]Erro: {e}[/red]")
+        try:
+            console.print(f"[red]Erro: {e}[/red]")
+        except Exception:
+            # Fallback if even console.print fails
+            print(f"Error: {e}")
         sys.exit(1)
     finally:
         # Force cleanup of all async resources
