@@ -1548,7 +1548,7 @@ COMPREHENSIVE_HEADER_MAPPING = {
     "utilapiset": [
         "Beep",
         "CopyFileTransacted",
-        "CreateDirectoryTransacted", 
+        "CreateDirectoryTransacted",
         "CreateFileTransacted",
         "CreateHardLinkTransacted",
         "CreateSymbolicLinkTransacted",
@@ -1562,7 +1562,7 @@ COMPREHENSIVE_HEADER_MAPPING = {
         "GetLongPathNameTransacted",
         "MoveFileTransacted",
         "RemoveDirectoryTransacted",
-        "SetFileAttributesTransacted"
+        "SetFileAttributesTransacted",
     ],
     "propidl": ["FreePropVariantArray", "PropVariantClear", "PropVariantCopy"],
     "propsys": [

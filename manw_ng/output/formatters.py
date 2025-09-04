@@ -320,7 +320,7 @@ class RichFormatter:
             )
 
         self.console.print(param_table)
-        
+
         # Render value tables for parameters that have them (only if --tabs flag is set)
         if self.show_parameter_tables:
             for param in function_info["parameters"]:
@@ -370,12 +370,12 @@ class RichFormatter:
         """Render value tables for a parameter"""
         param_name = param.get("name", "Unknown")
         value_tables = param.get("values", [])
-        
+
         for i, value_table in enumerate(value_tables):
             entries = value_table.get("entries", [])
             if not entries:
                 continue
-                
+
             # Create table for this value set
             table = Table(
                 title=f"[bold blue]» {param_name} - Tabela {i+1}[/bold blue]",
@@ -385,19 +385,18 @@ class RichFormatter:
                 show_header=True,
             )
             table.add_column("Valor", style="#AE81FF bold", min_width=20, max_width=40)
-            table.add_column("Significado", style="#F8F8F2", no_wrap=False, overflow="fold")
-            
+            table.add_column(
+                "Significado", style="#F8F8F2", no_wrap=False, overflow="fold"
+            )
+
             # Add entries to table
             for entry in entries:
                 value = entry.get("value", "").strip()
                 meaning = entry.get("meaning", "").strip()
-                
+
                 if value and meaning:
-                    table.add_row(
-                        f"[bold blue]{value}[/bold blue]",
-                        meaning
-                    )
-            
+                    table.add_row(f"[bold blue]{value}[/bold blue]", meaning)
+
             # Print the table
             self.console.print()
             self.console.print(table)
@@ -409,7 +408,9 @@ class RichFormatter:
             if function_info["return_description"].strip().startswith("- "):
                 self.console.print(
                     Panel(
-                        function_info["return_description"],  # Rich will handle the markup
+                        function_info[
+                            "return_description"
+                        ],  # Rich will handle the markup
                         title=f"[bold #F92672]» {self.get_string('return_value')}[/bold #F92672]",
                         border_style="#75715E",
                         padding=(1, 2),
@@ -576,7 +577,11 @@ class JSONFormatter:
     """JSON formatter for machine-readable output"""
 
     @staticmethod
-    def format_output(function_info: Dict, show_remarks: bool = False, show_parameter_tables: bool = False) -> str:
+    def format_output(
+        function_info: Dict,
+        show_remarks: bool = False,
+        show_parameter_tables: bool = False,
+    ) -> str:
         """Format function information as JSON"""
         # Convert SymbolInfo objects to dict for JSON serialization
         json_compatible = JSONFormatter._make_json_serializable(function_info)
@@ -616,7 +621,10 @@ class MarkdownFormatter:
 
     @staticmethod
     def format_output(
-        function_info: Dict, language: str = "br", show_remarks: bool = False, show_parameter_tables: bool = False
+        function_info: Dict,
+        language: str = "br",
+        show_remarks: bool = False,
+        show_parameter_tables: bool = False,
     ) -> str:
         """Format function information as Markdown"""
 

@@ -751,42 +751,41 @@ class Win32APIScraper:
         try:
             import requests
             import json
-            
+
             # Microsoft Learn Search API
             api_url = f"https://learn.microsoft.com/api/search"
             params = {
-                'search': function_name,
-                'locale': 'pt-br' if self.language == 'br' else 'en-us',
-                'facet': 'products',
-                'filter': 'products eq \'Windows\''
+                "search": function_name,
+                "locale": "pt-br" if self.language == "br" else "en-us",
+                "facet": "products",
+                "filter": "products eq 'Windows'",
             }
-            
+
             response = requests.get(api_url, params=params, timeout=10)
             if response.status_code == 200:
                 data = response.json()
-                results = data.get('results', [])
-                
+                results = data.get("results", [])
+
                 # Look for Win32 API documentation
                 for result in results:
-                    url = result.get('url', '')
-                    title = result.get('title', '').lower()
-                    
+                    url = result.get("url", "")
+                    title = result.get("title", "").lower()
+
                     # Prioritize Win32 API documentation
-                    if ('/windows/win32/api/' in url and 
-                        function_name.lower() in title):
+                    if "/windows/win32/api/" in url and function_name.lower() in title:
                         return url
-                    
+
                 # Fallback: any Windows documentation mentioning the function
                 for result in results:
-                    url = result.get('url', '')
-                    title = result.get('title', '').lower()
-                    
-                    if ('/windows/' in url and function_name.lower() in title):
+                    url = result.get("url", "")
+                    title = result.get("title", "").lower()
+
+                    if "/windows/" in url and function_name.lower() in title:
                         return url
-                        
+
         except Exception:
             pass  # Silently fail and continue to next priority
-            
+
         return None
 
     def _try_with_suffix(self, function_name: str, suffix: str) -> Optional[Dict]:
@@ -835,31 +834,39 @@ class Win32APIScraper:
         """
         try:
             # Load the complete function mapping
-            mapping_file = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'complete_function_mapping.json')
+            mapping_file = os.path.join(
+                os.path.dirname(__file__),
+                "..",
+                "..",
+                "assets",
+                "complete_function_mapping.json",
+            )
             if os.path.exists(mapping_file):
-                with open(mapping_file, 'r', encoding='utf-8') as f:
+                with open(mapping_file, "r", encoding="utf-8") as f:
                     mapping = json.load(f)
-                
+
                 # First try exact match
                 if function_name in mapping:
                     header = mapping[function_name]
                     url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{function_name.lower()}"
                     return url
-                
+
                 # If no exact match, try with W suffix (Unicode version)
                 if function_name + "W" in mapping:
                     header = mapping[function_name + "W"]
                     url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'w').lower()}"
                     if not self.quiet:
-                        self.console.print(f"[dim]Redirecting to {function_name}W version[/dim]")
+                        self.console.print(
+                            f"[dim]Redirecting to {function_name}W version[/dim]"
+                        )
                     return url
-                
+
                 # If no W, try with A suffix (ANSI version)
                 if function_name + "A" in mapping:
                     header = mapping[function_name + "A"]
                     url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'a').lower()}"
                     return url
-                    
+
         except Exception:
             pass
         return None

@@ -473,11 +473,30 @@ class Win32PageParser:
                             collected_descriptions.append(desc_text)
 
                             # Extract tables for parameters that likely have them (only once per parameter)
-                            if current_param.get("name") and "values" not in current_param:
+                            if (
+                                current_param.get("name")
+                                and "values" not in current_param
+                            ):
                                 param_name = current_param["name"].lower()
                                 # Common parameters that have value tables
-                                complex_params = ['utype', 'dwdesiredaccess', 'desiredaccess', 'dwsharemode', 'shareaccess', 'dwcreationdisposition', 'createdisposition', 'dwflagsandattributes', 'dwcreationflags', 'createoptions', 'objectattributes', 'fileattributes']
-                                if any(complex_param in param_name for complex_param in complex_params):
+                                complex_params = [
+                                    "utype",
+                                    "dwdesiredaccess",
+                                    "desiredaccess",
+                                    "dwsharemode",
+                                    "shareaccess",
+                                    "dwcreationdisposition",
+                                    "createdisposition",
+                                    "dwflagsandattributes",
+                                    "dwcreationflags",
+                                    "createoptions",
+                                    "objectattributes",
+                                    "fileattributes",
+                                ]
+                                if any(
+                                    complex_param in param_name
+                                    for complex_param in complex_params
+                                ):
                                     value_tables = self._extract_parameter_value_tables(
                                         next_elem
                                     )
@@ -525,7 +544,7 @@ class Win32PageParser:
         """Extract value/meaning tables for parameters - FIXED VERSION"""
         value_tables = []
         current = element.find_next_sibling()  # Start from next element after parameter
-        
+
         while current:
             # FIRST: Check if we hit the next parameter (HIGHEST PRIORITY)
             if current.name == "p":
@@ -536,42 +555,58 @@ class Win32PageParser:
                     if re.search(r"\[.*?\].*?[A-Za-z]", param_text):
                         # This is the next parameter - STOP immediately
                         break
-            
+
             # SECOND: Check for return value section
             elif current.name in ["h1", "h2", "h3"]:
                 section_text = current.get_text().strip().lower()
-                if any(keyword in section_text for keyword in ["return", "valor de retorno", "remarks", "observações"]):
+                if any(
+                    keyword in section_text
+                    for keyword in [
+                        "return",
+                        "valor de retorno",
+                        "remarks",
+                        "observações",
+                    ]
+                ):
                     break
-            
+
             # THIRD: Extract tables and lists
             elif current.name == "table":
                 table_data = self._parse_value_table(current)
                 if table_data and not self._is_return_value_table(table_data):
                     value_tables.append(table_data)
-            
+
             elif current.name in ["ul", "ol"]:
                 list_data = self._parse_list_items(current)
                 if list_data:
                     value_tables.append(list_data)
-            
+
             # Move to next sibling
             current = current.find_next_sibling()
-            
+
         return value_tables
-    
+
     def _is_return_value_table(self, table_data: Dict) -> bool:
         """Check if a table contains return values (like IDOK, IDCANCEL, etc.)"""
         if not table_data or not table_data.get("entries"):
             return False
-        
+
         # Check if entries contain return value patterns
-        return_value_patterns = ["ID", "IDOK", "IDCANCEL", "IDABORT", "IDRETRY", "IDYES", "IDNO"]
-        
+        return_value_patterns = [
+            "ID",
+            "IDOK",
+            "IDCANCEL",
+            "IDABORT",
+            "IDRETRY",
+            "IDYES",
+            "IDNO",
+        ]
+
         for entry in table_data["entries"]:
             value = entry.get("value", "").upper()
             if any(pattern in value for pattern in return_value_patterns):
                 return True
-        
+
         return False
 
     def _parse_list_items(self, list_element) -> Dict:
@@ -580,7 +615,7 @@ class Win32PageParser:
             list_items = list_element.find_all("li")
             if not list_items or len(list_items) < 2:
                 return None
-                
+
             entries = []
             for li in list_items:
                 item_text = li.get_text().strip()
@@ -605,18 +640,15 @@ class Win32PageParser:
                     else:
                         value = ""
                         meaning = item_text
-                        
+
                     if meaning:
                         entries.append({"value": value, "meaning": meaning})
-            
+
             if entries:
-                return {
-                    "title": "List Items",
-                    "entries": entries
-                }
+                return {"title": "List Items", "entries": entries}
         except Exception:
             pass
-        
+
         return None
 
     def _parse_value_table(self, table) -> Dict:
@@ -679,14 +711,18 @@ class Win32PageParser:
             if len(cells) > max(value_idx, meaning_idx):
                 value_cell = cells[value_idx] if value_idx < len(cells) else None
                 meaning_cell = cells[meaning_idx] if meaning_idx < len(cells) else None
-                
+
                 if value_cell and meaning_cell:
                     # Extract value with better parsing for Microsoft docs structure
                     value = self._extract_table_value(value_cell)
-                    meaning = self._clean_description_text(meaning_cell.get_text().strip())
+                    meaning = self._clean_description_text(
+                        meaning_cell.get_text().strip()
+                    )
 
                     if value and meaning:
-                        table_data["entries"].append({"value": value, "meaning": meaning})
+                        table_data["entries"].append(
+                            {"value": value, "meaning": meaning}
+                        )
 
         return table_data if table_data["entries"] else None
 
@@ -715,72 +751,72 @@ class Win32PageParser:
         # Microsoft docs often use this structure:
         # <dl><dt><b>CONSTANT_NAME</b></dt><dt>0x00000001L</dt></dl>
         # Or for return values: "IDABORT 3" or similar
-        
+
         const_name = None
         numeric_value = None
-        
+
         # Try to find the constant name in bold tags first
         bold_tags = cell.find_all(["b", "strong"])
         for bold in bold_tags:
             name = bold.get_text().strip()
-            if name and re.match(r'^[A-Z_][A-Z0-9_]*$', name):
+            if name and re.match(r"^[A-Z_][A-Z0-9_]*$", name):
                 const_name = name
                 break
-        
+
         # Look for hex values in dt elements first
         dt_elements = cell.find_all("dt")
         for dt in dt_elements:
             dt_text = dt.get_text().strip()
-            if re.match(r'0x[0-9A-Fa-f]+L?$', dt_text):
+            if re.match(r"0x[0-9A-Fa-f]+L?$", dt_text):
                 numeric_value = dt_text
                 break
             # Also check for decimal numbers (return values)
-            elif re.match(r'^\d+$', dt_text):
+            elif re.match(r"^\d+$", dt_text):
                 numeric_value = dt_text
                 break
-        
+
         # If no value in dt, search the entire cell text
         if not numeric_value:
             cell_text = cell.get_text()
             # First try hex values
-            hex_match = re.search(r'0x[0-9A-Fa-f]+L?', cell_text)
+            hex_match = re.search(r"0x[0-9A-Fa-f]+L?", cell_text)
             if hex_match:
                 numeric_value = hex_match.group()
             else:
                 # Then try decimal numbers (for return values like IDABORT 3)
-                decimal_match = re.search(r'\b(\d+)\b', cell_text)
+                decimal_match = re.search(r"\b(\d+)\b", cell_text)
                 if decimal_match:
                     numeric_value = decimal_match.group(1)
-        
+
         # If we found both constant name and numeric value, combine them
         if const_name and numeric_value:
             return f"{const_name} ({numeric_value})"
         elif const_name:
             return const_name
-        
+
         # Fallback: try to extract any constant-looking text
         cell_text = cell.get_text().strip()
-        lines = [line.strip() for line in cell_text.split('\n') if line.strip()]
-        
+        lines = [line.strip() for line in cell_text.split("\n") if line.strip()]
+
         for line in lines:
             # Look for patterns like "IDABORT 3" or "MB_OK"
-            const_match = re.match(r'^([A-Z_][A-Z0-9_]*)', line)
+            const_match = re.match(r"^([A-Z_][A-Z0-9_]*)", line)
             if const_match:
                 const_name = const_match.group(1)
-                
+
                 # Look for any numeric value in the same line or cell
-                if re.search(r'\d', cell_text):
+                if re.search(r"\d", cell_text):
                     # Try hex first
-                    hex_match = re.search(r'0x[0-9A-Fa-f]+L?', cell_text)
+                    hex_match = re.search(r"0x[0-9A-Fa-f]+L?", cell_text)
                     if hex_match:
                         return f"{const_name} ({hex_match.group()})"
                     # Then decimal
-                    decimal_match = re.search(r'\b(\d+)\b', cell_text)
+                    decimal_match = re.search(r"\b(\d+)\b", cell_text)
                     if decimal_match:
                         return f"{const_name} ({decimal_match.group(1)})"
-                
+
                 return const_name
-        
+
         # Last resort: return the first non-empty line
         return lines[0] if lines else cell_text
 
@@ -898,15 +934,17 @@ class Win32PageParser:
                 formatted_parts = [
                     f"- {part.strip()}" for part in content_parts if part.strip()
                 ]
-                
+
                 # Add tables to return description
                 if return_value_tables:
                     formatted_parts.append("\n- Valores de retorno possíveis:")
                     for table in return_value_tables:
                         for entry in table.get("entries", []):
                             # Highlight constants in blue for Rich formatting
-                            formatted_parts.append(f"  - [bold blue]{entry['value']}[/bold blue]: {entry['meaning']}")
-                
+                            formatted_parts.append(
+                                f"  - [bold blue]{entry['value']}[/bold blue]: {entry['meaning']}"
+                            )
+
                 return_desc = "\n".join(formatted_parts)
                 break
 
