@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Tuple, Optional, Union
 import sys
 import traceback
 from contextlib import contextmanager
+import logging
+logger = logging.getLogger(__name__)  
 
 from .types import FunctionSignature, TypeConverter, ArgumentParser
 
