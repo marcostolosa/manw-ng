@@ -14,6 +14,7 @@ License: MIT
 """
 
 # Suppress sklearn warnings before any other imports
+import argparse
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
@@ -76,7 +77,7 @@ Examples:
         "function_name",
         nargs="?",
         type=validate_function_name,
-        help="Nome da função Win32 para fazer scraping (ex: CreateProcessW, VirtualAlloc)",
+        help="Nome da função Windows para fazer scraping (ex: CreateProcessW, VirtualAlloc)",
     )
     parser.add_argument(
         "-l",
@@ -110,7 +111,7 @@ Examples:
         action="store_true",
         help="Mostrar tabelas de valores dos parâmetros (padrão: não mostrar)",
     )
-    parser.add_argument("--version", action="version", version="MANW-NG 3.3.0")
+    parser.add_argument("--version", action="version", version="MANW-NG 3.3.1")
 
     args = parser.parse_args()
 
