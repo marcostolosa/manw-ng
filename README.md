@@ -4,21 +4,12 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Advanced Windows API documentation discovery with AI-powered classification**
+**Windows API documentation scraping with AI-powered  + WinAPI Execution**
 
-Multi-layered Windows API documentation tool with ML classification, Microsoft Learn Search integration, and intelligent URL discovery for reverse engineers and security researchers.
+Multi-layered Windows API documentation tool with ML classification, Microsoft Learn Search integration, intelligent URL discovery, and Windows API execution engine.
 
 ![](/assets/demo.png)
 
-## System Architecture
-
-MANW-NG uses a 6-priority pipeline for comprehensive API discovery:
-
-```
-Special Cases → Smart URL → MS Learn Search → ML Fallback → Local DB → A/W Suffix
-    <1s           <3s           3-8s            8-15s         <1s       +5-10s
-   100%           85%            10%              3%            1%         1%
-```
 
 ## Installation
 
@@ -30,7 +21,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Basic Examples
+### Documentation Mode
 ```bash
 # Win32 APIs (Priority 1: <3s)
 ./manw-ng.py CreateProcessW
@@ -48,18 +39,55 @@ pip install -r requirements.txt
 # Output formats
 ./manw-ng.py VirtualAlloc -o json
 ./manw-ng.py CreateFile -o markdown
+
+# Show detailed parameter tables
+./manw-ng.py NtCreateFile -l br -t
+```
+
+### WinAPI Execution Mode
+```bash
+# Execute Windows APIs directly - ultra-simple syntax
+./manw-ng.py exec kernel32:Beep 750 300
+./manw-ng.py exec u:MessageBoxW 0 "Hello World" "MANW-NG" 0
+./manw-ng.py exec user32:FindWindowW "Notepad" 0 --ret ptr
+./manw-ng.py exec --show-error k32:GetModuleHandleW "kernel32.dll" --ret ptr
+
+# Module abbreviations supported (k=kernel32, u=user32, a32=advapi32, etc.)
+./manw-ng.py exec k:GetTickCount --ret u32
+./manw-ng.py exec u:GetCursorPos '$b:8' --ret bool
 ```
 
 ### Command Options
+
+#### Documentation Mode
 ```
-./manw-ng.py <function_name> [-l br|us] [-o rich|json|markdown] [-O] [-u USER_AGENT]
+./manw-ng.py <function_name> [-l br|us] [-o rich|json|markdown] [-O] [-t] [-u USER_AGENT]
 
 -l {br,us}               Language (default: us)
 -o {rich,json,markdown}  Output format (default: rich)  
 -O, --obs                Show remarks/observations
+-t, --tabs               Show parameter value tables (default: hidden)
 -u USER_AGENT            Custom User-Agent
 --version                Show version
 ```
+
+#### Execution Mode
+```
+./manw-ng.py exec <dll:function> [arguments...] [options]
+
+--ret TYPE               Return type (void, u32, i32, u64, i64, bool, ptr)
+--wide                   Force Wide (W) variant
+--show-error             Show GetLastError/FormatMessage
+```
+
+### Parameter Types (ultra-simplified)
+- `123` - Auto-detected integer (32 or 64-bit based on value)
+- `0x1000` - Hexadecimal values
+- `"text"` - Unicode strings (auto-detected)
+- `text` - Unicode strings (no quotes needed)
+- `$b:size` - Buffer allocation (with automatic hexdump)
+- `$s:text` - ASCII string (if needed)
+- Original winapiexec syntax still supported for compatibility
 
 ## Technical Implementation
 
@@ -110,7 +138,11 @@ manw-ng/
 │   ├── core/           # Main scraper and parser
 │   ├── ml/             # ML classification with 61k+ mappings  
 │   ├── utils/          # Smart URL generation and HTTP client
-│   └── output/         # Rich, JSON, Markdown formatters
+│   ├── output/         # Rich, JSON, Markdown formatters
+│   └── execution/      # WinAPI execution engine
+│       ├── engine.py   # Main execution engine
+│       ├── types.py    # Advanced type system
+│       └── memory.py   # Smart memory management
 ├── assets/
 │   ├── complete_function_mapping.json    # 61,603 function mappings
 │   └── winapi_categories.json           # Official API database
@@ -124,8 +156,28 @@ manw-ng/
 - [Windows SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-sdk/) - Complete development kit
 - [Original MANW Project](https://github.com/leandrofroes/manw) by [@leandrofroes](https://github.com/leandrofroes)
 
+## Execution Features
+
+### Performance Optimizations
+- **Function Caching**: Intelligent caching of resolved functions and modules
+- **Memory Management**: Advanced memory management with automatic cleanup
+- **Fast Resolution**: Sub-millisecond function resolution on subsequent calls
+
+### Security & Safety
+- **Parameter Validation**: Rigorous validation of all parameters
+- **Memory Protection**: Safe buffer allocation with bounds checking  
+- **Error Recovery**: Robust error handling and resource cleanup
+- **Thread Safety**: Safe operation in multi-threaded environments
+
+### Advanced Features
+- **A/W Auto-Resolution**: Intelligent ANSI/Wide function variant selection
+- **Module Abbreviations**: Support for winapiexec-style abbreviations
+- **Buffer Hexdump**: Automatic hexdump of output buffers
+- **GetLastError Integration**: Comprehensive error reporting
+
 ## Related Tools
 
+- [winapiexec](https://github.com/m417z/winapiexec) - Original WinAPI execution tool 
 - [API Monitor](http://www.rohitab.com/apimonitor) - Monitor API calls in real-time
 - [WinAPIOverride](http://jacquelin.potier.free.fr/winapioverride32/) - Advanced API monitoring  
 - [PEiD](https://www.aldeid.com/wiki/PEiD) - PE file analyzer with API detection

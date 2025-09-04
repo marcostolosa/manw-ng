@@ -17,6 +17,8 @@ from ..utils.smart_url_generator import SmartURLGenerator
 from ..utils.catalog_integration import get_catalog
 from ..utils.http_client import HTTPClient
 from ..ml import primary_classifier, HAS_ENHANCED
+import json
+import os
 
 
 class Win32APIScraper:
@@ -166,20 +168,67 @@ class Win32APIScraper:
                 )
             return self._create_not_found_result(function_name, [])
 
-        # PRIORITY 1: Smart URL Generation (Optimized for speed and reliability)
+        # PRIORITY 0: Direct mapping lookup (fastest)
+        direct_url = self._check_direct_mapping(function_name)
+        if direct_url:
+            try:
+                if not self.quiet:
+                    self.console.print(
+                        f"[bold green]✓[/bold green] [dim]Direct mapping:[/dim] [bold white]{function_name}[/bold white] [dim]→[/dim] [blue]{self._format_url_display(direct_url)}[/blue]"
+                    )
+                result = self._parse_function_page(direct_url)
+                if result and result.get("documentation_found"):
+                    return result
+            except Exception:
+                pass
+
+        # PRIORITY 1: Microsoft Learn Search API (official search - high reliability)
+        try:
+            if not self.quiet:
+                status = Status(
+                    f"[cyan]1/4[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
+                    console=self.console,
+                )
+                status.start()
+
+            # Search Microsoft Learn API
+            search_result = self._search_microsoft_learn(function_name)
+            if search_result:
+                if not self.quiet:
+                    status.update(
+                        f"[cyan]1/4[/cyan] Encontrado na API Microsoft Learn: [blue]{self._format_url_display(search_result)}[/blue]"
+                    )
+
+                # Parse the official Microsoft documentation
+                result = self._parse_function_page(search_result)
+                if result and result.get("documentation_found"):
+                    if not self.quiet:
+                        status.stop()
+                        self.console.print(
+                            f"[bold green]✓[/bold green] [bold white]{function_name}[/bold white] [dim]→[/dim] [blue]{self._format_url_display(search_result)}[/blue]"
+                        )
+                    return result
+
+            if not self.quiet:
+                status.stop()
+
+        except Exception:
+            pass  # Silently continue to next priority
+
+        # PRIORITY 2: Smart URL Generation (Optimized for speed and reliability)
         try:
             dll_name = getattr(self, "_current_function_dll", None)
             if not self.quiet:
                 searching_msg = self.get_string("searching_patterns")
                 with Status(
-                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {searching_msg}",
+                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/4[/cyan] {searching_msg}",
                     console=self.console,
                 ) as status:
 
                     def progress(done: int, total: int) -> None:
                         testing_msg = self.get_string("testing_urls")
                         status.update(
-                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]1/3[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
+                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/4[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
                         )
 
                     found_url = asyncio.run(
@@ -204,7 +253,7 @@ class Win32APIScraper:
                             )
                             return result
 
-                    status.update(f"[yellow]1/3[/yellow] Pattern matching completed")
+                    status.update(f"[yellow]2/4[/yellow] Pattern matching completed")
             else:
                 # Quiet mode - no status display
                 found_url = asyncio.run(
@@ -221,11 +270,11 @@ class Win32APIScraper:
         except Exception as e:
             pass  # Silently continue to next priority
 
-        # PRIORITY 2: Microsoft Learn Search API (official search)
+        # PRIORITY 3: Machine Learning Prediction (fallback)
         try:
             if not self.quiet:
                 status = Status(
-                    f"[cyan]2/4[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
+                    f"[cyan]3/4[/cyan] Testando predição ML para [bold]{function_name}[/bold]...",
                     console=self.console,
                 )
                 status.start()
@@ -264,7 +313,7 @@ class Win32APIScraper:
             if HAS_ENHANCED and primary_classifier:
                 if not self.quiet:
                     status = Status(
-                        f"[cyan]2/3[/cyan] Tentando classificação ML para [bold]{function_name}[/bold]...",
+                        f"[cyan]3/4[/cyan] Tentando classificação ML aprimorada para [bold]{function_name}[/bold]...",
                         console=self.console,
                     )
                     status.start()
@@ -697,6 +746,49 @@ class Win32APIScraper:
             # If parsing fails, return None instead of hanging
             return None
 
+    def _search_microsoft_learn(self, function_name: str) -> Optional[str]:
+        """Search Microsoft Learn API for function documentation"""
+        try:
+            import requests
+            import json
+            
+            # Microsoft Learn Search API
+            api_url = f"https://learn.microsoft.com/api/search"
+            params = {
+                'search': function_name,
+                'locale': 'pt-br' if self.language == 'br' else 'en-us',
+                'facet': 'products',
+                'filter': 'products eq \'Windows\''
+            }
+            
+            response = requests.get(api_url, params=params, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                results = data.get('results', [])
+                
+                # Look for Win32 API documentation
+                for result in results:
+                    url = result.get('url', '')
+                    title = result.get('title', '').lower()
+                    
+                    # Prioritize Win32 API documentation
+                    if ('/windows/win32/api/' in url and 
+                        function_name.lower() in title):
+                        return url
+                    
+                # Fallback: any Windows documentation mentioning the function
+                for result in results:
+                    url = result.get('url', '')
+                    title = result.get('title', '').lower()
+                    
+                    if ('/windows/' in url and function_name.lower() in title):
+                        return url
+                        
+        except Exception:
+            pass  # Silently fail and continue to next priority
+            
+        return None
+
     def _try_with_suffix(self, function_name: str, suffix: str) -> Optional[Dict]:
         """Try to find function with A or W suffix"""
         suffixed_name = function_name + suffix
@@ -736,6 +828,41 @@ class Win32APIScraper:
             if len(parts) > 1:
                 return f"api/{parts[1]}"
         return url.replace("https://learn.microsoft.com/", "")
+
+    def _check_direct_mapping(self, function_name: str) -> Optional[str]:
+        """
+        Check direct mapping file for immediate URL resolution
+        """
+        try:
+            # Load the complete function mapping
+            mapping_file = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'complete_function_mapping.json')
+            if os.path.exists(mapping_file):
+                with open(mapping_file, 'r', encoding='utf-8') as f:
+                    mapping = json.load(f)
+                
+                # First try exact match
+                if function_name in mapping:
+                    header = mapping[function_name]
+                    url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{function_name.lower()}"
+                    return url
+                
+                # If no exact match, try with W suffix (Unicode version)
+                if function_name + "W" in mapping:
+                    header = mapping[function_name + "W"]
+                    url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'w').lower()}"
+                    if not self.quiet:
+                        self.console.print(f"[dim]Redirecting to {function_name}W version[/dim]")
+                    return url
+                
+                # If no W, try with A suffix (ANSI version)
+                if function_name + "A" in mapping:
+                    header = mapping[function_name + "A"]
+                    url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'a').lower()}"
+                    return url
+                    
+        except Exception:
+            pass
+        return None
 
     # ------------------------------------------------------------------
     # Context management

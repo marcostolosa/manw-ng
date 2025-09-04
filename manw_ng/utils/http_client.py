@@ -280,7 +280,13 @@ class HTTPClient:
         """Synchronous cleanup method to be called explicitly"""
         if self._session and not self._session.closed:
             try:
-                asyncio.run(self._session.close())
+                # Create a new event loop if none exists
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                try:
+                    loop.run_until_complete(self._session.close())
+                finally:
+                    loop.close()
             except Exception:
                 pass
         self._save_cache_metadata()

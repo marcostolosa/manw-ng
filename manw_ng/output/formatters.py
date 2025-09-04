@@ -16,7 +16,7 @@ from rich.syntax import Syntax
 class RichFormatter:
     """Rich console formatter for beautiful terminal output"""
 
-    def __init__(self, language="us", show_remarks=False):
+    def __init__(self, language="us", show_remarks=False, show_parameter_tables=False):
         import sys
 
         # Configure console for maximum Windows compatibility
@@ -35,6 +35,7 @@ class RichFormatter:
         self.console = Console(**console_config)
         self.language = language
         self.show_remarks = show_remarks
+        self.show_parameter_tables = show_parameter_tables
         # Symbol classification removed - using simple classification
 
         # Elegant Unicode symbols
@@ -106,20 +107,8 @@ class RichFormatter:
             )
             return
 
-        # Get symbol classification info
-        symbol_info = function_info.get("symbol_info")
-        if symbol_info:
-            # Simple display info without classifier
-            display_info = {
-                "header_title": symbol_info.get("surface", "Win32 API"),
-                "header_file": symbol_info.get("header", "unknown"),
-                "function_type": symbol_info.get("kind", "function"),
-                "type_display": f"{symbol_info.get('kind', 'function').title()} {symbol_info.get('surface', 'Win32 API')}",
-            }
-            symbol_title = display_info["type_display"]
-        else:
-            # Fallback para compatibilidade
-            symbol_title = self.get_string("win32_function")
+        # Always use localized string for title
+        symbol_title = self.get_string("win32_function")
 
         # Extract symbol name and header from the full name
         full_name = function_info["name"]
@@ -320,15 +309,9 @@ class RichFormatter:
             )
             description = param["description"] or no_description
 
-            # Add value tables with Monokai colors
+            # Add value tables as structured tables
             if "values" in param and param["values"]:
-                description += "\n\n"
-                for value_table in param["values"]:
-                    description += f"[bold #A6E22E]{value_table.get('title', 'Values')}:[/bold #A6E22E]\n"
-                    for entry in value_table.get("entries", []):
-                        # Use Monokai colors
-                        description += f"• [#66D9EF]{entry['value']}[/#66D9EF]: [#F8F8F2]{entry['meaning']}[/#F8F8F2]\n"
-                    description += "\n"
+                description += f"\n\n[bold yellow]Tabelas de valores ({len(param['values'])} tabelas encontradas):[/bold yellow]"
 
             param_table.add_row(
                 param["name"],
@@ -337,6 +320,12 @@ class RichFormatter:
             )
 
         self.console.print(param_table)
+        
+        # Render value tables for parameters that have them (only if --tabs flag is set)
+        if self.show_parameter_tables:
+            for param in function_info["parameters"]:
+                if "values" in param and param["values"]:
+                    self._render_parameter_value_tables(param)
 
     def _render_members_table(self, function_info: Dict) -> None:
         """Renderiza tabela de membros para estruturas"""
@@ -377,14 +366,50 @@ class RichFormatter:
 
         self.console.print(member_table)
 
+    def _render_parameter_value_tables(self, param: Dict) -> None:
+        """Render value tables for a parameter"""
+        param_name = param.get("name", "Unknown")
+        value_tables = param.get("values", [])
+        
+        for i, value_table in enumerate(value_tables):
+            entries = value_table.get("entries", [])
+            if not entries:
+                continue
+                
+            # Create table for this value set
+            table = Table(
+                title=f"[bold blue]» {param_name} - Tabela {i+1}[/bold blue]",
+                expand=True,
+                show_lines=True,
+                border_style="#66D9EF",
+                show_header=True,
+            )
+            table.add_column("Valor", style="#AE81FF bold", min_width=20, max_width=40)
+            table.add_column("Significado", style="#F8F8F2", no_wrap=False, overflow="fold")
+            
+            # Add entries to table
+            for entry in entries:
+                value = entry.get("value", "").strip()
+                meaning = entry.get("meaning", "").strip()
+                
+                if value and meaning:
+                    table.add_row(
+                        f"[bold blue]{value}[/bold blue]",
+                        meaning
+                    )
+            
+            # Print the table
+            self.console.print()
+            self.console.print(table)
+
     def _render_return_value(self, function_info: Dict) -> None:
         """Renderiza seção de valor de retorno para funções"""
         if function_info["return_description"]:
-            # Se contém markdown bullets (linhas começando com "- "), renderizar como markdown
+            # Se contém markdown bullets (linhas começando com "- "), renderizar como texto com Rich markup
             if function_info["return_description"].strip().startswith("- "):
                 self.console.print(
                     Panel(
-                        Markdown(function_info["return_description"]),
+                        function_info["return_description"],  # Rich will handle the markup
                         title=f"[bold #F92672]» {self.get_string('return_value')}[/bold #F92672]",
                         border_style="#75715E",
                         padding=(1, 2),
@@ -551,7 +576,7 @@ class JSONFormatter:
     """JSON formatter for machine-readable output"""
 
     @staticmethod
-    def format_output(function_info: Dict, show_remarks: bool = False) -> str:
+    def format_output(function_info: Dict, show_remarks: bool = False, show_parameter_tables: bool = False) -> str:
         """Format function information as JSON"""
         # Convert SymbolInfo objects to dict for JSON serialization
         json_compatible = JSONFormatter._make_json_serializable(function_info)
@@ -591,7 +616,7 @@ class MarkdownFormatter:
 
     @staticmethod
     def format_output(
-        function_info: Dict, language: str = "br", show_remarks: bool = False
+        function_info: Dict, language: str = "br", show_remarks: bool = False, show_parameter_tables: bool = False
     ) -> str:
         """Format function information as Markdown"""
 
