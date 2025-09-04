@@ -13,7 +13,8 @@ import sys
 import traceback
 from contextlib import contextmanager
 import logging
-logger = logging.getLogger(__name__)  
+
+logger = logging.getLogger(__name__)
 
 from .types import FunctionSignature, TypeConverter, ArgumentParser
 
