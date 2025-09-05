@@ -727,7 +727,7 @@ class Win32PageParser:
         return table_data if table_data["entries"] else None
 
     def _get_table_title(self, table) -> str:
-        """Get title for a table by looking at preceding elements"""
+        """Get title for a table by looking at preceding elements and content"""
         # Look for preceding heading or caption
         prev_elem = table.find_previous(["h1", "h2", "h3", "h4", "h5", "h6", "caption"])
         if prev_elem and prev_elem.name == "caption":
@@ -742,9 +742,51 @@ class Win32PageParser:
 
             # If only a few elements between heading and table, use the heading
             if len(siblings_between) <= 3:
-                return prev_elem.get_text().strip()
+                title = prev_elem.get_text().strip()
+                if title and len(title) < 100:
+                    return title
 
-        return "Values"
+        # Look for paragraph before table that might describe it
+        prev_p = table.find_previous("p")
+        if prev_p:
+            p_text = prev_p.get_text().strip()
+            # Look for descriptive phrases that indicate table category
+            if "botões" in p_text.lower() or "buttons" in p_text.lower():
+                return "Botões"
+            elif "ícone" in p_text.lower() or "icon" in p_text.lower():
+                return "Ícones"
+            elif "padrão" in p_text.lower() or "default" in p_text.lower():
+                return "Botão Padrão"
+            elif "modal" in p_text.lower():
+                return "Modalidade"
+            elif "opções" in p_text.lower() or "options" in p_text.lower():
+                return "Opções Adicionais"
+
+        # Analyze table content to categorize
+        rows = table.find_all("tr")
+        if len(rows) > 1:
+            # Get first few values to determine category
+            first_values = []
+            for row in rows[1:3]:  # Check first 2 data rows
+                cells = row.find_all(["td", "th"])
+                if cells:
+                    value_text = cells[0].get_text().strip().upper()
+                    first_values.append(value_text)
+            
+            # Categorize based on common patterns in Microsoft docs
+            value_str = " ".join(first_values)
+            if any(btn in value_str for btn in ["MB_OK", "MB_YESNO", "MB_CANCEL", "ABORT", "RETRY"]):
+                return "Botões"
+            elif any(icon in value_str for icon in ["MB_ICON", "INFORMATION", "WARNING", "ERROR", "QUESTION"]):
+                return "Ícones"
+            elif any(def_btn in value_str for def_btn in ["MB_DEFBUTTON", "DEFBUTTON"]):
+                return "Botão Padrão"
+            elif any(modal in value_str for modal in ["MB_APPLMODAL", "MB_SYSTEMMODAL", "MB_TASKMODAL"]):
+                return "Modalidade"
+            elif any(opt in value_str for opt in ["MB_TOPMOST", "MB_RIGHT", "MB_SETFOREGROUND"]):
+                return "Opções Adicionais"
+
+        return "Valores"
 
     def _extract_table_value(self, cell) -> str:
         """Extract constant value from Microsoft docs table cell structure"""
