@@ -45,10 +45,10 @@ if sys.platform.startswith("win"):
 
 
 def validate_function_name(value: str) -> str:
-    pattern = r"^[A-Za-z0-9_]+$"
+    pattern = r"^[A-Za-z0-9_\-]+$"
     if not re.match(pattern, value):
         raise argparse.ArgumentTypeError(
-            "function name must contain only letters, numbers or underscores"
+            "function name must contain only letters, numbers, underscores or hyphens"
         )
     return value
 

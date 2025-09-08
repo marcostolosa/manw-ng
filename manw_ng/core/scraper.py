@@ -168,7 +168,42 @@ class Win32APIScraper:
                 )
             return self._create_not_found_result(function_name, [])
 
-        # PRIORITY 0: Direct mapping lookup (fastest)
+        # PRIORITY 0: Microsoft Learn Search API (official search - highest reliability)
+        try:
+            if not self.quiet:
+                status = Status(
+                    f"[cyan]0/4[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
+                    console=self.console,
+                )
+                status.start()
+
+            # Search Microsoft Learn API FIRST
+            search_result = self._search_microsoft_learn(function_name)
+            if search_result:
+                if not self.quiet:
+                    status.update(
+                        f"[cyan]0/4[/cyan] Encontrado na API Microsoft Learn: [blue]{self._format_url_display(search_result)}[/blue]"
+                    )
+
+                # Parse the official Microsoft documentation
+                result = self._parse_function_page(search_result)
+                if result and result.get("documentation_found"):
+                    if not self.quiet:
+                        status.stop()
+                        self.console.print(
+                            f"[bold green]✓[/bold green] [bold white]{function_name}[/bold white] [dim]→[/dim] [blue]{self._format_url_display(search_result)}[/blue]"
+                        )
+                    return result
+
+            if not self.quiet:
+                status.stop()
+
+        except Exception:
+            if not self.quiet and 'status' in locals():
+                status.stop()
+            pass
+
+        # PRIORITY 1: Direct mapping lookup (fallback for offline/fast access)
         direct_url = self._check_direct_mapping(function_name)
         if direct_url:
             try:
@@ -182,7 +217,7 @@ class Win32APIScraper:
             except Exception:
                 pass
 
-        # PRIORITY 1: Microsoft Learn Search API (official search - high reliability)
+        # PRIORITY 2: Advanced pattern matching and discovery
         try:
             if not self.quiet:
                 status = Status(
@@ -613,27 +648,82 @@ class Win32APIScraper:
                 # Filter for official documentation (not Q&A)
                 docs = [r for r in results if r.get("category") == "Documentation"]
 
-                # Look for Win32 API documentation specifically
+                # Look for ALL Windows API documentation types
                 for doc in docs:
                     url = doc.get("url", "")
                     title = doc.get("title", "").lower()
+                    function_lower = function_name.lower()
 
-                    # Prioritize Win32 API documentation
-                    if "windows/win32/api/" in url and function_name.lower() in title:
+                    # PRIORITY 1: Win32 API documentation
+                    if "windows/win32/api/" in url and function_lower in title:
                         return url
 
-                    # Also accept C runtime documentation for functions like memcpy
-                    if (
-                        "cpp/c-runtime-library/" in url
-                        and function_name.lower() in title
-                    ):
+                    # PRIORITY 2: Windows Driver Model documentation (Nt/Rtl functions)
+                    if "windows-hardware/drivers/ddi/" in url and function_lower in title:
                         return url
 
-                # Fallback: any official documentation mentioning the function
+                    # PRIORITY 3: COM/OLE API documentation
+                    if "windows/win32/api/combaseapi/" in url and function_lower in title:
+                        return url
+                    if "windows/win32/api/objbase/" in url and function_lower in title:
+                        return url
+                    if "windows/win32/api/ole2/" in url and function_lower in title:
+                        return url
+
+                    # PRIORITY 4: DirectX and Graphics APIs
+                    if "windows/win32/api/d3d" in url and function_lower in title:
+                        return url
+                    if "windows/win32/api/dxgi" in url and function_lower in title:
+                        return url
+                    if "windows/win32/direct3d" in url and function_lower in title:
+                        return url
+                    if "windows/win32/directx" in url and function_lower in title:
+                        return url
+
+                    # PRIORITY 5: Windows Runtime (WinRT) APIs
+                    if "windows/winrt/" in url and function_lower in title:
+                        return url
+                    if "uwp/api/" in url and function_lower in title:
+                        return url
+
+                    # PRIORITY 6: C/C++ Runtime documentation
+                    if "cpp/c-runtime-library/" in url and function_lower in title:
+                        return url
+                    if "cpp/standard-library/" in url and function_lower in title:
+                        return url
+
+                    # PRIORITY 7: PowerShell and .NET Core APIs
+                    if "powershell/" in url and function_lower in title:
+                        return url
+                    if "dotnet/api/" in url and function_lower in title:
+                        return url
+
+                    # PRIORITY 8: Windows Developer Notes and Internal APIs
+                    if "windows/win32/devnotes/" in url and function_lower in title:
+                        return url
+
+                    # PRIORITY 9: Windows Kit and SDK APIs
+                    if "windows-hardware/customize/" in url and function_lower in title:
+                        return url
+                    if "windows-hardware/manufacture/" in url and function_lower in title:
+                        return url
+
+                # COMPREHENSIVE FALLBACK: any Windows-related documentation
                 for doc in docs:
+                    url = doc.get("url", "")
                     title = doc.get("title", "").lower()
-                    if function_name.lower() in title and "function" in title:
-                        return doc.get("url", "")
+                    function_lower = function_name.lower()
+                    
+                    # Any Windows documentation containing the function name
+                    if function_lower in title and any(pattern in url for pattern in [
+                        "/windows/", "/dotnet/", "/cpp/", "/powershell/", "/uwp/",
+                        "/windows-hardware/", "/azure/", "/sql/", "/office/"
+                    ]):
+                        return url
+                    
+                    # Final fallback: any documentation with "function" keyword
+                    if function_lower in title and "function" in title:
+                        return url
 
         except Exception as e:
             # Silently fail - this is a fallback method
@@ -766,21 +856,59 @@ class Win32APIScraper:
                 data = response.json()
                 results = data.get("results", [])
 
-                # Look for Win32 API documentation
+                # Look for ALL Windows API documentation
                 for result in results:
                     url = result.get("url", "")
                     title = result.get("title", "").lower()
+                    function_lower = function_name.lower()
 
-                    # Prioritize Win32 API documentation
-                    if "/windows/win32/api/" in url and function_name.lower() in title:
+                    # PRIORITY 1: Win32 API documentation
+                    if "/windows/win32/api/" in url and function_lower in title:
+                        return url
+                    
+                    # PRIORITY 2: Windows Driver Model documentation
+                    if "/windows-hardware/drivers/ddi/" in url and function_lower in title:
+                        return url
+                    
+                    # PRIORITY 3: DirectX and Graphics APIs
+                    if any(pattern in url for pattern in ["/windows/win32/direct3d", "/windows/win32/directx", "/windows/win32/api/d3d", "/windows/win32/api/dxgi"]) and function_lower in title:
+                        return url
+                    
+                    # PRIORITY 4: Windows Runtime APIs
+                    if any(pattern in url for pattern in ["/windows/winrt/", "/uwp/api/"]) and function_lower in title:
+                        return url
+                    
+                    # PRIORITY 5: COM/OLE APIs
+                    if any(pattern in url for pattern in ["/windows/win32/api/combaseapi", "/windows/win32/api/objbase", "/windows/win32/api/ole2"]) and function_lower in title:
+                        return url
+                    
+                    # PRIORITY 6: C/C++ Runtime
+                    if any(pattern in url for pattern in ["/cpp/c-runtime-library/", "/cpp/standard-library/"]) and function_lower in title:
+                        return url
+                    
+                    # PRIORITY 7: PowerShell and .NET
+                    if any(pattern in url for pattern in ["/powershell/", "/dotnet/api/"]) and function_lower in title:
+                        return url
+                    
+                    # PRIORITY 8: Developer Notes
+                    if "/windows/win32/devnotes/" in url and function_lower in title:
                         return url
 
-                # Fallback: any Windows documentation mentioning the function
+                # COMPREHENSIVE FALLBACK: any Microsoft documentation mentioning the function
                 for result in results:
                     url = result.get("url", "")
                     title = result.get("title", "").lower()
+                    function_lower = function_name.lower()
 
-                    if "/windows/" in url and function_name.lower() in title:
+                    # Any Microsoft/Windows documentation containing the function
+                    if function_lower in title and any(pattern in url for pattern in [
+                        "/windows/", "/dotnet/", "/cpp/", "/powershell/", "/uwp/",
+                        "/windows-hardware/", "/azure/", "/sql/", "/office/", "/xamarin/"
+                    ]):
+                        return url
+                    
+                    # Super broad fallback: any learn.microsoft.com documentation
+                    if function_lower in title and "learn.microsoft.com" in url:
                         return url
 
         except Exception:
