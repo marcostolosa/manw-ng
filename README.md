@@ -15,7 +15,7 @@ Multi-layered Windows API documentation tool with ML classification, Microsoft L
 ```bash
 git clone https://github.com/marcostolosa/manw-ng.git
 cd manw-ng
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ## Usage
