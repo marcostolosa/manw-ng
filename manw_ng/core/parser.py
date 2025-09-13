@@ -181,8 +181,36 @@ class Win32PageParser:
         return "FunçãoDesconhecida"
 
     def _extract_dll(self, soup: BeautifulSoup) -> str:
-        """Extract DLL name"""
-        dll_patterns = [r"(\w+\.dll)", r"Library:\s*(\w+\.dll)", r"DLL:\s*(\w+\.dll)"]
+        """Extract DLL name - prioritize Requirements section"""
+
+        # First, look for Requirements/Requisitos section
+        requirements_headers = soup.find_all(
+            ["h2", "h3", "h4", "strong", "b"],
+            string=re.compile(r"Requirements?|Requisitos?", re.IGNORECASE)
+        )
+
+        for header in requirements_headers:
+            # Get the next elements after Requirements header
+            next_elem = header.find_next_sibling()
+            while next_elem and next_elem.name not in ["h1", "h2", "h3", "h4"]:
+                text = next_elem.get_text()
+                # Look for Library/DLL specifically
+                dll_match = re.search(r"(?:Library|DLL):\s*([A-Za-z0-9]+\.(?:dll|exe))", text, re.IGNORECASE)
+                if dll_match:
+                    return dll_match.group(1)
+                next_elem = next_elem.find_next_sibling()
+
+        # Fallback: look for any table that might contain requirements
+        tables = soup.find_all("table")
+        for table in tables:
+            table_text = table.get_text()
+            if re.search(r"(?:Library|DLL|Minimum)", table_text, re.IGNORECASE):
+                dll_match = re.search(r"([A-Za-z0-9]+\.(?:dll|exe))", table_text, re.IGNORECASE)
+                if dll_match:
+                    return dll_match.group(1)
+
+        # Final fallback: general DLL patterns in page
+        dll_patterns = [r"Library:\s*([A-Za-z0-9]+\.(?:dll|exe))", r"DLL:\s*([A-Za-z0-9]+\.(?:dll|exe))", r"([A-Za-z0-9]+\.dll)"]
         text = soup.get_text()
 
         for pattern in dll_patterns:
@@ -661,8 +689,8 @@ class Win32PageParser:
         header_texts = [h.get_text().strip().lower() for h in headers[:3]]
 
         # Look for common value table patterns
-        value_patterns = ["value", "valor", "flag", "constant", "constante"]
-        meaning_patterns = ["meaning", "significado", "description", "descrição"]
+        value_patterns = ["value", "valor", "flag", "constant", "constante", "code", "código", "status", "return"]
+        meaning_patterns = ["meaning", "significado", "description", "descrição", "descrição"]
 
         has_value_col = any(
             pattern in " ".join(header_texts) for pattern in value_patterns

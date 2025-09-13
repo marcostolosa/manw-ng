@@ -170,6 +170,7 @@ class Win32APIScraper:
 
         # PRIORITY 0: Microsoft Learn Search API (official search - highest reliability)
         try:
+            # Start status IMMEDIATELY before any network calls
             if not self.quiet:
                 status = Status(
                     f"[cyan]0/4[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
@@ -203,21 +204,7 @@ class Win32APIScraper:
                 status.stop()
             pass
 
-        # PRIORITY 1: Direct mapping lookup (fallback for offline/fast access)
-        direct_url = self._check_direct_mapping(function_name)
-        if direct_url:
-            try:
-                if not self.quiet:
-                    self.console.print(
-                        f"[bold green]✓[/bold green] [dim]Direct mapping:[/dim] [bold white]{function_name}[/bold white] [dim]→[/dim] [blue]{self._format_url_display(direct_url)}[/blue]"
-                    )
-                result = self._parse_function_page(direct_url)
-                if result and result.get("documentation_found"):
-                    return result
-            except Exception:
-                pass
-
-        # PRIORITY 2: Advanced pattern matching and discovery
+        # PRIORITY 1: Advanced pattern matching and discovery
         try:
             if not self.quiet:
                 status = Status(
@@ -460,6 +447,20 @@ class Win32APIScraper:
                         return result
         except Exception as e:
             pass
+
+        # PRIORITY 5: Direct mapping lookup (JSON fallback for offline/fast access)
+        direct_url = self._check_direct_mapping(function_name)
+        if direct_url:
+            try:
+                if not self.quiet:
+                    self.console.print(
+                        f"[bold yellow]⚠[/bold yellow] [dim]JSON fallback:[/dim] [bold white]{function_name}[/bold white] [dim]→[/dim] [blue]{self._format_url_display(direct_url)}[/blue]"
+                    )
+                result = self._parse_function_page(direct_url)
+                if result and result.get("documentation_found"):
+                    return result
+            except Exception:
+                pass
 
         # FINAL: Handle A/W suffix variations before giving up
         if not function_name.endswith(("A", "W")):
