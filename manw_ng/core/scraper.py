@@ -5,6 +5,7 @@ Main scraper class that orchestrates the discovery and parsing process.
 """
 
 from typing import Dict, Optional, List
+from urllib.parse import urlparse
 import random
 import time
 import asyncio
@@ -909,7 +910,8 @@ class Win32APIScraper:
                         return url
                     
                     # Super broad fallback: any learn.microsoft.com documentation
-                    if function_lower in title and "learn.microsoft.com" in url:
+                    host = urlparse(url).hostname
+                    if function_lower in title and host and (host == "learn.microsoft.com" or host.endswith(".learn.microsoft.com")):
                         return url
 
         except Exception:
