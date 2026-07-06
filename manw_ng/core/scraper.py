@@ -88,6 +88,7 @@ class Win32APIScraper:
                 "catalog_lookup": "Consulting internal catalog",
                 "direct_mapping": "Direct URL resolution",
                 "not_found": "API not found in Microsoft documentation",
+                "function_not_found": "Function '{function_name}' not found in Microsoft documentation",
                 "scanning": "Scanning",
                 "resolving": "Resolving",
             },
@@ -101,6 +102,7 @@ class Win32APIScraper:
                 "catalog_lookup": "Consultando catálogo interno",
                 "direct_mapping": "Resolução direta de URL",
                 "not_found": "API não encontrada na documentação Microsoft",
+                "function_not_found": "Função '{function_name}' não encontrada na documentação Microsoft",
                 "scanning": "Escaneando",
                 "resolving": "Resolvendo",
             },
@@ -168,22 +170,21 @@ class Win32APIScraper:
                 )
             return self._create_not_found_result(function_name, [])
 
-        # PRIORITY 0: Microsoft Learn Search API (official search - highest reliability)
+        # STEP 1/5: Microsoft Learn Search API (official search - highest reliability)
         try:
             # Start status IMMEDIATELY before any network calls
             if not self.quiet:
                 status = Status(
-                    f"[cyan]0/4[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
+                    f"[cyan]1/5[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
                     console=self.console,
                 )
                 status.start()
 
-            # Search Microsoft Learn API FIRST
             search_result = self._search_microsoft_learn(function_name)
             if search_result:
                 if not self.quiet:
                     status.update(
-                        f"[cyan]0/4[/cyan] Encontrado na API Microsoft Learn: [blue]{self._format_url_display(search_result)}[/blue]"
+                        f"[cyan]1/5[/cyan] Encontrado na API Microsoft Learn: [blue]{self._format_url_display(search_result)}[/blue]"
                     )
 
                 # Parse the official Microsoft documentation
@@ -200,57 +201,23 @@ class Win32APIScraper:
                 status.stop()
 
         except Exception:
-            if not self.quiet and 'status' in locals():
-                status.stop()
-            pass
-
-        # PRIORITY 1: Advanced pattern matching and discovery
-        try:
-            if not self.quiet:
-                status = Status(
-                    f"[cyan]1/4[/cyan] Pesquisando na API oficial Microsoft Learn para [bold]{function_name}[/bold]...",
-                    console=self.console,
-                )
-                status.start()
-
-            # Search Microsoft Learn API
-            search_result = self._search_microsoft_learn(function_name)
-            if search_result:
-                if not self.quiet:
-                    status.update(
-                        f"[cyan]1/4[/cyan] Encontrado na API Microsoft Learn: [blue]{self._format_url_display(search_result)}[/blue]"
-                    )
-
-                # Parse the official Microsoft documentation
-                result = self._parse_function_page(search_result)
-                if result and result.get("documentation_found"):
-                    if not self.quiet:
-                        status.stop()
-                        self.console.print(
-                            f"[bold green]✓[/bold green] [bold white]{function_name}[/bold white] [dim]→[/dim] [blue]{self._format_url_display(search_result)}[/blue]"
-                        )
-                    return result
-
-            if not self.quiet:
+            if not self.quiet and "status" in locals():
                 status.stop()
 
-        except Exception:
-            pass  # Silently continue to next priority
-
-        # PRIORITY 2: Smart URL Generation (Optimized for speed and reliability)
+        # STEP 2/5: Smart URL Generation (pattern-based discovery + validation)
         try:
             dll_name = getattr(self, "_current_function_dll", None)
             if not self.quiet:
                 searching_msg = self.get_string("searching_patterns")
                 with Status(
-                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/4[/cyan] {searching_msg}",
+                    f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/5[/cyan] {searching_msg}",
                     console=self.console,
                 ) as status:
 
                     def progress(done: int, total: int) -> None:
                         testing_msg = self.get_string("testing_urls")
                         status.update(
-                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/4[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
+                            f"[bold blue]→[/bold blue] [bold white]{function_name}[/bold white] [dim]({self.language})[/dim] [cyan]│[/cyan] [cyan]2/5[/cyan] {testing_msg} [yellow]{done}/{total}[/yellow]"
                         )
 
                     found_url = asyncio.run(
@@ -275,7 +242,7 @@ class Win32APIScraper:
                             )
                             return result
 
-                    status.update(f"[yellow]2/4[/yellow] Pattern matching completed")
+                    status.update(f"[yellow]2/5[/yellow] Pattern matching completed")
             else:
                 # Quiet mode - no status display
                 found_url = asyncio.run(
@@ -289,45 +256,10 @@ class Win32APIScraper:
                     if result and result.get("documentation_found"):
                         return result
 
-        except Exception as e:
+        except Exception:
             pass  # Silently continue to next priority
 
-        # PRIORITY 3: Machine Learning Prediction (fallback)
-        try:
-            if not self.quiet:
-                status = Status(
-                    f"[cyan]3/4[/cyan] Testando predição ML para [bold]{function_name}[/bold]...",
-                    console=self.console,
-                )
-                status.start()
-
-            # Search Microsoft Learn API
-            search_result = self._search_microsoft_learn(function_name)
-            if search_result:
-                if not self.quiet:
-                    status.update(
-                        f"[cyan]2/4[/cyan] Encontrado na API Microsoft Learn: [blue]{self._format_url_display(search_result)}[/blue]"
-                    )
-
-                # Parse the official Microsoft documentation
-                result = self._parse_function_page(search_result)
-                if result and result.get("documentation_found"):
-                    if not self.quiet:
-                        status.stop()
-                        self.console.print(
-                            f"[green]✓[/green] [bold]{function_name}[/bold] [dim]→[/dim] [green]Microsoft Learn API[/green]"
-                        )
-                    return result
-
-            if not self.quiet:
-                status.stop()
-
-        except Exception as e:
-            if not self.quiet and "status" in locals():
-                status.stop()
-            pass  # Continue to next priority
-
-        # PRIORITY 3: Enhanced ML Classification (fallback for complex cases)
+        # STEP 3/5: Enhanced ML Classification (heuristic header-prediction fallback)
         try:
             dll_name = getattr(self, "_current_function_dll", None)
 
@@ -335,7 +267,7 @@ class Win32APIScraper:
             if HAS_ENHANCED and primary_classifier:
                 if not self.quiet:
                     status = Status(
-                        f"[cyan]3/4[/cyan] Tentando classificação ML aprimorada para [bold]{function_name}[/bold]...",
+                        f"[cyan]3/5[/cyan] Tentando classificação ML aprimorada para [bold]{function_name}[/bold]...",
                         console=self.console,
                     )
                     status.start()
@@ -361,7 +293,7 @@ class Win32APIScraper:
 
                         if not self.quiet:
                             status.update(
-                                f"[cyan]2/3[/cyan] Testando predição ML: [blue]{header}[/blue] ({confidence:.2f})"
+                                f"[cyan]3/5[/cyan] Testando predição ML: [blue]{header}[/blue] ({confidence:.2f})"
                             )
 
                         # Test the ML-predicted URL
@@ -379,14 +311,14 @@ class Win32APIScraper:
                 finally:
                     if not self.quiet:
                         status.stop()
-        except Exception as e:
+        except Exception:
             pass
 
-        # PRIORITY 4: Try catalog lookup (backup)
+        # STEP 4/5: Internal catalog lookup (curated backup dataset)
         try:
             if not self.quiet:
                 with Status(
-                    f"[cyan]4/4[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
+                    f"[cyan]4/5[/cyan] Verificando catálogo para [bold]{function_name}[/bold]...",
                     console=self.console,
                 ) as status:
                     catalog_url = self.catalog.get_function_url(
@@ -394,7 +326,7 @@ class Win32APIScraper:
                     )
                     if catalog_url:
                         status.update(
-                            f"[cyan]4/4[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
+                            f"[cyan]4/5[/cyan] Testando URL do catálogo: [blue]{self._format_url_display(catalog_url)}[/blue]"
                         )
                         result = self._parse_function_page(catalog_url)
                         if result:
@@ -404,7 +336,7 @@ class Win32APIScraper:
                             )
                             return result
                         status.update(
-                            f"[yellow]4/4[/yellow] Catálogo não retornou resultado válido"
+                            f"[yellow]4/5[/yellow] Catálogo não retornou resultado válido"
                         )
             else:
                 # Quiet mode
@@ -415,40 +347,10 @@ class Win32APIScraper:
                     result = self._parse_function_page(catalog_url)
                     if result:
                         return result
-        except Exception as e:
+        except Exception:
             pass
 
-        # PRIORITY 4: Use direct mapping (final backup) - Currently not implemented
-        try:
-            direct_url = self._try_direct_url(function_name)
-            if direct_url:
-                if not self.quiet:
-                    with Status(
-                        f"[cyan]4/4[/cyan] Testando mapeamento direto para [bold]{function_name}[/bold]...",
-                        console=self.console,
-                    ) as status:
-                        status.update(
-                            f"[cyan]4/4[/cyan] Testando URL direto: [blue]{self._format_url_display(direct_url)}[/blue]"
-                        )
-                        result = self._parse_function_page(direct_url)
-                        if result:
-                            status.stop()
-                            self.console.print(
-                                f"[green]{self.check_mark}[/green] [bold]{function_name}[/bold] {self.arrow} [green]{self._format_url_display(direct_url)}[/green]"
-                            )
-                            return result
-                        status.update(
-                            f"[yellow]4/4[/yellow] Mapeamento direto não funcionou"
-                        )
-                else:
-                    # Quiet mode
-                    result = self._parse_function_page(direct_url)
-                    if result:
-                        return result
-        except Exception as e:
-            pass
-
-        # PRIORITY 5: Direct mapping lookup (JSON fallback for offline/fast access)
+        # STEP 5/5: Direct mapping lookup (JSON fallback for offline/fast access)
         direct_url = self._check_direct_mapping(function_name)
         if direct_url:
             try:
@@ -619,119 +521,6 @@ class Win32APIScraper:
 
         return None
 
-    def _search_microsoft_learn(self, function_name: str) -> Optional[str]:
-        """Search Microsoft Learn API for official documentation"""
-        try:
-            import requests
-
-            # Microsoft Learn Search API
-            search_url = "https://learn.microsoft.com/api/search"
-            params = {
-                "locale": "en-us" if self.language == "us" else "pt-br",
-                "search": function_name,  # Simple search works better
-                "$top": 5,
-            }
-
-            headers = {
-                "User-Agent": self.http_client.session.headers.get(
-                    "User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                )
-            }
-
-            response = requests.get(
-                search_url, params=params, headers=headers, timeout=10
-            )
-            if response.status_code == 200:
-                data = response.json()
-                results = data.get("results", [])
-
-                # Filter for official documentation (not Q&A)
-                docs = [r for r in results if r.get("category") == "Documentation"]
-
-                # Look for ALL Windows API documentation types
-                for doc in docs:
-                    url = doc.get("url", "")
-                    title = doc.get("title", "").lower()
-                    function_lower = function_name.lower()
-
-                    # PRIORITY 1: Win32 API documentation
-                    if "windows/win32/api/" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 2: Windows Driver Model documentation (Nt/Rtl functions)
-                    if "windows-hardware/drivers/ddi/" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 3: COM/OLE API documentation
-                    if "windows/win32/api/combaseapi/" in url and function_lower in title:
-                        return url
-                    if "windows/win32/api/objbase/" in url and function_lower in title:
-                        return url
-                    if "windows/win32/api/ole2/" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 4: DirectX and Graphics APIs
-                    if "windows/win32/api/d3d" in url and function_lower in title:
-                        return url
-                    if "windows/win32/api/dxgi" in url and function_lower in title:
-                        return url
-                    if "windows/win32/direct3d" in url and function_lower in title:
-                        return url
-                    if "windows/win32/directx" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 5: Windows Runtime (WinRT) APIs
-                    if "windows/winrt/" in url and function_lower in title:
-                        return url
-                    if "uwp/api/" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 6: C/C++ Runtime documentation
-                    if "cpp/c-runtime-library/" in url and function_lower in title:
-                        return url
-                    if "cpp/standard-library/" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 7: PowerShell and .NET Core APIs
-                    if "powershell/" in url and function_lower in title:
-                        return url
-                    if "dotnet/api/" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 8: Windows Developer Notes and Internal APIs
-                    if "windows/win32/devnotes/" in url and function_lower in title:
-                        return url
-
-                    # PRIORITY 9: Windows Kit and SDK APIs
-                    if "windows-hardware/customize/" in url and function_lower in title:
-                        return url
-                    if "windows-hardware/manufacture/" in url and function_lower in title:
-                        return url
-
-                # COMPREHENSIVE FALLBACK: any Windows-related documentation
-                for doc in docs:
-                    url = doc.get("url", "")
-                    title = doc.get("title", "").lower()
-                    function_lower = function_name.lower()
-                    
-                    # Any Windows documentation containing the function name
-                    if function_lower in title and any(pattern in url for pattern in [
-                        "/windows/", "/dotnet/", "/cpp/", "/powershell/", "/uwp/",
-                        "/windows-hardware/", "/azure/", "/sql/", "/office/"
-                    ]):
-                        return url
-                    
-                    # Final fallback: any documentation with "function" keyword
-                    if function_lower in title and "function" in title:
-                        return url
-
-        except Exception as e:
-            # Silently fail - this is a fallback method
-            pass
-
-        return None
-
     def _is_likely_undocumented_api(self, function_name: str) -> bool:
         """Detecta se uma API é provavelmente não documentada (para falha rápida)"""
         # APIs Native conhecidas como realmente não documentadas (verificadas individualmente)
@@ -772,17 +561,6 @@ class Win32APIScraper:
             "return_description": None,
             "description": None,
         }
-
-    def _try_direct_url(self, function_name: str) -> Optional[str]:
-        """
-        Try direct URL mapping for known functions (fastest path)
-        """
-        # Try complete Win32 API mapping without network requests for speed
-        # Use smart generator for all URL generation now
-        direct_url = None
-        if direct_url:
-            return direct_url
-        return None
 
     def _parse_function_page(self, url: str, status: Optional[Status] = None) -> Dict:
         """
@@ -921,17 +699,6 @@ class Win32APIScraper:
         """Try to find function with A or W suffix"""
         suffixed_name = function_name + suffix
 
-        # Try direct URL first
-        direct_url = self._try_direct_url(suffixed_name)
-        if direct_url:
-            result = self._parse_function_page(direct_url)
-            if result:
-                if not self.quiet:
-                    self.console.print(
-                        f"[green]{self.check_mark} Found with '{suffix}' suffix:[/green] [dim]{self._format_url_display(direct_url)}[/dim]"
-                    )
-                return result
-
         # Use smart URL generator directly to avoid recursion
         found_url = asyncio.run(
             self.smart_generator.find_valid_url_async(
@@ -965,7 +732,6 @@ class Win32APIScraper:
             # Load the complete function mapping
             mapping_file = os.path.join(
                 os.path.dirname(__file__),
-                "..",
                 "..",
                 "assets",
                 "complete_function_mapping.json",

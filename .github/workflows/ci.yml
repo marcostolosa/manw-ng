@@ -36,7 +36,7 @@ jobs:
     - name: 📦 Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install requests beautifulsoup4 rich lxml flake8 aiohttp
+        pip install requests beautifulsoup4 rich lxml flake8 aiohttp scikit-learn pytest
 
     - name: 🔍 Lint with flake8
       run: |
@@ -45,9 +45,11 @@ jobs:
         # Para outros problemas (não críticos)
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --ignore=E501,W293,W291,F401,F841,E402,F541,F811 --statistics
 
-    - name: 🧪 Run unit tests
+    - name: 🧪 Run pytest suite
+      run: pytest tests/ -v
+
+    - name: 🧪 Smoke-test core modules and CLI
       run: |
-        # Teste módulos principais
         python -c "import manw_ng.core.scraper; print('Core modules import OK')"
         python -c "from manw_ng.ml import enhanced_ml_classifier, HAS_ENHANCED; print(f'Enhanced ML: {HAS_ENHANCED}')"
         python -c "from manw_ng.ml.enhanced_classifier import enhanced_ml_classifier; stats = enhanced_ml_classifier.get_model_stats(); print(f'Function mappings: {stats[\"mapped_functions\"]:,}')"

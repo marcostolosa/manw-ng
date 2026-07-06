@@ -657,27 +657,57 @@ The Win32 API function '{function_name}' could not be found in Microsoft documen
 - Some deprecated functions may not be documented
 - Try searching for similar function names"""
 
+        strings = {
+            "us": {
+                "basic_info": "Basic Information",
+                "calling_convention": "Calling Convention",
+                "parameters_field": "Parameter Count",
+                "architectures": "Architectures",
+                "return_type": "Return Type",
+                "signature": "Signature",
+                "description": "Description",
+                "parameters": "Parameters",
+                "return_value": "Return Value",
+                "remarks": "Remarks",
+                "values": "Values",
+            },
+            "br": {
+                "basic_info": "Informações Básicas",
+                "calling_convention": "Calling Convention",
+                "parameters_field": "Parâmetros",
+                "architectures": "Arquiteturas",
+                "return_type": "Tipo de Retorno",
+                "signature": "Assinatura",
+                "description": "Descrição",
+                "parameters": "Parâmetros",
+                "return_value": "Valor de Retorno",
+                "remarks": "Observações",
+                "values": "Valores",
+            },
+        }
+        s = strings.get(language, strings["br"])
+
         md_content = f"""# {function_info['name']}
 
-## Informações Básicas
+## {s['basic_info']}
 
 - **DLL**: {function_info['dll']}
-- **Calling Convention**: {function_info['calling_convention']}  
-- **Parâmetros**: {function_info['parameter_count']}
-- **Arquiteturas**: {', '.join(function_info['architectures'])}
-- **Tipo de Retorno**: {function_info['return_type']}
+- **{s['calling_convention']}**: {function_info['calling_convention']}
+- **{s['parameters_field']}**: {function_info['parameter_count']}
+- **{s['architectures']}**: {', '.join(function_info['architectures'])}
+- **{s['return_type']}**: {function_info['return_type']}
 
-## Assinatura
+## {s['signature']}
 
 ```{function_info.get('signature_language', 'c')}
 {function_info['signature']}
 ```
 
-## Descrição
+## {s['description']}
 
 {function_info['description']}
 
-## Parâmetros
+## {s['parameters']}
 """
 
         for param in function_info.get("parameters", []):
@@ -686,7 +716,7 @@ The Win32 API function '{function_name}' could not be found in Microsoft documen
             # Add value tables if present
             if "values" in param and param["values"]:
                 for value_table in param["values"]:
-                    md_content += f"\n#### {value_table.get('title', 'Values')}\n\n"
+                    md_content += f"\n#### {value_table.get('title', s['values'])}\n\n"
                     md_content += "| Value | Meaning |\n|-------|---------|\n"
                     for entry in value_table.get("entries", []):
                         value = entry["value"].replace("|", "\\|")
@@ -696,11 +726,10 @@ The Win32 API function '{function_name}' could not be found in Microsoft documen
 
         if function_info.get("return_description"):
             md_content += (
-                f"\n## Valor de Retorno\n\n{function_info['return_description']}"
+                f"\n## {s['return_value']}\n\n{function_info['return_description']}"
             )
 
         if show_remarks and function_info.get("remarks"):
-            section_title = "Observações" if language == "br" else "Remarks"
-            md_content += f"\n## {section_title}\n\n{function_info['remarks']}"
+            md_content += f"\n## {s['remarks']}\n\n{function_info['remarks']}"
 
         return md_content

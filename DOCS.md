@@ -2,21 +2,42 @@
 
 ## System Architecture
 
-MANW-NG uses a 6-priority pipeline for comprehensive API discovery:
+MANW-NG uses a 5-step pipeline for comprehensive API discovery, tried in order until one
+succeeds (special cases and a known-undocumented-API denylist are checked first, as
+instant fast exits, before step 1):
 
 ```
-Special Cases → Smart URL → MS Learn Search → ML Fallback → Local DB → A/W Suffix
-    <1s           <3s           3-8s            8-15s         <1s       +5-10s
-   100%           85%            10%              3%            1%         1%
+1. MS Learn Search API   → official search, highest reliability
+2. Smart URL Generation  → pattern-based candidate URLs + validation
+3. Heuristic Classifier  → dictionary + regex header prediction fallback
+4. Internal Catalog      → curated backup dataset
+5. Offline JSON Mapping  → local function→header mapping, for offline/fast access
+Final: A/W suffix retry  → if the plain name failed, try the A/W variant (or vice versa)
 ```
+
+Note: the "heuristic classifier" here (`enhanced_classifier.py`) is a large hardcoded
+function→header dictionary plus keyword/regex matching, not a trained ML model — see
+"Function Classification" below.
 
 ## Technical Implementation
 
 ### Database Coverage
-- **Total Functions**: 7,865 official Microsoft functions
-- **Function Mappings**: 61,603 including A/W variants and aliases
+- **Total Functions**: ~7,866 official Microsoft functions
+- **Function Mappings**: 61,000+ including A/W variants and aliases
 - **Headers Mapped**: 257 (kernel32, user32, ntdll, drivers, etc.)
 - **Categories**: 157 unique API categories
+
+### Function Classification
+
+`manw_ng/ml/enhanced_classifier.py` is the classifier actually used by default
+(`primary_classifier` in `manw_ng/ml/__init__.py`). It's a hardcoded
+function→header mapping dictionary plus a reverse index built from
+`manw_ng/assets/complete_function_mapping.json`, with keyword/regex heuristics and
+hand-assigned confidence scores — no training involved. `manw_ng/ml/function_classifier.py`
+is a real scikit-learn classifier (TF-IDF + MultinomialNB + RandomForest) with an
+online-learning design that persists to `~/.cache/manw-ng/ml_models/*.pkl`; no model
+ships in the repo, so on a fresh install it's untrained and contributes nothing until
+it has learned from enough successful lookups at runtime.
 
 ### URL Pattern Types
 - **Standard**: `api/{header}/nf-{header}-{function}` (Win32 APIs)
@@ -57,46 +78,48 @@ api_info = get_api_info('CreateFileW')
 manw-ng/
 ├── manw_ng/
 │   ├── core/           # Main scraper and parser
-│   ├── ml/             # ML classification with 61k+ mappings  
+│   ├── ml/             # Heuristic classification + optional trainable ML fallback
 │   ├── utils/          # Smart URL generation and HTTP client
 │   ├── output/         # Rich, JSON, Markdown formatters
-│   └── execution/      # WinAPI execution engine
-│       ├── engine.py   # Main execution engine
-│       ├── types.py    # Advanced type system
-│       └── memory.py   # Smart memory management
+│   ├── execution/      # WinAPI execution engine
+│   │   ├── engine.py   # DLL/function resolution + ctypes call
+│   │   ├── types.py    # Argument/return-type parsing
+│   │   └── memory.py   # Buffer tracking + hexdump
+│   └── assets/
+│       ├── complete_function_mapping.json    # 61,000+ function mappings
+│       └── winapi_categories.json           # Official API database
 ├── assets/
-│   ├── complete_function_mapping.json    # 61,603 function mappings
-│   └── winapi_categories.json           # Official API database
-└── tests/              # Core functionality tests
+│   └── demo.png        # README screenshot (not used by any code)
+└── tests/              # pytest suite (formatters, dll_map, scraper, execution engine)
 ```
 
 ## Execution Features
 
-### Performance Optimizations
-- **Function Caching**: Intelligent caching of resolved functions and modules
-- **Memory Management**: Advanced memory management with automatic cleanup
-- **Fast Resolution**: Sub-millisecond function resolution on subsequent calls
+Implemented in `manw_ng/execution/` (`types.py` for argument/return-type parsing,
+`memory.py` for buffer tracking + hexdump, `engine.py` for DLL/function resolution
+and the actual `ctypes` call):
 
-### Security & Safety
-- **Parameter Validation**: Rigorous validation of all parameters
-- **Memory Protection**: Safe buffer allocation with bounds checking  
-- **Error Recovery**: Robust error handling and resource cleanup
-- **Thread Safety**: Safe operation in multi-threaded environments
+### Safety
+- **Parameter Validation**: malformed buffer sizes (`$b:`) and unknown `--ret` types
+  are rejected with a clear error before any DLL is touched.
+- **Buffer Size Guard**: `$b:` allocations are capped at 64 MiB to avoid
+  accidental/malicious huge allocations from a typo'd size.
+- **A/W Auto-Resolution**: tries the exact name, then the `W` variant, then the `A`
+  variant (or only `W`, if `--wide` is passed).
 
 ### Advanced Features
-- **A/W Auto-Resolution**: Intelligent ANSI/Wide function variant selection
-- **Module Abbreviations**: Support for winapiexec-style abbreviations
-- **Buffer Hexdump**: Automatic hexdump of output buffers
-- **GetLastError Integration**: Comprehensive error reporting
+- **Module Abbreviations**: `k`/`u`/`n`/`a32`/`g`/`ws2`/`sh`, or any `name`/`name.dll`.
+- **Buffer Hexdump**: `$b:` buffer arguments are hexdumped (offset/hex/ASCII) after
+  the call, showing whatever the API wrote into them.
+- **GetLastError Integration**: `--show-error` reports `GetLastError()` +
+  `FormatMessage`-equivalent text (`ctypes.FormatError`) after the call.
 
-### Parameter Types (ultra-simplified)
-- `123` - Auto-detected integer (32 or 64-bit based on value)
-- `0x1000` - Hexadecimal values
-- `"text"` - Unicode strings (auto-detected)
-- `text` - Unicode strings (no quotes needed)
-- `$b:size` - Buffer allocation (with automatic hexdump)
-- `$s:text` - ASCII string (if needed)
-- Original winapiexec syntax still supported for compatibility
+### Parameter Types
+- `123` / `-5` - Auto-detected integer (32 or 64-bit signed/unsigned, based on value)
+- `0x1000` - Hexadecimal values (same width rule as decimal)
+- `"text"` / `text` - Unicode strings (`LPCWSTR`), quotes optional
+- `$s:text` - ANSI string (`LPCSTR`)
+- `$b:size` - Zeroed, writable buffer of `size` bytes (hexdumped after the call)
 
 ## Links
 

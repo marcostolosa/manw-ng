@@ -4,9 +4,9 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Windows API documentation scraping with AI-powered classification + WinAPI Execution**
+**Windows API documentation scraping with heuristic classification + WinAPI Execution**
 
-Multi-layered Windows API documentation tool with ML classification, Microsoft Learn Search integration, intelligent URL discovery, and Windows API execution engine for reverse engineers and security researchers.
+Multi-layered Windows API documentation tool with a 61k+ function→header mapping database, Microsoft Learn Search integration, intelligent URL discovery, and a Windows API execution engine for reverse engineers and security researchers.
 
 ![](/assets/demo.png)
 
@@ -17,6 +17,9 @@ git clone https://github.com/marcostolosa/manw-ng.git
 cd manw-ng
 pip install -e .
 ```
+
+This installs a `manw-ng` console command in addition to running the script directly
+(`./manw-ng.py ...` below still works the same way).
 
 ## Usage
 
@@ -45,9 +48,16 @@ pip install -e .
 ./manw-ng.py exec u:MessageBoxW 0 "Hello World" "MANW-NG" 0
 ./manw-ng.py exec user32:FindWindowW "Notepad" 0
 
-# Module abbreviations supported
+# Module abbreviations supported (k, u, n, a32, g, ws2, sh, or any dll name)
 ./manw-ng.py exec k:GetTickCount
+
+# $b:size allocates a zeroed, writable buffer and hexdumps it after the call
 ./manw-ng.py exec u:GetCursorPos '$b:8'
+
+# Control the return type, force the wide (W) variant, and report GetLastError
+./manw-ng.py exec k:GetCurrentProcessId --ret u32
+./manw-ng.py exec u:FindWindowW Notepad 0 --wide
+./manw-ng.py exec k:OpenProcess 0x0400 0 99999 --show-error
 ```
 
 ## Command Options
@@ -75,12 +85,12 @@ pip install -e .
 
 ## Key Features
 
-- **Multi-layered Search**: 6-priority pipeline for comprehensive API discovery
-- **ML Classification**: 61,603 function mappings with AI-powered classification
+- **Multi-layered Search**: 5-step pipeline for comprehensive API discovery (official search, pattern-based URL generation, heuristic classification, internal catalog, offline JSON mapping)
+- **Function Mapping Database**: 61,000+ function→header mappings with heuristic classification (dictionary + regex, not a trained model)
 - **Parameter Tables**: Categorized value tables for complex parameters (--tabs flag)
-- **WinAPI Execution**: Direct Windows API execution with simplified syntax
+- **WinAPI Execution**: Real `ctypes`-backed Windows API execution — typed return values, buffer allocation with hexdump, `GetLastError` reporting
 - **Multi-language**: English and Portuguese documentation support
-- **Multiple Formats**: Rich terminal, JSON, and Markdown output
+- **Multiple Formats**: Rich terminal, JSON, and Markdown output (all three respect the selected language)
 
 ## Documentation
 

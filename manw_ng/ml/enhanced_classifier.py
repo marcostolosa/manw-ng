@@ -2875,7 +2875,7 @@ class EnhancedFunctionClassifier:
         # Then, load complete mapping from JSON file (all 61k+ mappings)
         try:
             complete_mapping_path = (
-                Path(__file__).parent.parent.parent
+                Path(__file__).parent.parent
                 / "assets"
                 / "complete_function_mapping.json"
             )
