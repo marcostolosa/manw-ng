@@ -1,7 +1,7 @@
 # MANW-NG
 
-![](https://github.com/qtc-de/wconv/workflows/master/badge.svg)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![CI/CD Pipeline](https://github.com/marcostolosa/manw-ng/actions/workflows/ci.yml/badge.svg)](https://github.com/marcostolosa/manw-ng/actions/workflows/ci.yml)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **Windows API documentation scraping with heuristic classification + WinAPI Execution**
@@ -12,14 +12,22 @@ Multi-layered Windows API documentation tool with a 61k+ function→header mappi
 
 ## Installation
 
+The supported installation method is always an editable install with `pip install -e .`:
+
 ```bash
 git clone https://github.com/marcostolosa/manw-ng.git
 cd manw-ng
 pip install -e .
 ```
 
-This installs a `manw-ng` console command in addition to running the script directly
-(`./manw-ng.py ...` below still works the same way).
+This is the canonical way to install MANW-NG — it pulls in every runtime dependency
+declared in `pyproject.toml` and registers the `manw-ng` console command. The script can
+also be run directly (`./manw-ng.py ...` as shown below), but `pip install -e .` is the
+recommended and officially supported path.
+
+**Requirements:** Python 3.8 or newer. Execution Mode (`exec`) additionally requires
+Windows, since it loads real DLLs via `ctypes.WinDLL`; Documentation Mode runs on any
+platform.
 
 ## Usage
 
@@ -92,9 +100,18 @@ This installs a `manw-ng` console command in addition to running the script dire
 - **Multi-language**: English and Portuguese documentation support
 - **Multiple Formats**: Rich terminal, JSON, and Markdown output (all three respect the selected language)
 
-## Documentation
+## Scope of Use
 
-For detailed technical documentation, see [DOCS.md](DOCS.md).
+MANW-NG is a dual-use tool built for reverse engineers and security researchers.
+The **Execution Mode** (`exec`) loads and invokes real Windows APIs via `ctypes`,
+which can produce side effects on the host (spawning processes, touching the
+registry, allocating memory, etc.).
+
+Use it only on systems you own or are explicitly authorized to test — for example
+authorized penetration tests, malware analysis in a controlled lab, CTF
+challenges, or your own research environment. You are responsible for complying
+with all applicable laws and engagement rules. **Documentation Mode** only reads
+public Microsoft Learn pages and has no such side effects.
 
 ## Related Tools
 

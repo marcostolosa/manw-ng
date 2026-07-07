@@ -10,7 +10,6 @@ from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.table import Table
-from rich.syntax import Syntax
 
 
 class RichFormatter:
@@ -201,8 +200,6 @@ class RichFormatter:
             title = self.get_string("function_signature")
 
         # Use markdown com código C para melhor compatibilidade
-        from rich.markdown import Markdown
-
         signature_markdown = f"```c\n{function_info['signature']}\n```"
 
         try:

@@ -266,10 +266,6 @@ class HTTPClient:
         """Synchronous wrapper for GET requests."""
         return asyncio.run(self._request("GET", url, **kwargs))
 
-    def post(self, url: str, **kwargs) -> Union[str, dict]:
-        """Synchronous wrapper for POST requests."""
-        return asyncio.run(self._request("POST", url, **kwargs))
-
     async def close(self) -> None:
         """Close the HTTP session and save cache metadata"""
         if self._session and not self._session.closed:

@@ -5,18 +5,11 @@ Ultra-fast asynchronous URL generator that tests ALL known patterns simultaneous
 This system ensures 100% coverage with maximum speed using concurrent requests.
 """
 
-from typing import List, Dict, Set, Optional, Tuple, Callable
+from typing import List, Dict, Optional, Callable
 import re
 import asyncio
-
-# Lazy import heavy dependencies
-# import aiohttp
-from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
 import random
-
-# Lazy import to avoid 3s+ load time
-# from .url_pattern_learner import pattern_learner
 
 
 class SmartURLGenerator:
@@ -84,7 +77,6 @@ class SmartURLGenerator:
         ]
 
         # Enhanced request tracking
-        self._request_counter = 0
         self._last_successful_agent = None
         self._agent_failure_count = {}
 
@@ -106,15 +98,6 @@ class SmartURLGenerator:
             "backoff_factor": 1.5,  # Less aggressive backoff
             "jitter": True,
         }
-
-        # Try to import ML classifier for intelligent predictions
-        self.ml_classifier = None
-        try:
-            from ..ml.function_classifier import ml_classifier
-
-            self.ml_classifier = ml_classifier
-        except ImportError:
-            pass  # Continue without ML if not available
 
         # Mapeamento DLL -> Headers COMPLETO (TODOS os headers possíveis)
         self.dll_to_headers = {
@@ -193,17 +176,7 @@ class SmartURLGenerator:
                 "ws2spi",
             ],
             "wininet.dll": ["wininet", "urlmon", "winhttp"],
-            "ole32.dll": ["objbase", "combaseapi", "ole2", "oleidl", "oleauto"],
             "oleaut32.dll": ["oleauto", "oaidl"],
-            "shell32.dll": ["shellapi", "shlobj_core", "shlwapi"],
-            "version.dll": ["winver"],
-            "psapi.dll": ["psapi"],
-            "dbghelp.dll": ["dbghelp"],
-            "imagehlp.dll": ["imagehlp"],
-            "rpcrt4.dll": ["rpc"],
-            "secur32.dll": ["sspi", "ntsecapi"],
-            "winspool.drv": ["winspool"],
-            "winmm.dll": ["mmeapi", "timeapi"],
             "urlmon.dll": ["urlmon", "wininet"],
             "winhttp.dll": ["winhttp", "wininet"],
             "ntdll.dll": ["winternl", "winbase", "ntstatus", "subauth", "winnt", "wdm"],
@@ -859,19 +832,6 @@ class SmartURLGenerator:
         function_lower = function_name.lower()
         urls = []
 
-        # 0. ML-based header predictions (HIGHEST priority if available)
-        ml_headers = []
-        if self.ml_classifier and self.ml_classifier.is_trained:
-            try:
-                ml_predictions = self.ml_classifier.predict_headers(
-                    function_name, dll_name, top_k=3
-                )
-                ml_headers = [
-                    header for header, confidence in ml_predictions if confidence > 0.1
-                ]
-            except Exception:
-                pass  # Continue without ML if it fails
-
         # 1. Check for DLL-specific primary header first (high priority)
         priority_headers = []
         if dll_name and dll_name.lower() in self.dll_to_primary_header:
@@ -898,14 +858,8 @@ class SmartURLGenerator:
             "processthreadsapi",
         ]
 
-        # Combine in order of priority (ML first!)
-        all_headers = (
-            ml_headers
-            + priority_headers
-            + pattern_headers
-            + dll_headers
-            + common_headers
-        )
+        # Combine in order of priority
+        all_headers = priority_headers + pattern_headers + dll_headers + common_headers
 
         # Remove duplicates while preserving order
         headers_to_try = []
@@ -994,498 +948,12 @@ class SmartURLGenerator:
 
         return unique_urls
 
-    def generate_all_possible_urls(
-        self, function_name: str, base_url: str = "https://learn.microsoft.com/en-us"
-    ) -> List[Tuple[str, str, str]]:
-        """Generate ALL possible URLs for Elite coverage (URL, locale, area)"""
-        urls = []
-        symbol_lower = function_name.lower()
-
-        # INTELLIGENT HEADER PRIORITY: Use patterns first, then fallback to common headers
-        pattern_headers = []
-        for pattern, pattern_header_list in self.function_patterns.items():
-            if re.match(pattern, symbol_lower):
-                pattern_headers.extend(pattern_header_list)
-
-        # Remove duplicates while preserving order
-        intelligent_headers = []
-        seen = set()
-        for header in pattern_headers:
-            if header not in seen:
-                intelligent_headers.append(header)
-                seen.add(header)
-
-        # Headers COMPLETOS - TODOS os headers do Windows SDK DRASTICAMENTE EXPANDIDOS
-        common_headers = [
-            # CORE SYSTEM APIs (MÁXIMA prioridade)
-            "winuser",
-            "wingdi",
-            "winbase",
-            "fileapi",
-            "memoryapi",
-            "processthreadsapi",
-            "handleapi",
-            "synchapi",
-            "errhandlingapi",
-            "debugapi",
-            "appmodel",
-            "libloaderapi",
-            "heapapi",
-            "processenv",
-            "sysinfoapi",
-            "consoleapi",
-            "profileapi",
-            # PROCESS & THREAD APIs EXPANDIDOS
-            "processthreadsapi",
-            "securitybaseapi",
-            "userenv",
-            "psapi",
-            "toolhelp",
-            "tlhelp32",
-            "jobapi",
-            "jobapi2",
-            "threadpoollegacyapiset",
-            "fibersapi",
-            "processenv",
-            "wow64apiset",
-            "processthreadsapi",
-            "handleapi",
-            # ADVANCED SYSTEM APIs EXPANDIDOS
-            "realtimeapiset",
-            "interlockedapi",
-            "securityappcontainer",
-            "systemtopologyapi",
-            "utilapiset",
-            "ioapiset",
-            "namedpipeapi",
-            "namespaceapi",
-            "winsafer",
-            "securitybaseapi",
-            "authz",
-            "accctrl",
-            "errhandlingapi",
-            "debugapi",
-            "appmodel",
-            # SECURITY & CRYPTO COMPLETE
-            "aclapi",
-            "wincrypt",
-            "bcrypt",
-            "ncrypt",
-            "wincred",
-            "winefs",
-            "wintrust",
-            "sspi",
-            "schannel",
-            "ntsecapi",
-            "dpapi",
-            "cryptuiapi",
-            "credui",
-            "lsalookup",
-            "secext",
-            "secedit",
-            "winscard",
-            "wintrust",
-            "certadm",
-            "certcli",
-            "certenc",
-            "certenroll",
-            "certpol",
-            "certsrv",
-            "certview",
-            "xenroll",
-            # REGISTRY & SERVICES COMPLETE
-            "winreg",
-            "winsvc",
-            "evntprov",
-            "evntrace",
-            "perflib",
-            "pdh",
-            "loadperf",
-            "winperf",
-            "evntcons",
-            "evntrace",
-            "tdh",
-            "wmistr",
-            "wmium",
-            # NETWORKING COMPLETE
-            "winsock2",
-            "winsock",
-            "ws2tcpip",
-            "wsipx",
-            "mswsock",
-            "ws2spi",
-            "wininet",
-            "urlmon",
-            "winhttp",
-            "winnetwk",
-            "npapi",
-            "snmp",
-            "winsnmp",
-            "iphlpapi",
-            "iprtrmib",
-            "iptypes",
-            "icmpapi",
-            "netioapi",
-            "tcpestats",
-            "udpmib",
-            "tcpmib",
-            "ifmib",
-            "ipmib",
-            "dhcpcsdk",
-            "dhcpsapi",
-            # UI & SHELL COMPLETE
-            "commctrl",
-            "commdlg",
-            "shellapi",
-            "shlobj",
-            "shlwapi",
-            "shobjidl",
-            "uxtheme",
-            "vsstyle",
-            "vssym32",
-            "dwmapi",
-            "windowsandmessaging",
-            "menurc",
-            "winstation",
-            "prsht",
-            "richedit",
-            "richole",
-            "textserv",
-            "dde",
-            "ddeml",
-            "msaatext",
-            "oleacc",
-            "winable",
-            "wincon",
-            # MULTIMEDIA & DEVICES COMPLETE
-            "mmsystem",
-            "mmreg",
-            "timeapi",
-            "playsoundapi",
-            "winspool",
-            "wingdi",
-            "setupapi",
-            "cfgmgr32",
-            "devguid",
-            "regstr",
-            "powrprof",
-            "batclass",
-            "devpkey",
-            "dbt",
-            "hidclass",
-            "hidpi",
-            "hidsdi",
-            "hidusage",
-            "newdev",
-            "pnputil",
-            "sporder",
-            "spapidef",
-            "sputils",
-            "swdevice",
-            "usbioctl",
-            "usbiodef",
-            "usbuser",
-            "winioctl",
-            "winusb",
-            "devioctl",
-            "poclass",
-            # COM & OLE COMPLETE
-            "combaseapi",
-            "objbase",
-            "objidl",
-            "unknwn",
-            "wtypes",
-            "oaidl",
-            "activation",
-            "callobj",
-            "cguid",
-            "comcat",
-            "comdefsp",
-            "coml2api",
-            "compobj",
-            "comsvcs",
-            "docobj",
-            "dvdmedia",
-            "exdisp",
-            "hlink",
-            "htiface",
-            "htiframe",
-            "htmlhelp",
-            "hyptrk",
-            "iaccessible",
-            "mshtmhst",
-            "mshtml",
-            "mshtmdid",
-            "msxml",
-            "ocidl",
-            "olectl",
-            "oledlg",
-            "oleauto",
-            "oleidl",
-            "propidl",
-            "propsys",
-            "propvarutil",
-            "servprov",
-            "shlguid",
-            "strmif",
-            "structuredquery",
-            "tom",
-            "txfw32",
-            "urlhist",
-            "urlmon",
-            "webservices",
-            "wia",
-            "wincodec",
-            "wincodecsdk",
-            # RPC & IPC COMPLETE
-            "rpc",
-            "rpcdce",
-            "rpcndr",
-            "rpcproxy",
-            "rpcasync",
-            "rpcdcep",
-            "rpcnsi",
-            "rpcnterr",
-            "rpcssl",
-            "midles",
-            "midluser",
-            # NETWORK MANAGEMENT COMPLETE
-            "lmaccess",
-            "lmapibuf",
-            "lmconfig",
-            "lmerr",
-            "lmserver",
-            "lmshare",
-            "lmuse",
-            "lmwksta",
-            "netapi32",
-            "lmat",
-            "lmcons",
-            "lmstats",
-            "lmalert",
-            "lmaudit",
-            "lmmsg",
-            "lmremutl",
-            "lmrepl",
-            "lmsname",
-            # DEBUG & TOOLS COMPLETE
-            "imagehlp",
-            "dbghelp",
-            "fci",
-            "fdi",
-            "dbgeng",
-            "cor",
-            "corsym",
-            "corprof",
-            "cordebug",
-            "metahost",
-            "mscoree",
-            "fusion",
-            "clrdata",
-            "diasdk",
-            "cvconst",
-            "dbgmodel",
-            "engextcpp",
-            "extsfns",
-            "wdbgexts",
-            # NATIVE/INTERNAL COMPLETE
-            "winternl",
-            "ntstatus",
-            "subauth",
-            "winnt",
-            "ntdef",
-            "ntlsa",
-            "ntsecapi",
-            "ntddndis",
-            "ntdddisk",
-            "ntddkbd",
-            "ntddmou",
-            "ntddpar",
-            "ntddscsi",
-            "ntddser",
-            "ntddstor",
-            "ntddtape",
-            "ntddvol",
-            "ntimage",
-            "ntldr",
-            # VERSION & TIME COMPLETE
-            "winver",
-            "timezoneapi",
-            "versionhelpers",
-            "verrsrc",
-            # CRT & STANDARD COMPLETE
-            "corecrt",
-            "crtdbg",
-            "malloc",
-            "stdio",
-            "stdlib",
-            "string",
-            "time",
-            "crtasm",
-            "direct",
-            "dos",
-            "fcntl",
-            "io",
-            "memory",
-            "process",
-            "search",
-            "share",
-            "signal",
-            "sys",
-            "wchar",
-            # WINDOWS RUNTIME & MODERN APIs
-            "roapi",
-            "robuffer",
-            "roerrorapi",
-            "rometadata",
-            "rometadataapi",
-            "rometadataresolution",
-            "roparameterizediid",
-            "roregistrationapi",
-            "winrt",
-            "activation",
-            "asyncinfo",
-            "eventtoken",
-            "hstring",
-            "inspectable",
-            "memorybuffer",
-            "restrictederrorinfo",
-            "shcore",
-            "windows",
-            # AUDIO & VIDEO
-            "audioclient",
-            "audiopolicy",
-            "devicetopology",
-            "endpointvolume",
-            "mmdeviceapi",
-            "mmreg",
-            "dsound",
-            "dshow",
-            "dxva2",
-            "evr",
-            "mfapi",
-            "mferror",
-            "mfidl",
-            "mfobjects",
-            "mfplay",
-            "mfreadwrite",
-            "mftransform",
-            "wmcodecdsp",
-            "wmcontainer",
-            "wmsdkidl",
-            "wmsdk",
-            # GRAPHICS & DIRECTX
-            "d2d1",
-            "d2d1helper",
-            "d3d9",
-            "d3d10",
-            "d3d11",
-            "d3d12",
-            "d3dcompiler",
-            "dwrite",
-            "dxgi",
-            "dxgiformat",
-            "dxgidebug",
-            "dxgitype",
-            "ddraw",
-            "gdiplus",
-            "gdiplusheaders",
-            "gdiplusimaging",
-            "gdipluslinecaps",
-            "gdipluspixelformats",
-            "gdiplustypes",
-            "uianimation",
-            "wincodec",
-            "wincodecsdk",
-            "d2d1effects",
-            "d2d1svg",
-            "d3d11on12",
-            "d3d12sdklayers",
-            # GAME DEVELOPMENT
-            "xinput",
-            "xaudio2",
-            "x3daudio",
-            "xapofx",
-            "gamemode",
-            # PRINTING
-            "winspool",
-            "compstui",
-            "winddiui",
-            "printoem",
-            "prcomoem",
-            # ACCESSIBILITY
-            "oleacc",
-            "uiautomation",
-            "uiautomationcore",
-            "uiautomationcoreapi",
-            "winable",
-        ]
-
-        # Combine: intelligent headers FIRST, then common headers as fallback
-        all_headers = intelligent_headers + [h for h in common_headers if h not in seen]
-
-        # WDK/DDI headers
-        ddi_headers = ["ntifs", "ntddk", "wdm", "winternl", "ntdef"]
-
-        # Both locales
-        locales = ["pt-br", "en-us"] if "/pt-br" in base_url else ["en-us", "pt-br"]
-
-        for locale in locales:
-            # Try Win32 SDK patterns - INTELLIGENT HEADERS FIRST!
-            for header in all_headers:
-                base_api_url = (
-                    f"https://learn.microsoft.com/{locale}/windows/win32/api/{header}"
-                )
-
-                # Function patterns
-                urls.append(
-                    (f"{base_api_url}/nf-{header}-{symbol_lower}", locale, "SDK")
-                )
-                urls.append(
-                    (f"{base_api_url}/nf-{header}-{symbol_lower}a", locale, "SDK")
-                )
-                urls.append(
-                    (f"{base_api_url}/nf-{header}-{symbol_lower}w", locale, "SDK")
-                )
-
-                # Struct patterns
-                urls.append(
-                    (f"{base_api_url}/ns-{header}-{symbol_lower}", locale, "SDK")
-                )
-
-                # Enum patterns
-                urls.append(
-                    (f"{base_api_url}/ne-{header}-{symbol_lower}", locale, "SDK")
-                )
-
-                # Interface patterns
-                urls.append(
-                    (f"{base_api_url}/nn-{header}-{symbol_lower}", locale, "SDK")
-                )
-
-            # Try WDK/DDI patterns for Native API
-            for header in ddi_headers:
-                base_ddi_url = f"https://learn.microsoft.com/{locale}/windows-hardware/drivers/ddi/{header}"
-
-                urls.append(
-                    (f"{base_ddi_url}/nf-{header}-{symbol_lower}", locale, "DDI")
-                )
-                urls.append(
-                    (f"{base_ddi_url}/ns-{header}-{symbol_lower}", locale, "DDI")
-                )
-                urls.append(
-                    (f"{base_ddi_url}/ne-{header}-{symbol_lower}", locale, "DDI")
-                )
-
-        return urls
-
     def get_random_headers(self) -> Dict[str, str]:
         """Get intelligent User-Agent and headers based on success rates"""
 
         # Intelligent user agent selection
         user_agent = self._get_optimal_user_agent()
         additional = random.choice(self.additional_headers)
-        self._request_counter += 1
         self._requests_with_current_agent += 1
 
         # Base headers optimized for Microsoft Learn
@@ -1568,19 +1036,6 @@ class SmartURLGenerator:
             self.user_agents_flat
         )
         self._requests_with_current_agent = 0
-
-    def _extract_header_from_url(self, url: str) -> Optional[str]:
-        """Extract header name from a successful URL for ML training"""
-        try:
-            # URL format: /windows/win32/api/HEADER/nf-HEADER-functionname
-            if "/api/" in url:
-                parts = url.split("/api/")
-                if len(parts) > 1:
-                    header_part = parts[1].split("/")[0]
-                    return header_part
-        except Exception:
-            pass
-        return None
 
     def report_user_agent_success(self, user_agent: str, success: bool):
         """Track user agent success for intelligent rotation"""
@@ -1917,7 +1372,7 @@ class SmartURLGenerator:
                             )
                         return None
 
-                except Exception as e:
+                except Exception:
                     self._record_failure()
                     if headers:
                         self.report_user_agent_success(
@@ -2015,163 +1470,3 @@ class SmartURLGenerator:
                 continue
 
         return None
-
-    async def _test_urls_async(
-        self,
-        urls: List[str],
-        session,
-        progress_callback: Optional[Callable[[int, int], None]] = None,
-    ) -> Optional[str]:
-        """Test multiple URLs concurrently and return first valid one"""
-
-        async def test_single_url(url: str) -> Optional[str]:
-            try:
-                # Use random headers for each request
-                headers = self.get_random_headers()
-                # Random delay to avoid rate limiting and appear more human
-                delay = random.uniform(0.1, 0.4)
-                await asyncio.sleep(delay)
-                async with session.get(url, headers=headers) as response:
-                    if response.status == 200:
-                        # Quick content check to ensure it's a valid function page
-                        content = await response.text()
-                        if any(
-                            keyword in content.lower()
-                            for keyword in [
-                                "function",
-                                "routine",
-                                "api",
-                                "syntax",
-                                "parameters",
-                            ]
-                        ):
-                            return url
-                    return None
-            except:
-                return None
-
-        # Create tasks for ALL URLs simultaneously
-        tasks = [test_single_url(url) for url in urls]
-        total = len(tasks)
-        completed = 0
-
-        # Use as_completed to get the FIRST successful result
-
-        for completed_task in asyncio.as_completed(tasks):
-            try:
-                result = await completed_task
-                completed += 1
-                if progress_callback:
-                    progress_callback(completed, total)
-                if result:  # Found valid URL!
-                    # Success found - ML training disabled in async context
-
-                    # Cancel remaining tasks for speed
-                    for task in tasks:
-                        if not task.done():
-                            task.cancel()
-                    return result
-            except:
-                completed += 1
-                if progress_callback:
-                    progress_callback(completed, total)
-                continue
-
-        return None  # No valid URL found
-
-    def find_valid_url_sync(
-        self,
-        function_name: str,
-        dll_name: str = None,
-        base_url: str = "https://learn.microsoft.com/en-us",
-        max_workers: int = 12,  # Reduced for better performance
-    ) -> Optional[str]:
-        """
-        Optimized synchronous version with intelligent URL prioritization
-        Tests prioritized URLs first for maximum speed
-        """
-        import requests
-
-        # Get prioritized URLs instead of all URLs
-        prioritized_urls = self._get_prioritized_urls(function_name, dll_name, base_url)
-
-        # Test high-confidence URLs first
-        high_confidence_urls = prioritized_urls[:15]
-
-        def test_url_fast(url: str) -> Optional[str]:
-            try:
-                headers = self.get_random_headers()
-                # Reduced timeout for speed
-                response = requests.get(url, headers=headers, timeout=2.5)
-
-                if response.status_code == 200:
-                    # Fast content check - only first 1KB
-                    content_chunk = (
-                        response.content[:1024].decode("utf-8", errors="ignore").lower()
-                    )
-                    if any(
-                        keyword in content_chunk
-                        for keyword in [
-                            "function",
-                            "routine",
-                            "api",
-                            "syntax",
-                            "parameters",
-                        ]
-                    ):
-                        return url
-                return None
-            except Exception:
-                return None
-
-        # First round: Test high-confidence URLs
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_url = {
-                executor.submit(test_url_fast, url): url for url in high_confidence_urls
-            }
-
-            for future in as_completed(future_to_url):
-                try:
-                    result = future.result()
-                    if result:
-                        # Cancel remaining futures and return immediately
-                        for remaining_future in future_to_url:
-                            if not remaining_future.done():
-                                remaining_future.cancel()
-                        return result
-                except Exception:
-                    continue
-
-        # Second round: If not found and function is important, try more URLs
-        if self._is_important_function(function_name) and len(prioritized_urls) > 15:
-            remaining_urls = prioritized_urls[15:25]
-
-            with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                future_to_url = {
-                    executor.submit(test_url_fast, url): url for url in remaining_urls
-                }
-
-                for future in as_completed(future_to_url):
-                    try:
-                        result = future.result()
-                        if result:
-                            for remaining_future in future_to_url:
-                                if not remaining_future.done():
-                                    remaining_future.cancel()
-                            return result
-                    except Exception:
-                        continue
-
-        return None
-
-    def get_high_probability_urls(
-        self,
-        function_name: str,
-        dll_name: str = None,
-        base_url: str = "https://learn.microsoft.com/en-us",
-    ) -> List[str]:
-        """
-        Get only the most likely URLs (top 15) for better Native API coverage
-        """
-        all_urls = self.generate_possible_urls(function_name, dll_name, base_url)
-        return all_urls[:15]  # Return top 15 to cover Zw variants

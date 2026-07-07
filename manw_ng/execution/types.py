@@ -1,6 +1,6 @@
 """Argument and return-type parsing for the WinAPI execution engine.
 
-Supported CLI argument syntax (see DOCS.md "Execution Mode"):
+Supported CLI argument syntax (see the README "Execution Mode" section):
     123          unsigned int (32-bit, or 64-bit if it doesn't fit in 32)
     -5           signed int (same width rule)
     0x1000       hex, same width rule as decimal

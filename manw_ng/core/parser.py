@@ -5,7 +5,7 @@ Extracts function information from Microsoft documentation pages.
 """
 
 import re
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 from bs4 import BeautifulSoup
 
 
@@ -186,7 +186,7 @@ class Win32PageParser:
         # First, look for Requirements/Requisitos section
         requirements_headers = soup.find_all(
             ["h2", "h3", "h4", "strong", "b"],
-            string=re.compile(r"Requirements?|Requisitos?", re.IGNORECASE)
+            string=re.compile(r"Requirements?|Requisitos?", re.IGNORECASE),
         )
 
         for header in requirements_headers:
@@ -195,7 +195,11 @@ class Win32PageParser:
             while next_elem and next_elem.name not in ["h1", "h2", "h3", "h4"]:
                 text = next_elem.get_text()
                 # Look for Library/DLL specifically
-                dll_match = re.search(r"(?:Library|DLL):\s*([A-Za-z0-9]+\.(?:dll|exe))", text, re.IGNORECASE)
+                dll_match = re.search(
+                    r"(?:Library|DLL):\s*([A-Za-z0-9]+\.(?:dll|exe))",
+                    text,
+                    re.IGNORECASE,
+                )
                 if dll_match:
                     return dll_match.group(1)
                 next_elem = next_elem.find_next_sibling()
@@ -205,12 +209,18 @@ class Win32PageParser:
         for table in tables:
             table_text = table.get_text()
             if re.search(r"(?:Library|DLL|Minimum)", table_text, re.IGNORECASE):
-                dll_match = re.search(r"([A-Za-z0-9]+\.(?:dll|exe))", table_text, re.IGNORECASE)
+                dll_match = re.search(
+                    r"([A-Za-z0-9]+\.(?:dll|exe))", table_text, re.IGNORECASE
+                )
                 if dll_match:
                     return dll_match.group(1)
 
         # Final fallback: general DLL patterns in page
-        dll_patterns = [r"Library:\s*([A-Za-z0-9]+\.(?:dll|exe))", r"DLL:\s*([A-Za-z0-9]+\.(?:dll|exe))", r"([A-Za-z0-9]+\.dll)"]
+        dll_patterns = [
+            r"Library:\s*([A-Za-z0-9]+\.(?:dll|exe))",
+            r"DLL:\s*([A-Za-z0-9]+\.(?:dll|exe))",
+            r"([A-Za-z0-9]+\.dll)",
+        ]
         text = soup.get_text()
 
         for pattern in dll_patterns:
@@ -689,8 +699,24 @@ class Win32PageParser:
         header_texts = [h.get_text().strip().lower() for h in headers[:3]]
 
         # Look for common value table patterns
-        value_patterns = ["value", "valor", "flag", "constant", "constante", "code", "código", "status", "return"]
-        meaning_patterns = ["meaning", "significado", "description", "descrição", "descrição"]
+        value_patterns = [
+            "value",
+            "valor",
+            "flag",
+            "constant",
+            "constante",
+            "code",
+            "código",
+            "status",
+            "return",
+        ]
+        meaning_patterns = [
+            "meaning",
+            "significado",
+            "description",
+            "descrição",
+            "descrição",
+        ]
 
         has_value_col = any(
             pattern in " ".join(header_texts) for pattern in value_patterns
@@ -800,18 +826,30 @@ class Win32PageParser:
                 if cells:
                     value_text = cells[0].get_text().strip().upper()
                     first_values.append(value_text)
-            
+
             # Categorize based on common patterns in Microsoft docs
             value_str = " ".join(first_values)
-            if any(btn in value_str for btn in ["MB_OK", "MB_YESNO", "MB_CANCEL", "ABORT", "RETRY"]):
+            if any(
+                btn in value_str
+                for btn in ["MB_OK", "MB_YESNO", "MB_CANCEL", "ABORT", "RETRY"]
+            ):
                 return "Botões"
-            elif any(icon in value_str for icon in ["MB_ICON", "INFORMATION", "WARNING", "ERROR", "QUESTION"]):
+            elif any(
+                icon in value_str
+                for icon in ["MB_ICON", "INFORMATION", "WARNING", "ERROR", "QUESTION"]
+            ):
                 return "Ícones"
             elif any(def_btn in value_str for def_btn in ["MB_DEFBUTTON", "DEFBUTTON"]):
                 return "Botão Padrão"
-            elif any(modal in value_str for modal in ["MB_APPLMODAL", "MB_SYSTEMMODAL", "MB_TASKMODAL"]):
+            elif any(
+                modal in value_str
+                for modal in ["MB_APPLMODAL", "MB_SYSTEMMODAL", "MB_TASKMODAL"]
+            ):
                 return "Modalidade"
-            elif any(opt in value_str for opt in ["MB_TOPMOST", "MB_RIGHT", "MB_SETFOREGROUND"]):
+            elif any(
+                opt in value_str
+                for opt in ["MB_TOPMOST", "MB_RIGHT", "MB_SETFOREGROUND"]
+            ):
                 return "Opções Adicionais"
 
         return "Valores"

@@ -7,22 +7,10 @@ Author: Marcos Tolosa
 License: MIT
 """
 
-# Suppress sklearn warnings before any other imports
 import argparse
-import warnings
-
-warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
-try:
-    from sklearn.exceptions import InconsistentVersionWarning
-
-    warnings.filterwarnings("ignore", category=InconsistentVersionWarning)
-except ImportError:
-    pass
-
 import sys
 import os
 import re
-
 
 # Minimal setup for fast startup
 
@@ -106,9 +94,7 @@ Examples:
         action="store_true",
         help="Mostrar tabelas de valores dos parâmetros (padrão: não mostrar)",
     )
-    parser.add_argument(
-        "--version", action="version", version=f"MANW-NG {__version__}"
-    )
+    parser.add_argument("--version", action="version", version=f"MANW-NG {__version__}")
 
     args = parser.parse_args()
 
@@ -163,12 +149,12 @@ Examples:
                     show_parameter_tables=args.tabs,
                 )
                 formatter.format_output(function_info)
-            except (UnicodeEncodeError, UnicodeError) as e:
+            except (UnicodeEncodeError, UnicodeError):
                 # Fallback específico para problemas de Unicode no Windows
                 print("Unicode encoding error, using markdown fallback:")
                 formatter = MarkdownFormatter()
                 print(formatter.format_output(function_info, language=args.language))
-            except Exception as e:
+            except Exception:
                 # Outros erros - fallback silencioso para markdown
                 try:
                     formatter = MarkdownFormatter()

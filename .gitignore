@@ -281,6 +281,8 @@ out/
 # ---------------------
 *.csv
 *.json.gz
+# ...but the packaged, gzipped runtime assets are tracked on purpose.
+!manw_ng/assets/*.json.gz
 *.xlsx
 *.db
 *.sqlite

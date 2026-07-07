@@ -9,9 +9,15 @@ description = "Windows API documentation scraping with heuristic classification 
 readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Marcos Tolosa" }]
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
@@ -19,9 +25,7 @@ dependencies = [
     "requests>=2.31.0",
     "beautifulsoup4>=4.12.0",
     "rich>=13.0.0",
-    "lxml>=4.9.0",
     "aiohttp>=3.10.0",
-    "scikit-learn>=1.3.0",
 ]
 
 [project.optional-dependencies]
@@ -37,7 +41,13 @@ manw-ng = "manw_ng.cli:main"
 packages = ["manw_ng", "manw_ng.core", "manw_ng.ml", "manw_ng.utils", "manw_ng.output", "manw_ng.execution"]
 
 [tool.setuptools.package-data]
-"manw_ng" = ["assets/*.json"]
+# Ship only the assets loaded at runtime. winapi_categories.json and
+# comprehensive_test_db.json are CI test fixtures, not used by the package.
+"manw_ng" = [
+    "assets/complete_function_mapping.json.gz",
+    "assets/header_mapping.json.gz",
+    "assets/win32_api_catalog.json",
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

@@ -6,7 +6,7 @@ Integrates the comprehensive Win32 API catalog with the existing system.
 
 import json
 import csv
-from typing import Dict, List, Optional, Set
+from typing import Dict, Optional
 from pathlib import Path
 
 
@@ -131,60 +131,6 @@ class Win32CatalogIntegration:
         entry = self.find_function(function_name, language)
         return entry["url"] if entry else None
 
-    def get_functions_by_header(self, header: str) -> List[Dict]:
-        """Get all functions from a specific header"""
-        if not self._catalog_data:
-            return []
-
-        return [
-            entry
-            for entry in self._catalog_data
-            if entry["header"].lower() == header.lower()
-            and entry["type"] in ["function", "macro"]
-        ]
-
-    def get_all_headers(self) -> Set[str]:
-        """Get all unique headers in the catalog"""
-        if not self._catalog_data:
-            return set()
-
-        return {entry["header"] for entry in self._catalog_data if entry["header"]}
-
-    def get_statistics(self) -> Dict:
-        """Get catalog statistics"""
-        if not self._catalog_data:
-            return {}
-
-        stats = {
-            "total_entries": len(self._catalog_data),
-            "by_type": {},
-            "by_language": {},
-            "by_header": {},
-            "unique_functions": (
-                len(self._function_index) if self._function_index else 0
-            ),
-        }
-
-        for entry in self._catalog_data:
-            # By type
-            entry_type = entry["type"]
-            stats["by_type"][entry_type] = stats["by_type"].get(entry_type, 0) + 1
-
-            # By language
-            lang = entry["language"]
-            stats["by_language"][lang] = stats["by_language"].get(lang, 0) + 1
-
-            # By header
-            header = entry["header"]
-            if header:
-                stats["by_header"][header] = stats["by_header"].get(header, 0) + 1
-
-        return stats
-
-    def is_catalog_available(self) -> bool:
-        """Check if catalog data is available"""
-        return bool(self._catalog_data)
-
 
 # Global catalog instance
 _catalog_instance = None
@@ -196,14 +142,3 @@ def get_catalog() -> Win32CatalogIntegration:
     if _catalog_instance is None:
         _catalog_instance = Win32CatalogIntegration()
     return _catalog_instance
-
-
-def find_function_fast(function_name: str, language: str = "en-us") -> Optional[str]:
-    """
-    Fast function lookup using catalog
-
-    Returns:
-        URL string or None
-    """
-    catalog = get_catalog()
-    return catalog.get_function_url(function_name, language)

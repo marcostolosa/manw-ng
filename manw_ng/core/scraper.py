@@ -5,7 +5,6 @@ Main scraper class that orchestrates the discovery and parsing process.
 """
 
 from typing import Dict, Optional, List
-import random
 import time
 import asyncio
 from bs4 import BeautifulSoup
@@ -16,9 +15,8 @@ from ..core.parser import Win32PageParser
 from ..utils.smart_url_generator import SmartURLGenerator
 from ..utils.catalog_integration import get_catalog
 from ..utils.http_client import HTTPClient
+from ..utils.assets import load_json_asset
 from ..ml import primary_classifier, HAS_ENHANCED
-import json
-import os
 
 
 class Win32APIScraper:
@@ -67,10 +65,6 @@ class Win32APIScraper:
         )
         self.smart_generator = SmartURLGenerator()
 
-        # Start async ML loading (non-blocking)
-        self._ml_ready = False
-        self._start_async_ml_loading()
-
         # Elegant Unicode characters
         self.check_mark = "✓"
         self.arrow = "→"
@@ -115,24 +109,6 @@ class Win32APIScraper:
                 self.http.cleanup_sync()
             except:
                 pass
-
-    def _start_async_ml_loading(self):
-        """Start async ML loading in background thread"""
-        import threading
-
-        def load_ml():
-            try:
-                # Import ML here to avoid blocking main thread
-                from ..ml.function_classifier import ml_classifier
-
-                if ml_classifier:
-                    self._ml_ready = True
-            except Exception:
-                # If ML fails to load, continue without it
-                self._ml_ready = False
-
-        # Start loading in background
-        threading.Thread(target=load_ml, daemon=True).start()
 
     def set_current_function_dll(self, dll_name: str) -> None:
         """Public setter to define the DLL used for smart URL generation."""
@@ -242,7 +218,7 @@ class Win32APIScraper:
                             )
                             return result
 
-                    status.update(f"[yellow]2/5[/yellow] Pattern matching completed")
+                    status.update("[yellow]2/5[/yellow] Pattern matching completed")
             else:
                 # Quiet mode - no status display
                 found_url = asyncio.run(
@@ -336,7 +312,7 @@ class Win32APIScraper:
                             )
                             return result
                         status.update(
-                            f"[yellow]4/5[/yellow] Catálogo não retornou resultado válido"
+                            "[yellow]4/5[/yellow] Catálogo não retornou resultado válido"
                         )
             else:
                 # Quiet mode
@@ -388,7 +364,7 @@ class Win32APIScraper:
                     if w_suffix_result:
                         status.stop()
                         return w_suffix_result
-                    status.update(f"[red]FINAL[/red] Sufixos A/W também falharam")
+                    status.update("[red]FINAL[/red] Sufixos A/W também falharam")
             else:
                 # Silent mode
                 a_suffix_result = self._try_with_suffix(function_name, "A")
@@ -566,7 +542,6 @@ class Win32APIScraper:
         """
         Parse Microsoft documentation page with fallback support with retry logic
         """
-        timeout = 15  # Reduced timeout for faster failure
         max_retries = 2  # Reduced retries for faster failure
         base_delay = 1
 
@@ -576,7 +551,7 @@ class Win32APIScraper:
                 soup = BeautifulSoup(html, "html.parser")
                 break  # Success - exit retry loop
 
-            except Exception as e:
+            except Exception:
                 # Se não é a última tentativa, aguardar antes de tentar novamente
                 if attempt < max_retries - 1:
                     delay = base_delay * (2**attempt)  # Exponential backoff
@@ -619,10 +594,9 @@ class Win32APIScraper:
         """Search Microsoft Learn API for function documentation"""
         try:
             import requests
-            import json
 
             # Microsoft Learn Search API
-            api_url = f"https://learn.microsoft.com/api/search"
+            api_url = "https://learn.microsoft.com/api/search"
             params = {
                 "search": function_name,
                 "locale": "pt-br" if self.language == "br" else "en-us",
@@ -644,31 +618,76 @@ class Win32APIScraper:
                     # PRIORITY 1: Win32 API documentation
                     if "/windows/win32/api/" in url and function_lower in title:
                         return url
-                    
+
                     # PRIORITY 2: Windows Driver Model documentation
-                    if "/windows-hardware/drivers/ddi/" in url and function_lower in title:
+                    if (
+                        "/windows-hardware/drivers/ddi/" in url
+                        and function_lower in title
+                    ):
                         return url
-                    
+
                     # PRIORITY 3: DirectX and Graphics APIs
-                    if any(pattern in url for pattern in ["/windows/win32/direct3d", "/windows/win32/directx", "/windows/win32/api/d3d", "/windows/win32/api/dxgi"]) and function_lower in title:
+                    if (
+                        any(
+                            pattern in url
+                            for pattern in [
+                                "/windows/win32/direct3d",
+                                "/windows/win32/directx",
+                                "/windows/win32/api/d3d",
+                                "/windows/win32/api/dxgi",
+                            ]
+                        )
+                        and function_lower in title
+                    ):
                         return url
-                    
+
                     # PRIORITY 4: Windows Runtime APIs
-                    if any(pattern in url for pattern in ["/windows/winrt/", "/uwp/api/"]) and function_lower in title:
+                    if (
+                        any(
+                            pattern in url
+                            for pattern in ["/windows/winrt/", "/uwp/api/"]
+                        )
+                        and function_lower in title
+                    ):
                         return url
-                    
+
                     # PRIORITY 5: COM/OLE APIs
-                    if any(pattern in url for pattern in ["/windows/win32/api/combaseapi", "/windows/win32/api/objbase", "/windows/win32/api/ole2"]) and function_lower in title:
+                    if (
+                        any(
+                            pattern in url
+                            for pattern in [
+                                "/windows/win32/api/combaseapi",
+                                "/windows/win32/api/objbase",
+                                "/windows/win32/api/ole2",
+                            ]
+                        )
+                        and function_lower in title
+                    ):
                         return url
-                    
+
                     # PRIORITY 6: C/C++ Runtime
-                    if any(pattern in url for pattern in ["/cpp/c-runtime-library/", "/cpp/standard-library/"]) and function_lower in title:
+                    if (
+                        any(
+                            pattern in url
+                            for pattern in [
+                                "/cpp/c-runtime-library/",
+                                "/cpp/standard-library/",
+                            ]
+                        )
+                        and function_lower in title
+                    ):
                         return url
-                    
+
                     # PRIORITY 7: PowerShell and .NET
-                    if any(pattern in url for pattern in ["/powershell/", "/dotnet/api/"]) and function_lower in title:
+                    if (
+                        any(
+                            pattern in url
+                            for pattern in ["/powershell/", "/dotnet/api/"]
+                        )
+                        and function_lower in title
+                    ):
                         return url
-                    
+
                     # PRIORITY 8: Developer Notes
                     if "/windows/win32/devnotes/" in url and function_lower in title:
                         return url
@@ -680,12 +699,23 @@ class Win32APIScraper:
                     function_lower = function_name.lower()
 
                     # Any Microsoft/Windows documentation containing the function
-                    if function_lower in title and any(pattern in url for pattern in [
-                        "/windows/", "/dotnet/", "/cpp/", "/powershell/", "/uwp/",
-                        "/windows-hardware/", "/azure/", "/sql/", "/office/", "/xamarin/"
-                    ]):
+                    if function_lower in title and any(
+                        pattern in url
+                        for pattern in [
+                            "/windows/",
+                            "/dotnet/",
+                            "/cpp/",
+                            "/powershell/",
+                            "/uwp/",
+                            "/windows-hardware/",
+                            "/azure/",
+                            "/sql/",
+                            "/office/",
+                            "/xamarin/",
+                        ]
+                    ):
                         return url
-                    
+
                     # Super broad fallback: any learn.microsoft.com documentation
                     if function_lower in title and "learn.microsoft.com" in url:
                         return url
@@ -729,41 +759,29 @@ class Win32APIScraper:
         Check direct mapping file for immediate URL resolution
         """
         try:
-            # Load the complete function mapping
-            mapping_file = os.path.join(
-                os.path.dirname(__file__),
-                "..",
-                "assets",
-                "complete_function_mapping.json",
-            )
-            if os.path.exists(mapping_file):
-                with open(mapping_file, "r", encoding="utf-8") as f:
-                    mapping = json.load(f)
+            mapping = load_json_asset("complete_function_mapping.json")
+        except FileNotFoundError:
+            return None
 
-                # First try exact match
-                if function_name in mapping:
-                    header = mapping[function_name]
-                    url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{function_name.lower()}"
-                    return url
+        # First try exact match
+        if function_name in mapping:
+            header = mapping[function_name]
+            return f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{function_name.lower()}"
 
-                # If no exact match, try with W suffix (Unicode version)
-                if function_name + "W" in mapping:
-                    header = mapping[function_name + "W"]
-                    url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'w').lower()}"
-                    if not self.quiet:
-                        self.console.print(
-                            f"[dim]Redirecting to {function_name}W version[/dim]"
-                        )
-                    return url
+        # If no exact match, try with W suffix (Unicode version)
+        if function_name + "W" in mapping:
+            header = mapping[function_name + "W"]
+            if not self.quiet:
+                self.console.print(
+                    f"[dim]Redirecting to {function_name}W version[/dim]"
+                )
+            return f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'w').lower()}"
 
-                # If no W, try with A suffix (ANSI version)
-                if function_name + "A" in mapping:
-                    header = mapping[function_name + "A"]
-                    url = f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'a').lower()}"
-                    return url
+        # If no W, try with A suffix (ANSI version)
+        if function_name + "A" in mapping:
+            header = mapping[function_name + "A"]
+            return f"{self.base_url}/windows/win32/api/{header}/nf-{header}-{(function_name + 'a').lower()}"
 
-        except Exception:
-            pass
         return None
 
     # ------------------------------------------------------------------
